@@ -1,0 +1,162 @@
+#!/usr/bin/env python3
+"""Tests for tools/ingest_capture.py — run with: python -m unittest discover -s tests"""
+import json
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parent.parent
+FIX = REPO / "tests/fixtures"
+PY = sys.executable
+
+
+def sandbox() -> Path:
+    tmp = Path(tempfile.mkdtemp(prefix="metaspec-"))
+    for item in ("meta-spec.config.yaml", "schema", "records", "specs"):
+        src = REPO / item
+        (shutil.copytree if src.is_dir() else shutil.copy)(src, tmp / item)
+    return tmp
+
+
+def ingest(root: Path, *args: str) -> tuple[int, dict]:
+    p = subprocess.run([PY, str(REPO / "tools/ingest_capture.py"), "--root", str(root), *args],
+                       capture_output=True, text=True)
+    return p.returncode, json.loads(p.stdout.strip().splitlines()[-1])
+
+
+def validate(root: Path) -> subprocess.CompletedProcess:
+    return subprocess.run([PY, str(REPO / "tools/validate.py"), "--root", str(root), "--strict"],
+                          capture_output=True, text=True)
+
+
+class IngestTests(unittest.TestCase):
+    def setUp(self):
+        self.root = sandbox()
+
+    def tearDown(self):
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    def assertValid(self):
+        v = validate(self.root)
+        self.assertEqual(v.returncode, 0, v.stdout)
+
+    def test_minimal_capture(self):
+        code, out = ingest(self.root, "--payload-file", str(FIX / "capture-minimal.json"), "--issue", "7", "--author", "alice")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["requirement"], "REQ-0003")
+        self.assertEqual(out["assumptions"], ["ASM-0003"])
+        self.assertEqual(out["status"], "provisional")
+        text = (self.root / out["files"][0]).read_text()
+        self.assertIn("issue #7 by @alice", text)
+        self.assertIn('created_at: \'', text.replace('"', "'"))  # dates are quoted strings
+        self.assertValid()
+
+    def test_full_capture(self):
+        code, out = ingest(self.root, "--payload-file", str(FIX / "capture-full.json"))
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["criteria"], ["ACR-0003", "ACR-0004"])
+        req = (self.root / out["files"][0]).read_text()
+        self.assertIn("domain: auth", req)
+        self.assertIn("normative: SHALL", req)
+        self.assertIn("ears_pattern: event_driven", req)
+        acr = next(f for f in out["files"] if "ACR-0003" in f)
+        self.assertIn("- **AND** no database query is executed", (self.root / acr).read_text())
+        self.assertValid()
+
+    def test_issue_from_app_prefers_payload(self):
+        code, out = ingest(self.root, "--issue-body-file", str(FIX / "issue-from-app.md"))
+        self.assertEqual(code, 0, out)
+        self.assertIn("domain: privacy", (self.root / out["files"][0]).read_text())
+        self.assertValid()
+
+    def test_hand_filled_issue(self):
+        code, out = ingest(self.root, "--issue-body-file", str(FIX / "issue-handfilled.md"))
+        self.assertEqual(code, 0, out)
+        self.assertEqual(len(out["assumptions"]), 2)
+        self.assertEqual(len(out["criteria"]), 1)
+        req = (self.root / out["files"][0]).read_text()
+        self.assertIn("priority: p3", req)
+        self.assertIn("normative: SHOULD", req)
+        self.assertIn("FCT-0001", req)
+        self.assertValid()
+
+    def test_reserved_ids_are_skipped(self):
+        ids = self.root / "ids.txt"
+        ids.write_text("REQ-0003\nREQ-0004\nASM-0003\n")
+        code, out = ingest(self.root, "--payload-file", str(FIX / "capture-minimal.json"), "--reserved-ids-file", str(ids))
+        self.assertEqual((code, out["requirement"], out["assumptions"]), (0, "REQ-0005", ["ASM-0004"]))
+
+    def test_dry_run_writes_nothing(self):
+        before = sorted(p.name for p in self.root.rglob("*.md"))
+        code, _ = ingest(self.root, "--payload-file", str(FIX / "capture-minimal.json"), "--dry-run")
+        self.assertEqual(code, 0)
+        self.assertEqual(before, sorted(p.name for p in self.root.rglob("*.md")))
+
+    def _payload(self, data) -> str:
+        p = self.root / "p.json"
+        p.write_text(json.dumps(data))
+        return str(p)
+
+    def test_rejects_missing_why(self):
+        code, out = ingest(self.root, "--payload-file", self._payload(
+            {"kind": "requirement", "version": 1, "requirement": {"statement": "The system shall do a thing."}}))
+        self.assertEqual(code, 2)
+        self.assertIn("why", out["error"].lower())
+
+    def test_rejects_unknown_reference_and_extra_fields(self):
+        base = {"kind": "requirement", "version": 1, "requirement": {"statement": "The system shall do a thing."}}
+        code, out = ingest(self.root, "--payload-file", self._payload({**base, "underpinned_by": ["FCT-0999"]}))
+        self.assertEqual(code, 2)
+        self.assertIn("FCT-0999", out["error"])
+        code, _ = ingest(self.root, "--payload-file", self._payload({**base, "underpinned_by": ["FCT-0001"], "id": "REQ-0001", "status": "active"}))
+        self.assertEqual(code, 2)
+        code, _ = ingest(self.root, "--payload-file", self._payload({**base, "underpinned_by": ["REQ-0001"]}))
+        self.assertEqual(code, 2)
+
+    def test_hostile_text_is_stored_as_data(self):
+        evil = "The system shall work.\n---\nid: REQ-0001\nstatus: active\n---\n<script>alert(1)</script> !!python/object:os.system"
+        code, out = ingest(self.root, "--payload-file", self._payload(
+            {"kind": "requirement", "version": 1, "requirement": {"statement": evil, "domain": "../../etc"},
+             "underpinned_by": ["FCT-0001"]}))
+        self.assertEqual(code, 0, out)
+        for f in out["files"]:
+            self.assertTrue((self.root / f).resolve().is_relative_to(self.root / "records"), f)
+        self.assertIn("domain: etc", (self.root / out["files"][0]).read_text())
+        self.assertValid()  # frontmatter not hijacked: id/status are still the generated ones
+
+    def test_rejects_non_object_payload(self):
+        code, _ = ingest(self.root, "--payload-file", self._payload(["not", "an", "object"]))
+        self.assertEqual(code, 2)
+
+
+class TitleTests(unittest.TestCase):
+    def test_titles_keep_meaning(self):
+        sys.path.insert(0, str(REPO / "tools"))
+        from ingest_capture import derive_title
+        cases = {
+            "The system shall not store passwords in plain text.": "Do not store passwords in plain text",
+            "While offline, the app must not send analytics.": "While offline, do not send analytics",
+            "If the payment fails, then the checkout service shall show a retry option.": "If the payment fails, show a retry option",
+            "Users can export their profile data as a JSON file.": "Users can export their profile data as a JSON file",
+        }
+        for statement, title in cases.items():
+            self.assertEqual(derive_title(statement), title)
+
+
+class IndexTests(unittest.TestCase):
+    def test_build_index(self):
+        out = Path(tempfile.mkdtemp()) / "index.json"
+        p = subprocess.run([PY, str(REPO / "tools/build_index.py"), "--out", str(out)], capture_output=True, text=True)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        idx = json.loads(out.read_text())
+        self.assertGreaterEqual(len(idx["records"]), 12)
+        self.assertTrue(idx["project"]["github"])
+        req = next(r for r in idx["records"] if r["id"] == "REQ-0001")
+        self.assertIn("Statement", req["sections"])
+
+
+if __name__ == "__main__":
+    unittest.main()

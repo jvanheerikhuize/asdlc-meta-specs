@@ -1,0 +1,6 @@
+{
+  "kind": "requirement",
+  "version": 1,
+  "requirement": { "statement": "Users can export their profile data as a JSON file." },
+  "new_assumptions": [{ "statement": "GDPR data portability applies to our EU customers." }]
+}

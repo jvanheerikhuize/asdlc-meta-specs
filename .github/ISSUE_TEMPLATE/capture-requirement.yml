@@ -1,0 +1,66 @@
+name: "📝 Capture a requirement"
+description: "Propose a new requirement. It becomes a reviewed Pull Request — approving the PR is the approval of the requirement."
+title: "[capture] "
+labels: ["capture"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Tip:** the guided capture app on GitHub Pages fills this in for you (with hints and a live preview).
+        Filling it in here by hand works too — only the first two questions are needed.
+
+  - type: textarea
+    id: statement
+    attributes:
+      label: "What should the system do?"
+      description: "One sentence in plain language. E.g. *Users can export their profile data as a JSON file.*"
+    validations:
+      required: false
+
+  - type: textarea
+    id: why
+    attributes:
+      label: "Why? What do we know or believe?"
+      description: "One reason per line. Each line is recorded as an assumption until someone validates it."
+    validations:
+      required: false
+
+  - type: input
+    id: refs
+    attributes:
+      label: "Existing facts or assumptions (optional)"
+      description: "IDs that support this requirement, e.g. FCT-0001, ASM-0002"
+
+  - type: textarea
+    id: criteria
+    attributes:
+      label: "How will we know it works? (optional)"
+      description: "Given / When / Then lines. Leave a blank line between scenarios."
+      placeholder: |
+        Given a logged-in user
+        When they click "Export"
+        Then a JSON file is downloaded
+
+  - type: input
+    id: domain
+    attributes:
+      label: "Domain (optional)"
+      description: "Area of the product, e.g. auth, billing. Defaults to 'general'."
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Priority"
+      options:
+        - "p2 – Normal"
+        - "p1 – High"
+        - "p0 – Critical"
+        - "p3 – Low"
+      default: 0
+
+  - type: textarea
+    id: payload
+    attributes:
+      label: "Payload (filled in automatically by the capture app)"
+      description: "Leave empty when filling in by hand. If present, it takes precedence over the fields above."
+      render: yaml

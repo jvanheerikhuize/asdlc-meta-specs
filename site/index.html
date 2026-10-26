@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ASDLC Meta-Specs</title>
+  <meta name="description" content="Capture, browse and approve epistemic specification records.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>">
+  <link rel="stylesheet" href="assets/styles.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="topbar">
+    <a class="brand" href="#/dashboard"><span aria-hidden="true">🧭</span> <span id="brand-name">ASDLC Meta-Specs</span></a>
+    <form class="search" role="search" id="global-search">
+      <label for="q" class="visually-hidden">Search records</label>
+      <input id="q" name="q" type="search" placeholder="Search records…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+    </form>
+    <a class="button primary" href="#/capture/requirement"><span aria-hidden="true">＋</span> Capture</a>
+  </header>
+
+  <nav class="sidenav" aria-label="Main">
+    <p class="nav-heading">Overview</p>
+    <a href="#/dashboard" data-route="dashboard">Dashboard</a>
+    <p class="nav-heading">Browse</p>
+    <a href="#/records" data-route="records">Records</a>
+    <a href="#/specs" data-route="specs">Specifications</a>
+    <p class="nav-heading">Capture</p>
+    <a href="#/capture/requirement" data-route="capture/requirement" data-draft="requirement">Requirement</a>
+    <span class="nav-soon" aria-disabled="true">Assumption <small>soon</small></span>
+    <span class="nav-soon" aria-disabled="true">Fact &amp; validation <small>soon</small></span>
+    <span class="nav-soon" aria-disabled="true">Decision <small>soon</small></span>
+    <p class="nav-heading">Review</p>
+    <a href="#/pending" data-route="pending">Pending approval</a>
+  </nav>
+
+  <main id="main" tabindex="-1">
+    <p class="loading">Loading…</p>
+  </main>
+
+  <footer class="footer" id="footer"></footer>
+</body>
+</html>

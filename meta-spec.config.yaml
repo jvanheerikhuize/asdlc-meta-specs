@@ -4,8 +4,17 @@ version: "1.0.0"
 project:
   name: "asdlc-meta-specs"
   description: "Standard-agnostic epistemic specification repository"
+  github: "jvanheerikhuize/asdlc-meta-specs"   # owner/repo used by the Pages app to open capture issues
   default_normative_syntax: "RFC2119+EARS"
   default_criteria_format: "gherkin"
+
+# GitHub Pages workspace (site/). Deployment is additionally gated by the repo variable PAGES_ENABLED=true.
+site:
+  # full     = publish titles, links AND record text (prose) in site/data/index.json
+  # metadata = publish ids, titles, status and links only
+  # NOTE: a Pages site is publicly reachable unless you are on GitHub Enterprise Cloud with access control.
+  publish: "full"
+  default_domain: "general"
 
 # Canonical Elemental Record Prefixes & Storage Paths
 records:

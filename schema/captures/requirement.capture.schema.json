@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://asdlc.local/schemas/captures/requirement.capture.schema.json",
+  "title": "Requirement Capture Payload",
+  "description": "Contract between capture interfaces (Pages app / Issue Form) and tools/ingest_capture.py. Untrusted input: strictly bounded.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "requirement"],
+  "properties": {
+    "kind": { "const": "requirement" },
+    "version": { "const": 1 },
+    "requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statement"],
+      "properties": {
+        "statement": { "type": "string", "minLength": 10, "maxLength": 2000 },
+        "title": { "type": "string", "maxLength": 140 },
+        "domain": { "type": "string", "maxLength": 60 },
+        "priority": { "enum": ["p0", "p1", "p2", "p3"] },
+        "category": { "enum": ["functional", "non_functional", "interface", "data", "security"] },
+        "normative": { "enum": ["MUST", "SHALL", "SHOULD", "MAY"] },
+        "ears_pattern": { "enum": ["ubiquitous", "event_driven", "state_driven", "unwanted_behavior", "optional_feature", "complex"] },
+        "notes": { "type": "string", "maxLength": 4000 }
+      }
+    },
+    "underpinned_by": {
+      "type": "array",
+      "maxItems": 30,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^(FCT|ASM)-[0-9]{4}$" }
+    },
+    "new_assumptions": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["statement"],
+        "properties": {
+          "statement": { "type": "string", "minLength": 5, "maxLength": 1000 },
+          "risk": { "enum": ["low", "medium", "high", "critical"] },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "criteria": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["then"],
+        "properties": {
+          "title": { "type": "string", "maxLength": 140 },
+          "given": { "type": "string", "maxLength": 1000 },
+          "when": { "type": "string", "maxLength": 1000 },
+          "then": { "type": "string", "minLength": 3, "maxLength": 1000 }
+        }
+      }
+    }
+  },
+  "anyOf": [
+    { "required": ["underpinned_by"], "properties": { "underpinned_by": { "minItems": 1 } } },
+    { "required": ["new_assumptions"], "properties": { "new_assumptions": { "minItems": 1 } } }
+  ]
+}

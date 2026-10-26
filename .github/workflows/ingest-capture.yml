@@ -1,0 +1,123 @@
+name: ingest-capture
+
+# Turns a "capture" issue into a validated Pull Request. Approving + merging the PR = approving the record.
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: ingest-capture        # serialise ID allocation
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    # Only labelled captures, only open issues, only people with write access to the repo.
+    if: >-
+      contains(github.event.issue.labels.*.name, 'capture') &&
+      github.event.issue.state == 'open' &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ISSUE: ${{ github.event.issue.number }}
+      AUTHOR: ${{ github.event.issue.user.login }}
+      BODY: ${{ github.event.issue.body }}           # untrusted: only ever used via env, never interpolated into scripts
+      BRANCH: capture/issue-${{ github.event.issue.number }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r tools/requirements.txt
+
+      - name: Reserve IDs already used on other open capture branches
+        run: |
+          : > /tmp/reserved.txt
+          for b in $(git branch -r --format='%(refname:short)' | grep '^origin/capture/' | grep -vx "origin/${BRANCH}" || true); do
+            git ls-tree -r --name-only "$b" -- records | grep -oE '(ASM|VAL|FCT|CON|REQ|ACR|DEC)-[0-9]{4}' >> /tmp/reserved.txt || true
+          done
+          sort -u -o /tmp/reserved.txt /tmp/reserved.txt
+          wc -l < /tmp/reserved.txt
+
+      - name: Ingest capture
+        id: ingest
+        run: |
+          printf '%s' "$BODY" > /tmp/body.md
+          set +e
+          python tools/ingest_capture.py --issue-body-file /tmp/body.md --issue "$ISSUE" \
+            --author "$AUTHOR" --reserved-ids-file /tmp/reserved.txt > /tmp/result.json
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+          cat /tmp/result.json
+
+      - name: Validate record graph
+        id: validate
+        if: steps.ingest.outputs.code == '0'
+        run: |
+          set +e
+          python tools/validate.py > /tmp/validate.txt 2>&1
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+          cat /tmp/validate.txt
+
+      - name: Open or update pull request
+        if: steps.ingest.outputs.code == '0' && steps.validate.outputs.code == '0'
+        run: |
+          REQ=$(jq -r .requirement /tmp/result.json)
+          TITLE=$(jq -r .title /tmp/result.json)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add records
+          git commit -m "capture: $REQ – $TITLE (#$ISSUE)"
+          git push --force origin "$BRANCH"
+
+          {
+            echo "Captured from #$ISSUE by @$AUTHOR."
+            echo
+            echo "| Record | File |"
+            echo "| :--- | :--- |"
+            jq -r '.files[] | "| `\(split("/")[-1] | split("-")[0:2] | join("-"))` | `\(.)` |"' /tmp/result.json
+            echo
+            echo "**Approve = review & merge.** Refine wording, status or links by editing the files in this PR before merging."
+            echo "To change the capture itself, edit issue #$ISSUE — this PR is regenerated automatically."
+            echo
+            echo "Closes #$ISSUE"
+          } > /tmp/pr.md
+
+          PR=$(gh pr list --head "$BRANCH" --state open --json number -q '.[0].number')
+          if [ -z "$PR" ]; then
+            gh pr create --head "$BRANCH" --base main --title "capture: $REQ – $TITLE" --body-file /tmp/pr.md --label capture
+            PR=$(gh pr list --head "$BRANCH" --state open --json number -q '.[0].number')
+            VERB="opened"
+          else
+            gh pr edit "$PR" --title "capture: $REQ – $TITLE" --body-file /tmp/pr.md
+            VERB="updated"
+          fi
+          gh issue comment "$ISSUE" --body "✅ Thanks! I $VERB pull request #$PR with **$REQ** and its linked records. Approving and merging that PR approves the requirement."
+
+      - name: Report problems on the issue
+        if: steps.ingest.outputs.code != '0' || steps.validate.outputs.code != '0'
+        run: |
+          {
+            echo "⚠️ I couldn't turn this capture into a pull request yet."
+            echo
+            if [ "${{ steps.ingest.outputs.code }}" != "0" ]; then
+              jq -r '.error' /tmp/result.json 2>/dev/null || echo "Unexpected error — see the workflow log."
+            else
+              echo '```'
+              grep -E '^(ERROR|RESULT)' /tmp/validate.txt | head -n 30
+              echo '```'
+            fi
+            echo
+            echo "Edit this issue to fix it — I'll try again automatically."
+          } > /tmp/comment.md
+          gh issue comment "$ISSUE" --body-file /tmp/comment.md
+          exit 1

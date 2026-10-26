@@ -71,10 +71,53 @@ asdlc-meta-specs/
 │   ├── openspec/
 │   └── speckit/
 ├── dist/                              # Projected standard outputs (currently hand-written samples)
-├── tools/                             # validate.py + requirements.txt
-├── .github/workflows/validate.yml     # CI: runs the validator on every push / PR
+├── site/                              # GitHub Pages workspace (plain HTML/CSS/ES modules, no build step)
+├── tools/
+│   ├── recordlib.py                   # shared record parsing / writing
+│   ├── validate.py                    # schema, links, epistemic consistency, readiness
+│   ├── build_index.py                 # records → site/data/index.json (built in CI)
+│   └── ingest_capture.py              # capture payload / issue → new record files
+├── tests/                             # unit tests + fixtures for ingestion & index
+├── .github/
+│   ├── ISSUE_TEMPLATE/                # capture-requirement issue form (fallback capture path)
+│   └── workflows/                     # validate · ingest-capture · pages (gated)
 └── docs/                              # Architecture, lifecycle & mapping guides
 ```
+
+---
+
+## GitHub Pages Workspace
+
+`site/` is a small, framework-free web app that serves as the human-facing workspace: dashboard, record browser, prose view per record, pending captures, and **capture interfaces** — all inside one persistent shell (header, navigation, search, draft indicators).
+
+### Capturing a requirement
+
+```mermaid
+flowchart LR
+    F["Capture form (Pages)"] -->|"pre-filled issue"| I["GitHub issue (label: capture)"]
+    I -->|"ingest-capture workflow"| P["PR with REQ / ASM / ACR files"]
+    P -->|"validator passes, reviewer merges"| M["main = approved records"]
+```
+
+1. Open **Capture → Requirement**. Only one field is required: *what should the system do?* Everything else (why, underpinning facts/assumptions, acceptance criteria, domain, priority) is optional. Drafts autosave in the browser.
+2. **Submit** opens a pre-filled GitHub issue; click *Submit new issue*. (No app login or token needed — your GitHub session is used.)
+3. The `ingest-capture` workflow allocates IDs, writes the records (status `provisional` when underpinned by new/open assumptions, otherwise `draft`), validates them, and opens a PR that closes the issue.
+4. **Approval = merging the PR.**
+
+Without the app you can use the issue form directly (*New issue → Capture a requirement*). Only repository owners/members/collaborators can trigger ingestion.
+
+### Enabling the site
+
+Deployment is **off by default**. To enable:
+
+1. *Settings → Pages → Source:* **GitHub Actions**.
+2. *Settings → Secrets and variables → Actions → Variables:* add `PAGES_ENABLED` = `true`.
+3. Push to `main` (or run the *pages* workflow manually).
+
+> [!WARNING]
+> Pages sites are public unless you're on GitHub Enterprise Cloud — even for private repositories. Set `site.publish: "metadata"` in `meta-spec.config.yaml` to omit record prose from the published index.
+
+Local preview: `python tools/build_index.py && python -m http.server -d site 8000`.
 
 ---
 
@@ -102,7 +145,9 @@ asdlc-meta-specs/
 | Reference example (auth capability) | ✅ In place |
 | Validator + CI | ✅ In place |
 | Projection compiler (`adapters/` → `dist/`) | 🔜 Planned — `dist/` currently holds hand-written samples of the intended output |
-| Capture interfaces (CLI / UI) | 🔜 Planned |
+| Pages workspace shell (dashboard, records, prose, pending) | ✅ In place — deploy gated behind `PAGES_ENABLED` |
+| Requirement capture (app → issue → PR) | ✅ In place |
+| Assumption / fact / decision capture, in-app approval | 🔜 Planned |
 
 ---
 

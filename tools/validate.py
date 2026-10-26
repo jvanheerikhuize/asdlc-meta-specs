@@ -10,22 +10,23 @@ Checks performed:
   5. Epistemic consistency: a normative record's status matches the state of what underpins it.
   6. Reports Epistemic Readiness per specification manifest (SPC).
 
-Usage:  python tools/validate.py [--strict]     (--strict turns warnings into errors)
+Usage:  python tools/validate.py [--strict] [--root PATH]   (--strict turns warnings into errors)
 Exit code is non-zero when errors are found.
 """
 from __future__ import annotations
 
 import json
-import re
 import sys
 from pathlib import Path
 
-import yaml
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
-ROOT = Path(__file__).resolve().parent.parent
-FRONTMATTER = re.compile(r"^---\n(.*?)\n---\n", re.S)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from recordlib import ROOT as DEFAULT_ROOT, iter_record_files, parse_record  # noqa: E402
+from recordlib import load_config as _load_config  # noqa: E402
+
+ROOT = DEFAULT_ROOT
 
 errors: list[str] = []
 warnings: list[str] = []
@@ -40,7 +41,7 @@ def warn(msg: str) -> None:
 
 
 def load_config() -> dict:
-    return yaml.safe_load((ROOT / "meta-spec.config.yaml").read_text())
+    return _load_config(ROOT)
 
 
 def load_schemas() -> tuple[dict, Registry]:
@@ -56,31 +57,25 @@ def load_schemas() -> tuple[dict, Registry]:
 
 def load_records(config: dict) -> dict[str, tuple[Path, dict]]:
     records: dict[str, tuple[Path, dict]] = {}
-    for type_name, spec in config["records"]["types"].items():
-        directory = ROOT / spec["directory"]
-        for path in sorted(directory.glob("*.md")):
-            rel = path.relative_to(ROOT)
-            match = FRONTMATTER.match(path.read_text())
-            if not match:
-                err(f"{rel}: missing YAML frontmatter")
-                continue
-            try:
-                meta = yaml.safe_load(match.group(1)) or {}
-            except yaml.YAMLError as exc:
-                err(f"{rel}: invalid YAML frontmatter ({exc})")
-                continue
-            rid = meta.get("id")
-            if not rid:
-                err(f"{rel}: missing 'id'")
-                continue
-            if meta.get("type") != type_name:
-                err(f"{rel}: type '{meta.get('type')}' does not belong in {spec['directory']} (expected '{type_name}')")
-            if not path.name.startswith(f"{rid}-"):
-                err(f"{rel}: filename must start with '{rid}-'")
-            if rid in records:
-                err(f"{rel}: duplicate id {rid} (also in {records[rid][0]})")
-                continue
-            records[rid] = (rel, meta)
+    for type_name, path in iter_record_files(config, ROOT):
+        rel = path.relative_to(ROOT)
+        try:
+            meta, _ = parse_record(path)
+        except ValueError as exc:
+            err(f"{rel}: {exc}")
+            continue
+        rid = meta.get("id")
+        if not rid:
+            err(f"{rel}: missing 'id'")
+            continue
+        if meta.get("type") != type_name:
+            err(f"{rel}: type '{meta.get('type')}' does not belong in {config['records']['types'][type_name]['directory']} (expected '{type_name}')")
+        if not path.name.startswith(f"{rid}-"):
+            err(f"{rel}: filename must start with '{rid}-'")
+        if rid in records:
+            err(f"{rel}: duplicate id {rid} (also in {records[rid][0]})")
+            continue
+        records[rid] = (rel, meta)
     return records
 
 
@@ -196,7 +191,10 @@ def readiness_report(records) -> list[str]:
 
 
 def main() -> int:
+    global ROOT
     strict = "--strict" in sys.argv
+    if "--root" in sys.argv:
+        ROOT = Path(sys.argv[sys.argv.index("--root") + 1]).resolve()
     config = load_config()
     schemas, registry = load_schemas()
     records = load_records(config)

@@ -1,0 +1,18 @@
+{
+  "kind": "requirement",
+  "version": 1,
+  "requirement": {
+    "statement": "When an access token is older than 15 minutes, the API Gateway shall reject it with 401 Unauthorized.",
+    "domain": "Auth",
+    "priority": "p1",
+    "category": "security"
+  },
+  "underpinned_by": ["FCT-0001", "ASM-0002"],
+  "new_assumptions": [
+    { "statement": "Clients refresh tokens proactively before expiry.", "risk": "high" }
+  ],
+  "criteria": [
+    { "given": "a token issued 16 minutes ago", "when": "the client calls a protected endpoint", "then": "the gateway returns 401 AND no database query is executed" },
+    { "then": "tokens younger than 15 minutes are accepted" }
+  ]
+}
