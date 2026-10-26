@@ -1,0 +1,34 @@
+# OpenSpec Projection Mapping Definition
+adapter: openspec
+version: "1.0.0"
+description: "Projects canonical SPC, REQ, ACR, DEC, and CHG records into the OpenSpec directory hierarchy."
+
+output_root: "dist/openspec"
+
+projections:
+  capability_spec:
+    source_type: "spec"
+    output_path_pattern: "specs/{{domain}}/spec.md"
+    template: "templates/spec.md.hbs"
+    include_epistemic_annotations: true
+    mappings:
+      header_title: "title"
+      purpose_section: "body.purpose"
+      requirements:
+        source: "composition.requirements"
+        resolve_type: "requirement"
+        heading_prefix: "### Requirement:"
+        nested_scenarios:
+          source: "verified_by"
+          resolve_type: "criterion"
+          heading_prefix: "#### Scenario:"
+
+  change_proposal:
+    source_type: "change"
+    output_path_pattern: "changes/{{slug}}/specs/{{domain}}/spec.md"
+    template: "templates/delta-spec.md.hbs"
+    mappings:
+      added_requirements: "deltas.added[type=requirement]"
+      modified_requirements: "deltas.modified[type=requirement]"
+      removed_requirements: "deltas.removed[type=requirement]"
+      design_decisions: "deltas.added[type=decision]"

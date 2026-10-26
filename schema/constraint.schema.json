@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://asdlc.local/schemas/constraint.schema.json",
+  "title": "Constraint / Principle Record (CON)",
+  "description": "A project-wide non-negotiable guardrail, architectural invariant, or compliance rule.",
+  "allOf": [
+    {
+      "$ref": "./base-record.schema.json"
+    }
+  ],
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "title",
+    "domain",
+    "status",
+    "scope",
+    "enforcement",
+    "underpinned_by",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^CON-[0-9]{4}$"
+    },
+    "type": {
+      "const": "constraint"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "provisional",
+        "active",
+        "needs_review",
+        "deprecated"
+      ]
+    },
+    "scope": {
+      "type": "string",
+      "enum": [
+        "global",
+        "domain",
+        "security",
+        "performance",
+        "compliance"
+      ]
+    },
+    "enforcement": {
+      "type": "string",
+      "enum": [
+        "mandatory",
+        "advisory"
+      ]
+    },
+    "underpinned_by": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^(FCT|ASM)-[0-9]{4}$"
+      },
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Facts or Assumptions that justify this constraint."
+    }
+  }
+}

@@ -1,0 +1,19 @@
+# Projected / compiled standard outputs (tracked by default for reference samples)
+!dist/
+
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.vscode/
+.idea/
+
+# Future tooling / local indices
+.cache/
+*.sqlite
+*.db
+node_modules/
+__pycache__/
+.venv/

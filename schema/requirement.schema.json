@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://asdlc.local/schemas/requirement.schema.json",
+  "title": "Requirement Record (REQ)",
+  "description": "An atomic functional or non-functional normative statement underpinned by facts and/or assumptions.",
+  "allOf": [
+    {
+      "$ref": "./base-record.schema.json"
+    }
+  ],
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "title",
+    "domain",
+    "status",
+    "category",
+    "normative",
+    "underpinned_by",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^REQ-[0-9]{4}$"
+    },
+    "type": {
+      "const": "requirement"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "provisional",
+        "active",
+        "needs_review",
+        "broken",
+        "deprecated"
+      ],
+      "description": "'provisional' if underpinned by unvalidated ASM; 'active' when all underpinnings are verified FCTs; 'needs_review' when an underpinning ASM is promoted/refined; 'broken' if an underpinning ASM is invalidated."
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "functional",
+        "non_functional",
+        "interface",
+        "data",
+        "security"
+      ]
+    },
+    "normative": {
+      "type": "string",
+      "enum": [
+        "MUST",
+        "SHALL",
+        "SHOULD",
+        "MAY"
+      ],
+      "description": "RFC 2119 enforcement level."
+    },
+    "ears_pattern": {
+      "type": "string",
+      "enum": [
+        "ubiquitous",
+        "event_driven",
+        "state_driven",
+        "unwanted_behavior",
+        "optional_feature",
+        "complex"
+      ],
+      "description": "Easy Approach to Requirements Syntax (EARS) structural classification."
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "p0",
+        "p1",
+        "p2",
+        "p3"
+      ]
+    },
+    "underpinned_by": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^(FCT|ASM)-[0-9]{4}$"
+      },
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Non-empty list of Facts (FCT-xxxx) and/or Assumptions (ASM-xxxx) that justify this requirement."
+    },
+    "governed_by": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^CON-[0-9]{4}$"
+      },
+      "uniqueItems": true,
+      "description": "Global or domain constraints (CON-xxxx) that bound this requirement."
+    },
+    "verified_by": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^ACR-[0-9]{4}$"
+      },
+      "uniqueItems": true,
+      "description": "Acceptance Criteria (ACR-xxxx) that test and verify this requirement."
+    },
+    "parent": {
+      "type": "string",
+      "pattern": "^REQ-[0-9]{4}$",
+      "description": "Optional parent requirement ID for hierarchical decomposition."
+    }
+  }
+}

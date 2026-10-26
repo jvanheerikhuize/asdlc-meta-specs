@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://asdlc.local/schemas/decision.schema.json",
+  "title": "Architectural / Design Decision Record (DEC)",
+  "description": "A technical design decision (ADR) chosen to satisfy specific requirements and constraints, underpinned by facts and assumptions.",
+  "allOf": [
+    {
+      "$ref": "./base-record.schema.json"
+    }
+  ],
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "title",
+    "domain",
+    "status",
+    "satisfies",
+    "underpinned_by",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^DEC-[0-9]{4}$"
+    },
+    "type": {
+      "const": "decision"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "proposed",
+        "provisional",
+        "accepted",
+        "needs_review",
+        "superseded",
+        "rejected"
+      ]
+    },
+    "satisfies": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^(REQ|CON)-[0-9]{4}$"
+      },
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Requirements and Constraints addressed by this design decision."
+    },
+    "underpinned_by": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^(FCT|ASM)-[0-9]{4}$"
+      },
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Facts and Assumptions that justify choosing this technical option over alternatives."
+    },
+    "supersedes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^DEC-[0-9]{4}$"
+      },
+      "uniqueItems": true
+    }
+  }
+}

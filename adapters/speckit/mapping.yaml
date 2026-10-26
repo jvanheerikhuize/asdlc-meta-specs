@@ -1,0 +1,23 @@
+# GitHub Spec Kit Projection Mapping Definition
+adapter: speckit
+version: "1.0.0"
+description: "Projects canonical CON, FCT, SPC, REQ, ACR, and DEC records into GitHub Spec Kit artifacts."
+
+output_root: "dist/speckit"
+
+projections:
+  constitution:
+    source_type: "constraint"
+    filter: "status == 'active'"
+    output_path_pattern: ".specify/memory/constitution.md"
+    template: "templates/constitution.md.hbs"
+
+  feature_spec:
+    source_type: "spec"
+    output_path_pattern: "specs/{{domain}}/spec.md"
+    template: "templates/spec.md.hbs"
+
+  technical_plan:
+    source_type: "spec"
+    output_path_pattern: "specs/{{domain}}/plan.md"
+    template: "templates/plan.md.hbs"

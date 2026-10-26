@@ -1,0 +1,43 @@
+# Delta Specification: {{title}}
+
+<!-- Generated from Canonical Change {{id}} targeting {{target_spec}} -->
+
+{{#if added_requirements}}
+## ADDED Requirements
+
+{{#each added_requirements}}
+### Requirement: {{this.title}}
+<!-- Canonical ID: {{this.id}} | Underpinned by: {{#each this.underpinned_by}}{{this}}{{#unless @last}}, {{/unless}}{{/each}} -->
+{{this.statement}}
+
+{{#each this.criteria}}
+#### Scenario: {{this.title}}
+{{this.scenario_body}}
+{{/each}}
+{{/each}}
+{{/if}}
+
+{{#if modified_requirements}}
+## MODIFIED Requirements
+
+{{#each modified_requirements}}
+### Requirement: {{this.title}}
+<!-- Canonical ID: {{this.id}} | Underpinned by: {{#each this.underpinned_by}}{{this}}{{#unless @last}}, {{/unless}}{{/each}} -->
+{{this.statement}}
+
+{{#each this.criteria}}
+#### Scenario: {{this.title}}
+{{this.scenario_body}}
+{{/each}}
+{{/each}}
+{{/if}}
+
+{{#if removed_requirements}}
+## REMOVED Requirements
+
+{{#each removed_requirements}}
+### Requirement: {{this.title}}
+<!-- Canonical ID: {{this.id}} -->
+- **Reason**: {{this.removal_reason}}
+{{/each}}
+{{/if}}

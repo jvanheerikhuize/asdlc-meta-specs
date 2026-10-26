@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://asdlc.local/schemas/spec-manifest.schema.json",
+  "title": "Specification & Change Manifest Schema (SPC / CHG)",
+  "description": "Composes atomic elemental records into a cohesive capability specification (SPC) or a scoped delta proposal (CHG).",
+  "allOf": [
+    {
+      "$ref": "./base-record.schema.json"
+    }
+  ],
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "title",
+    "domain",
+    "status",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^(SPC|CHG)-[0-9]{4}$"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "spec",
+        "change"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "provisional",
+        "active",
+        "needs_review",
+        "merged",
+        "archived"
+      ]
+    },
+    "composition": {
+      "type": "object",
+      "description": "Explicit inclusion list for SPC capability specifications.",
+      "properties": {
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^CON-[0-9]{4}$"
+          },
+          "uniqueItems": true
+        },
+        "requirements": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^REQ-[0-9]{4}$"
+          },
+          "uniqueItems": true
+        },
+        "criteria": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^ACR-[0-9]{4}$"
+          },
+          "uniqueItems": true
+        },
+        "decisions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^DEC-[0-9]{4}$"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "target_spec": {
+      "type": "string",
+      "pattern": "^SPC-[0-9]{4}$",
+      "description": "For CHG records: the target Specification Manifest (SPC-xxxx) modified by this delta."
+    },
+    "deltas": {
+      "type": "object",
+      "description": "For CHG records: explicit ADDED, MODIFIED, and REMOVED elemental record references.",
+      "properties": {
+        "added": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(ASM|VAL|FCT|CON|REQ|ACR|DEC)-[0-9]{4}$"
+          },
+          "uniqueItems": true
+        },
+        "modified": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(ASM|VAL|FCT|CON|REQ|ACR|DEC)-[0-9]{4}$"
+          },
+          "uniqueItems": true
+        },
+        "removed": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(ASM|VAL|FCT|CON|REQ|ACR|DEC)-[0-9]{4}$"
+          },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

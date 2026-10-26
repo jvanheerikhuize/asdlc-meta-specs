@@ -1,0 +1,33 @@
+# {{title}}
+
+<!-- Generated from Canonical Spec {{id}} (domain: {{domain}}, status: {{status}}) -->
+
+## Purpose
+
+{{purpose}}
+
+## Epistemic Readiness Summary
+
+- **Spec ID**: `{{id}}`
+- **Status**: `{{status}}`
+- **Governing Constraints**: {{#each constraints}}`{{this.id}}` ({{this.title}}){{#unless @last}}, {{/unless}}{{/each}}
+
+## Requirements
+
+{{#each requirements}}
+### Requirement: {{this.title}}
+<!-- Canonical ID: {{this.id}} | Status: {{this.status}} | Underpinned by: {{#each this.underpinned_by}}{{this}}{{#unless @last}}, {{/unless}}{{/each}} -->
+{{#if this.has_unvalidated_assumptions}}
+> [!WARNING]
+> **Provisional Requirement (`{{this.id}}`)**: Underpinned by unvalidated assumption(s): {{#each this.unvalidated_assumptions}}`{{this.id}}` ({{this.title}}, risk: {{this.risk}}){{#unless @last}}, {{/unless}}{{/each}}.
+{{/if}}
+
+{{this.statement}}
+
+{{#each this.criteria}}
+#### Scenario: {{this.title}}
+<!-- Canonical ID: {{this.id}} -->
+{{this.scenario_body}}
+
+{{/each}}
+{{/each}}

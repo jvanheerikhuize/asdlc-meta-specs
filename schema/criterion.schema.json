@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://asdlc.local/schemas/criterion.schema.json",
+  "title": "Acceptance Criterion Record (ACR)",
+  "description": "A testable scenario or verification condition bound to one or more requirements.",
+  "allOf": [
+    {
+      "$ref": "./base-record.schema.json"
+    }
+  ],
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "title",
+    "domain",
+    "status",
+    "format",
+    "verifies",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^ACR-[0-9]{4}$"
+    },
+    "type": {
+      "const": "criterion"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "provisional",
+        "active",
+        "needs_review",
+        "deprecated"
+      ]
+    },
+    "format": {
+      "type": "string",
+      "enum": [
+        "gherkin",
+        "invariant",
+        "metric_threshold",
+        "checklist"
+      ],
+      "description": "Structure used in the Markdown body (e.g., Given/When/Then Gherkin scenario vs quantitative threshold)."
+    },
+    "verifies": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^REQ-[0-9]{4}$"
+      },
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Requirements (REQ-xxxx) verified by this acceptance criterion."
+    },
+    "underpinned_by": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^(FCT|ASM)-[0-9]{4}$"
+      },
+      "uniqueItems": true,
+      "description": "Specific Facts or Assumptions that define the boundary values/thresholds in this scenario."
+    }
+  }
+}

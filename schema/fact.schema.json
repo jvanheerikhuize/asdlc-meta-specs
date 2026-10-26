@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://asdlc.local/schemas/fact.schema.json",
+  "title": "Fact Record (FCT)",
+  "description": "A verified domain truth, empirical measurement, external system invariant, or validated assumption.",
+  "allOf": [
+    {
+      "$ref": "./base-record.schema.json"
+    }
+  ],
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "title",
+    "domain",
+    "status",
+    "source",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^FCT-[0-9]{4}$"
+    },
+    "type": {
+      "const": "fact"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "superseded",
+        "deprecated"
+      ]
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "empirical_validation",
+        "domain_invariant",
+        "external_contract",
+        "regulatory_mandate",
+        "hardware_limit",
+        "business_policy"
+      ],
+      "description": "Origin category of the verified fact."
+    },
+    "promoted_from": {
+      "type": "string",
+      "pattern": "^ASM-[0-9]{4}$",
+      "description": "Optional ID of the Assumption record (ASM-xxxx) from which this Fact was promoted."
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^VAL-[0-9]{4}$"
+      },
+      "uniqueItems": true,
+      "description": "Validation records (VAL-xxxx) providing empirical proof for this fact."
+    },
+    "supersedes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^FCT-[0-9]{4}$"
+      },
+      "uniqueItems": true,
+      "description": "Older Fact records superseded by this updated fact."
+    }
+  }
+}

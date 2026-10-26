@@ -1,0 +1,43 @@
+# Feature Specification: {{title}}
+
+<!-- Generated from Canonical Spec {{id}} (domain: {{domain}}) -->
+
+## 1. Overview & Purpose
+
+{{purpose}}
+
+## 2. Epistemic Foundation (Facts & Assumptions)
+
+### Verified Facts Underpinning This Spec
+{{#each facts}}
+- **`{{this.id}}` — {{this.title}}**: {{this.statement}}
+{{/each}}
+
+### Active Assumptions (Pending Validation)
+{{#if assumptions}}
+{{#each assumptions}}
+- **`{{this.id}}` — {{this.title}}** *(Confidence: {{this.confidence}}, Risk: {{this.risk}})*: {{this.statement}}
+  - *Validation Plan*: {{this.validation_plan}}
+{{/each}}
+{{else}}
+*All assumptions for this specification have been validated and promoted to facts.*
+{{/if}}
+
+## 3. Requirements
+
+{{#each requirements}}
+### {{this.id}}: {{this.title}} (`{{this.normative}}` | Status: `{{this.status}}`)
+- **Underpinned By**: {{#each this.underpinned_by}}`{{this}}`{{#unless @last}}, {{/unless}}{{/each}}
+- **Governed By**: {{#each this.governed_by}}`{{this}}`{{#unless @last}}, {{/unless}}{{/each}}
+
+{{this.statement}}
+
+{{/each}}
+
+## 4. Acceptance Scenarios
+
+{{#each criteria}}
+### {{this.id}}: {{this.title}} (Verifies: {{#each this.verifies}}`{{this}}`{{#unless @last}}, {{/unless}}{{/each}})
+{{this.scenario_body}}
+
+{{/each}}

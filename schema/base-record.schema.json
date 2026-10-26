@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://asdlc.local/schemas/base-record.schema.json",
+  "title": "Base Elemental Record Envelope",
+  "description": "Shared metadata envelope for all epistemic, normative, and composition records.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "title",
+    "domain",
+    "status",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^(ASM|VAL|FCT|CON|REQ|ACR|DEC|SPC|CHG)-[0-9]{4}$",
+      "description": "Unique canonical identifier for the elemental record."
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "assumption",
+        "validation",
+        "fact",
+        "constraint",
+        "requirement",
+        "criterion",
+        "decision",
+        "spec",
+        "change"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 140,
+      "description": "Concise human-readable summary of the record."
+    },
+    "domain": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Capability or bounded context slug (e.g., 'auth', 'payments', 'global')."
+    },
+    "status": {
+      "type": "string",
+      "description": "Lifecycle state of the record (further constrained by sub-schemas)."
+    },
+    "owners": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Human or agent owners responsible for maintaining this record."
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9-]+$"
+      },
+      "uniqueItems": true
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO 8601 creation date (YYYY-MM-DD)."
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO 8601 last modification date (YYYY-MM-DD)."
+    }
+  }
+}

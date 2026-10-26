@@ -1,0 +1,83 @@
+# ASDLC Meta-Specification Repository Configuration
+version: "1.0.0"
+
+project:
+  name: "asdlc-meta-specs"
+  description: "Standard-agnostic epistemic specification repository"
+  default_normative_syntax: "RFC2119+EARS"
+  default_criteria_format: "gherkin"
+
+# Canonical Elemental Record Prefixes & Storage Paths
+records:
+  id_format: "^(ASM|VAL|FCT|CON|REQ|ACR|DEC|SPC|CHG)-[0-9]{4}$"
+  types:
+    assumption:
+      prefix: "ASM"
+      layer: "epistemic"
+      directory: "records/epistemic/assumptions"
+      schema: "schema/assumption.schema.json"
+    validation:
+      prefix: "VAL"
+      layer: "epistemic"
+      directory: "records/epistemic/validations"
+      schema: "schema/validation.schema.json"
+    fact:
+      prefix: "FCT"
+      layer: "epistemic"
+      directory: "records/epistemic/facts"
+      schema: "schema/fact.schema.json"
+    constraint:
+      prefix: "CON"
+      layer: "normative"
+      directory: "records/normative/constraints"
+      schema: "schema/constraint.schema.json"
+    requirement:
+      prefix: "REQ"
+      layer: "normative"
+      directory: "records/normative/requirements"
+      schema: "schema/requirement.schema.json"
+    criterion:
+      prefix: "ACR"
+      layer: "normative"
+      directory: "records/normative/criteria"
+      schema: "schema/criterion.schema.json"
+    decision:
+      prefix: "DEC"
+      layer: "normative"
+      directory: "records/normative/decisions"
+      schema: "schema/decision.schema.json"
+    spec:
+      prefix: "SPC"
+      layer: "composition"
+      directory: "specs/capabilities"
+      schema: "schema/spec-manifest.schema.json"
+    change:
+      prefix: "CHG"
+      layer: "composition"
+      directory: "specs/changes"
+      schema: "schema/spec-manifest.schema.json"
+
+# Epistemic Governance & Quality Gates
+epistemic_rules:
+  require_underpinning_for_requirements: true
+  require_criteria_for_active_requirements: true
+  auto_flag_stale_on_assumption_promotion: true
+  auto_flag_broken_on_assumption_invalidation: true
+  readiness_gates:
+    release_ready:
+      allow_unvalidated_high_risk_assumptions: false
+      min_fact_coverage_ratio: 1.0
+    provisional:
+      allow_unvalidated_high_risk_assumptions: true
+      min_fact_coverage_ratio: 0.0
+
+# Target Standard Adapters
+adapters:
+  openspec:
+    enabled: true
+    config_path: "adapters/openspec/mapping.yaml"
+    output_dir: "dist/openspec"
+  speckit:
+    enabled: true
+    config_path: "adapters/speckit/mapping.yaml"
+    output_dir: "dist/speckit"

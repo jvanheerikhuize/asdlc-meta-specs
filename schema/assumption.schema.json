@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://asdlc.local/schemas/assumption.schema.json",
+  "title": "Assumption Record (ASM)",
+  "description": "An unverified hypothesis, belief, or provisional premise underpinning normative spec elements.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "title",
+    "domain",
+    "status",
+    "confidence",
+    "risk",
+    "validation_plan",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^ASM-[0-9]{4}$"
+    },
+    "type": {
+      "const": "assumption"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "unvalidated",
+        "validating",
+        "promoted",
+        "invalidated",
+        "retired"
+      ],
+      "description": "Epistemic lifecycle status. When 'promoted', promoted_to must reference at least one FCT record."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Estimated probability (0.0 to 1.0) that this assumption holds true prior to validation."
+    },
+    "risk": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "description": "Severity of impact on dependent requirements/architecture if this assumption is false."
+    },
+    "validation_plan": {
+      "type": "string",
+      "minLength": 10,
+      "description": "Actionable method to test or verify this assumption (e.g., spike, benchmark, stakeholder sign-off)."
+    },
+    "validated_by": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^VAL-[0-9]{4}$"
+      },
+      "uniqueItems": true,
+      "description": "Validation records (VAL-xxxx) that tested this assumption."
+    },
+    "promoted_to": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^FCT-[0-9]{4}$"
+      },
+      "uniqueItems": true,
+      "description": "Fact records (FCT-xxxx) minted when this assumption was validated or refined."
+    }
+  },
+  "allOf": [
+    {
+      "$ref": "./base-record.schema.json"
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "promoted"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "validated_by",
+          "promoted_to"
+        ],
+        "properties": {
+          "promoted_to": {
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ]
+}

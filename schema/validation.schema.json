@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://asdlc.local/schemas/validation.schema.json",
+  "title": "Validation / Evidence Record (VAL)",
+  "description": "Empirical test, spike, benchmark, user interview, or external citation that evaluates an assumption or establishes a fact.",
+  "allOf": [
+    {
+      "$ref": "./base-record.schema.json"
+    }
+  ],
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "title",
+    "domain",
+    "status",
+    "method",
+    "outcome",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^VAL-[0-9]{4}$"
+    },
+    "type": {
+      "const": "validation"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "planned",
+        "in_progress",
+        "completed",
+        "aborted"
+      ]
+    },
+    "method": {
+      "type": "string",
+      "enum": [
+        "benchmark",
+        "prototype_spike",
+        "user_research",
+        "documentation_audit",
+        "production_telemetry",
+        "formal_proof",
+        "stakeholder_signoff"
+      ],
+      "description": "Type of validation activity conducted."
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "confirmed",
+        "refined",
+        "refuted"
+      ],
+      "description": "Result of the validation: 'confirmed' or 'refined' promotes ASM to FCT; 'refuted' invalidates ASM."
+    },
+    "tests": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^ASM-[0-9]{4}$"
+      },
+      "uniqueItems": true,
+      "description": "Assumptions evaluated by this validation."
+    },
+    "establishes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^FCT-[0-9]{4}$"
+      },
+      "uniqueItems": true,
+      "description": "Facts established or proven by this validation."
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Links or paths to raw benchmark logs, scripts, PRs, or external references."
+    }
+  }
+}

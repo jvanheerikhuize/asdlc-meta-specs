@@ -1,0 +1,20 @@
+# Project Constitution
+
+<!-- Generated from Canonical Constraints (CON-xxxx) and Verified Facts (FCT-xxxx) -->
+
+## Core Principles & Non-Negotiable Guardrails
+
+{{#each constraints}}
+### {{this.id}}: {{this.title}}
+- **Scope**: `{{this.scope}}` | **Enforcement**: `{{this.enforcement}}`
+- **Underpinned By**: {{#each this.underpinned_by}}`{{this}}`{{#unless @last}}, {{/unless}}{{/each}}
+
+{{this.statement}}
+
+{{/each}}
+
+## Verified Domain Invariants (Fact Base)
+
+{{#each facts}}
+- **`{{this.id}}` ({{this.title}})**: {{this.summary}} *(Source: `{{this.source}}`{{#if this.promoted_from}}, Promoted from `{{this.promoted_from}}`{{/if}})*
+{{/each}}
