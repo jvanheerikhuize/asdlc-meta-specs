@@ -1,26 +1,50 @@
 # ASDLC Meta-Specs
 
-A **standard-agnostic, epistemic specification repository** designed for Agentic Software Development Life Cycles (ASDLC) and Specification-Driven Development (SDD).
+[![validate-meta-specs](https://github.com/jvanheerikhuize/asdlc-meta-specs/actions/workflows/validate.yml/badge.svg)](https://github.com/jvanheerikhuize/asdlc-meta-specs/actions/workflows/validate.yml)
 
-Instead of authoring monolithic, static specification files that silently mix verified truths with unverified guesswork, this repository breaks specifications down into **atomic, linkable elemental records** governed by an explicit **epistemic feedback loop**:
+A **standard-agnostic, epistemic specification repository** for Agentic Software Development Life Cycles (ASDLC) and Specification-Driven Development (SDD).
 
-$$\text{Assumptions (ASM)} \xrightarrow{\text{Validation (VAL)}} \text{Facts (FCT)} \xrightarrow{\text{Underpins}} \text{Requirements (REQ) \& Criteria (ACR)} \xrightarrow{\text{Composes}} \text{Specifications (SPC)}$$
+Instead of monolithic spec documents that silently mix verified truths with guesswork, this repository breaks specifications down into **atomic, linkable elemental records** governed by an explicit **epistemic feedback loop**:
+
+```mermaid
+flowchart LR
+    ASM["Assumptions (ASM)"] -->|"validated by"| VAL["Validations (VAL)"]
+    VAL -->|"promote to"| FCT["Facts (FCT)"]
+    FCT -->|"underpin"| REQ["Requirements (REQ) and Criteria (ACR)"]
+    ASM -.->|"provisionally underpin"| REQ
+    REQ -->|"compose"| SPC["Specifications (SPC)"]
+    SPC -->|"project to"| STD["OpenSpec / Spec Kit / ..."]
+```
+
+> **Better facts → better requirements → better specs.**
 
 ---
 
 ## Core Philosophy
 
 1. **Epistemic Transparency (Facts vs. Assumptions)**
-   Every normative element—whether a global Constraint (`CON`), a Requirement (`REQ`), an Acceptance Criterion (`ACR`), or an Architectural Decision (`DEC`)—must explicitly link to the **Facts (`FCT`)** and/or **Assumptions (`ASM`)** that underpin it.
-   - Requirements underpinned by unvalidated assumptions are automatically treated as **provisional**.
-   - Validating an assumption (`VAL`) promotes it to a new **Fact (`FCT`)** with immutable lineage (`promoted_from`), triggering a review of downstream requirements to sharpen the specification.
-   - Invalidating an assumption immediately flags all dependent requirements and decisions as **stale/broken**.
+   Every normative element — Constraint (`CON`), Requirement (`REQ`), Acceptance Criterion (`ACR`), or Decision (`DEC`) — links to the **Facts (`FCT`)** and/or **Assumptions (`ASM`)** that underpin it. The validator enforces that:
+   - records underpinned by unvalidated assumptions cannot be `active` (they must be **provisional**);
+   - records underpinned by an invalidated assumption or deprecated fact must be **broken** / **needs_review**;
+   - records still pointing at a *promoted* assumption are flagged for review against the resulting fact.
 
 2. **Atomic Elemental Records**
-   Each record lives in its own Markdown file with strict YAML frontmatter (`records/`). This guarantees clean Git diffs, zero merge conflicts on unrelated requirements, deterministic ID addressing, and effortless parsing by both AI agents and future capture UIs/CLIs.
+   Each record is one Markdown file with strict YAML frontmatter in `records/`. This gives clean Git diffs, no merge conflicts between unrelated requirements, stable ID addressing, and easy parsing by AI agents and future capture UIs.
 
 3. **Standard-Agnostic Projections**
-   External SDD frameworks—such as **OpenSpec**, **GitHub Spec Kit**, EARS, Gherkin, and ADRs—are treated as **target projections** (`adapters/` $\rightarrow$ `dist/`) compiled from the canonical elemental graph.
+   External SDD formats — **OpenSpec**, **GitHub Spec Kit**, EARS, Gherkin, ADRs — are treated as **target projections** (`adapters/` → `dist/`) of the canonical record graph.
+
+---
+
+## Quickstart
+
+```bash
+pip install -r tools/requirements.txt
+python tools/validate.py            # schema, links, reciprocity, epistemic consistency, readiness
+python tools/validate.py --strict   # also fail on warnings
+```
+
+**Adding a record:** copy an existing record of the same type, take the next free ID (`REQ-0003`), name the file `<ID>-<kebab-slug>.md`, fill in the frontmatter, and run the validator. Dates must be quoted strings (`created_at: "2026-10-26"`).
 
 ---
 
@@ -28,38 +52,28 @@ $$\text{Assumptions (ASM)} \xrightarrow{\text{Validation (VAL)}} \text{Facts (FC
 
 ```text
 asdlc-meta-specs/
-├── meta-spec.config.yaml              # Global configuration, ID prefixes, and epistemic gate rules
-├── schema/                            # JSON Schemas (Draft 2020-12) for YAML frontmatter validation
-│   ├── base-record.schema.json
-│   ├── assumption.schema.json
-│   ├── validation.schema.json
-│   ├── fact.schema.json
-│   ├── constraint.schema.json
-│   ├── requirement.schema.json
-│   ├── criterion.schema.json
-│   ├── decision.schema.json
-│   └── spec-manifest.schema.json
-├── records/                           # Canonical Atomic Store (Source of Truth)
+├── meta-spec.config.yaml              # ID prefixes, directories, schemas, epistemic rules, adapters
+├── schema/                            # JSON Schemas (Draft 2020-12) for record frontmatter
+├── records/                           # Canonical atomic store (source of truth)
 │   ├── epistemic/
-│   │   ├── assumptions/               # ASM-xxxx: Unverified hypotheses & provisional premises
-│   │   ├── validations/               # VAL-xxxx: Spikes, benchmarks, interviews, & evidence
-│   │   └── facts/                     # FCT-xxxx: Verified truths & promoted assumptions
+│   │   ├── assumptions/               # ASM-xxxx: unverified hypotheses
+│   │   ├── validations/               # VAL-xxxx: spikes, benchmarks, interviews, evidence
+│   │   └── facts/                     # FCT-xxxx: verified truths & promoted assumptions
 │   └── normative/
-│       ├── constraints/               # CON-xxxx: Global project guardrails & invariants
-│       ├── requirements/              # REQ-xxxx: Atomic functional & non-functional requirements
-│       ├── criteria/                  # ACR-xxxx: Testable acceptance scenarios (Gherkin / assertions)
-│       └── decisions/                 # DEC-xxxx: Architectural & technical design choices
-├── specs/                             # Specification Assemblies & Scoped Deltas
-│   ├── capabilities/                  # SPC-xxxx: Feature/capability manifests composing elemental records
-│   └── changes/                       # CHG-xxxx: Delta proposals (ADDED / MODIFIED / REMOVED records)
-├── adapters/                          # Standard Mapping Rules & Templates
-│   ├── openspec/                      # Projection config & templates for OpenSpec
-│   └── speckit/                       # Projection config & templates for GitHub Spec Kit
-├── dist/                              # Projected standard outputs (generated artifacts)
-└── docs/                              # Architecture & Governance Guides
-    ├── architecture.md                # Meta-model graph, record taxonomy, and file conventions
-    ├── epistemic-lifecycle.md         # Assumption promotion, invalidation cascades, and readiness scoring
-    └── standard-mappings.md           # Mapping matrix for OpenSpec, Spec Kit, EARS, Gherkin, and ADR
+│       ├── constraints/               # CON-xxxx: project guardrails & invariants
+│       ├── requirements/              # REQ-xxxx: atomic functional & non-functional requirements
+│       ├── criteria/                  # ACR-xxxx: testable acceptance scenarios
+│       └── decisions/                 # DEC-xxxx: architectural & design decisions
+├── specs/
+│   ├── capabilities/                  # SPC-xxxx: capability manifests composing records
+│   └── changes/                       # CHG-xxxx: delta proposals (added / modified / removed)
+├── adapters/                          # Mapping rules & templates per target standard
+│   ├── openspec/
+│   └── speckit/
+├── dist/                              # Projected standard outputs (currently hand-written samples)
+├── tools/                             # validate.py + requirements.txt
+├── .github/workflows/validate.yml     # CI: runs the validator on every push / PR
+└── docs/                              # Architecture, lifecycle & mapping guides
 ```
 
 ---
@@ -68,20 +82,32 @@ asdlc-meta-specs/
 
 | Prefix | Layer | Type | Description |
 | :--- | :--- | :--- | :--- |
-| **`ASM`** | Epistemic | `assumption` | Unverified belief or hypothesis with explicit `confidence`, `risk`, and `validation_plan`. |
+| **`ASM`** | Epistemic | `assumption` | Unverified belief with explicit `confidence`, `risk`, and `validation_plan`. |
 | **`VAL`** | Epistemic | `validation` | Experiment, benchmark, test, or citation that `tests` an assumption or `establishes` a fact. |
-| **`FCT`** | Epistemic | `fact` | Verified truth or domain invariant (native or `promoted_from` an `ASM` via a `VAL`). |
-| **`CON`** | Normative | `constraint` | Global project principle, compliance boundary, or architectural invariant. |
-| **`REQ`** | Normative | `requirement` | Atomic normative statement (`MUST`/`SHALL`/`SHOULD`) underpinned by facts/assumptions. |
-| **`ACR`** | Normative | `criterion` | Testable acceptance scenario (`GIVEN`/`WHEN`/`THEN` or invariant assertion) verifying a `REQ`. |
-| **`DEC`** | Normative | `decision` | Technical design choice or Architecture Decision Record satisfying `REQ`s and `CON`s. |
-| **`SPC`** | Composition | `spec` | Capability or feature specification assembling `CON`, `REQ`, `ACR`, and `DEC` records. |
-| **`CHG`** | Composition | `change` | Delta manifest proposing additions, modifications, or removals across elemental records. |
+| **`FCT`** | Epistemic | `fact` | Verified truth or invariant (native, or `promoted_from` an `ASM` via a `VAL`). |
+| **`CON`** | Normative | `constraint` | Project principle, compliance boundary, or architectural invariant. |
+| **`REQ`** | Normative | `requirement` | Atomic normative statement (`MUST`/`SHALL`/`SHOULD`/`MAY`). |
+| **`ACR`** | Normative | `criterion` | Testable scenario (`GIVEN`/`WHEN`/`THEN` or assertion) verifying a `REQ`. |
+| **`DEC`** | Normative | `decision` | Design choice / ADR satisfying `REQ`s and `CON`s. |
+| **`SPC`** | Composition | `spec` | Capability specification assembling `CON`, `REQ`, `ACR`, `DEC` records. |
+| **`CHG`** | Composition | `change` | Delta proposal adding, modifying, or removing records. |
+
+---
+
+## Project Status
+
+| Area | Status |
+| :--- | :--- |
+| Record model, schemas, folder architecture | ✅ In place |
+| Reference example (auth capability) | ✅ In place |
+| Validator + CI | ✅ In place |
+| Projection compiler (`adapters/` → `dist/`) | 🔜 Planned — `dist/` currently holds hand-written samples of the intended output |
+| Capture interfaces (CLI / UI) | 🔜 Planned |
 
 ---
 
 ## Documentation
 
-- **[Architecture & Data Model](docs/architecture.md)**: Deep dive into the canonical record graph, YAML frontmatter conventions, and bidirectional traceability.
-- **[Epistemic Lifecycle & Promotion Guide](docs/epistemic-lifecycle.md)**: Step-by-step workflow for capturing assumptions, running validations, promoting to facts, and cascading updates to requirements.
-- **[Standard Mappings Reference](docs/standard-mappings.md)**: How the canonical records project into **OpenSpec**, **GitHub Spec Kit**, EARS, and Gherkin.
+- **[Architecture & Data Model](docs/architecture.md)** — record graph, frontmatter conventions, traceability rules.
+- **[Epistemic Lifecycle](docs/epistemic-lifecycle.md)** — capturing assumptions, validating, promoting to facts, cascading updates.
+- **[Standard Mappings](docs/standard-mappings.md)** — how records project into OpenSpec, Spec Kit, EARS, and Gherkin.

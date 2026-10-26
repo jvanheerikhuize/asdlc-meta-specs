@@ -5,6 +5,12 @@ description: "Projects canonical SPC, REQ, ACR, DEC, and CHG records into the Op
 
 output_root: "dist/openspec"
 
+# Variables available in output_path_pattern / templates.
+# Frontmatter fields are referenced by name; the following are DERIVED by the compiler:
+derived_variables:
+  file_slug: "Record filename without the ID prefix and extension (CHG-0001-add-revocation-denylist.md -> add-revocation-denylist)"
+  "section:<Heading>": "Markdown body content under '## <Heading>' (e.g. section:Purpose, section:Statement)"
+
 projections:
   capability_spec:
     source_type: "spec"
@@ -13,19 +19,21 @@ projections:
     include_epistemic_annotations: true
     mappings:
       header_title: "title"
-      purpose_section: "body.purpose"
+      purpose_section: "section:Purpose"
       requirements:
         source: "composition.requirements"
         resolve_type: "requirement"
         heading_prefix: "### Requirement:"
+        statement: "section:Statement"
         nested_scenarios:
           source: "verified_by"
           resolve_type: "criterion"
           heading_prefix: "#### Scenario:"
+          body: "section:Scenario*"
 
   change_proposal:
     source_type: "change"
-    output_path_pattern: "changes/{{slug}}/specs/{{domain}}/spec.md"
+    output_path_pattern: "changes/{{file_slug}}/specs/{{domain}}/spec.md"
     template: "templates/delta-spec.md.hbs"
     mappings:
       added_requirements: "deltas.added[type=requirement]"

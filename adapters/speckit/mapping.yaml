@@ -5,6 +5,12 @@ description: "Projects canonical CON, FCT, SPC, REQ, ACR, and DEC records into G
 
 output_root: "dist/speckit"
 
+# Variables available in output_path_pattern / templates.
+# Frontmatter fields are referenced by name; the following are DERIVED by the compiler:
+derived_variables:
+  feature_number: "Numeric part of the SPC id, zero-padded to 3 digits (SPC-0001 -> 001), matching Spec Kit's specs/NNN-feature/ convention"
+  "section:<Heading>": "Markdown body content under '## <Heading>'"
+
 projections:
   constitution:
     source_type: "constraint"
@@ -14,10 +20,10 @@ projections:
 
   feature_spec:
     source_type: "spec"
-    output_path_pattern: "specs/{{domain}}/spec.md"
+    output_path_pattern: "specs/{{feature_number}}-{{domain}}/spec.md"
     template: "templates/spec.md.hbs"
 
   technical_plan:
     source_type: "spec"
-    output_path_pattern: "specs/{{domain}}/plan.md"
+    output_path_pattern: "specs/{{feature_number}}-{{domain}}/plan.md"
     template: "templates/plan.md.hbs"

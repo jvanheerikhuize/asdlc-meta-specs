@@ -13,8 +13,8 @@ tags:
   - auth
   - revocation
   - compliance
-created_at: 2026-10-26
-updated_at: 2026-10-26
+created_at: "2026-10-26"
+updated_at: "2026-10-26"
 ---
 
 ## Statement

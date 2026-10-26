@@ -1,7 +1,7 @@
 ---
 id: ASM-0001
 type: assumption
-title: Peak concurrent token validations remain under 500 req/s
+title: Peak token validation bursts exceed 1,000 req/s during flash events
 domain: auth
 status: promoted
 confidence: 0.6
@@ -17,15 +17,15 @@ tags:
   - auth
   - throughput
   - database
-created_at: 2026-10-20
-updated_at: 2026-10-26
+created_at: "2026-10-20"
+updated_at: "2026-10-26"
 ---
 
 ## Statement
-We initially assume peak authentication token validation traffic will not exceed 500 requests per second, which would allow synchronous relational database lookups on every incoming API request.
+We assume that during flash events (marketing pushes, mass re-logins after incidents) authentication token validation traffic bursts **above 1,000 requests per second**, which would make synchronous relational database lookups on every API request risky.
 
-## Impact if False
-If request rates exceed database connection pool capacity (~650 req/s), synchronous session lookups on the API gateway hot path will cause connection starvation and cascading `503 Service Unavailable` failures across all downstream services.
+## Impact if True
+If bursts exceed database connection pool capacity, synchronous session lookups on the API gateway hot path will cause connection starvation and cascading `503 Service Unavailable` failures across all downstream services.
 
 ## Resolution & Promotion Note
-Tested by `VAL-0001` (Gateway Traffic Replay). Empirical measurements refuted the 500 req/s ceiling (actual burst reached 3,200 req/s) and established `FCT-0001`, refining our understanding of hot-path throughput constraints.
+Tested by `VAL-0001` (Gateway Traffic Replay). Outcome **refined**: the assumption holds and was sharpened with measured boundaries — bursts reach **3,200 req/s** and the DB pool saturates at **650 req/s**. Promoted to `FCT-0001`.

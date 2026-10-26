@@ -15,8 +15,8 @@ tags:
   - auth
   - adr
   - cryptography
-created_at: 2026-10-26
-updated_at: 2026-10-26
+created_at: "2026-10-26"
+updated_at: "2026-10-26"
 ---
 
 ## Context

@@ -6,6 +6,20 @@
   "allOf": [
     {
       "$ref": "./base-record.schema.json"
+    },
+    {
+      "if": { "properties": { "type": { "const": "spec" } } },
+      "then": {
+        "required": ["composition"],
+        "properties": { "id": { "pattern": "^SPC-[0-9]{4}$" } }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "const": "change" } } },
+      "then": {
+        "required": ["target_spec", "deltas"],
+        "properties": { "id": { "pattern": "^CHG-[0-9]{4}$" } }
+      }
     }
   ],
   "type": "object",

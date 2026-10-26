@@ -15,8 +15,8 @@ tags:
   - auth
   - revocation
   - bdd
-created_at: 2026-10-26
-updated_at: 2026-10-26
+created_at: "2026-10-26"
+updated_at: "2026-10-26"
 ---
 
 ## Scenario: Revoked token blocked at edge gateway

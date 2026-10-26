@@ -1,6 +1,6 @@
-# Projected / compiled standard outputs (tracked by default for reference samples)
+# Projected standard outputs are committed as reference samples.
+# Negation needed because many global gitignores exclude dist/.
 !dist/
-
 
 # OS & Editor files
 .DS_Store
