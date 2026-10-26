@@ -86,7 +86,7 @@ jobs:
             echo "| :--- | :--- |"
             jq -r '.files[] | "| `\(split("/")[-1] | split("-")[0:2] | join("-"))` | `\(.)` |"' /tmp/result.json
             echo
-            echo "**Approve = review & merge.** Refine wording, status or links by editing the files in this PR before merging."
+            echo "**To approve:** submit a review with *Approve* (1 collaborator approval required), then merge. Refine wording, status or links by editing the files in this PR first — the approval must come after the last push."
             echo "To change the capture itself, edit issue #$ISSUE — this PR is regenerated automatically."
             echo
             echo "Closes #$ISSUE"
