@@ -288,8 +288,7 @@ const CAPTURES = {
       meta.evidence = yamlStr(v.evidence.replace(/\s+/g, " ").trim());
       const asm = byId[v.promoted_from];
       return { status: "active", meta, sections: { Statement: v.statement },
-        followUp: asm && h("p", { class: "note" }, "Also edit ", h("a", { href: gh(`edit/main/${asm.path}`), target: "_blank", rel: "noopener" }, asm.id),
-          " in the same pull request: set ", h("code", {}, "status: validated"), " and add ", h("code", {}, `promoted_to: ${id}`), ".") };
+        followUp: asm && promotionNote(asm, id) };
     },
   },
   spec: {
@@ -308,6 +307,18 @@ const CAPTURES = {
       sections: { Purpose: v.purpose } }),
   },
 };
+
+/** Promoting an assumption touches more than one file; list every edit the check will ask for. */
+function promotionNote(asm, factId) {
+  const edit = (r) => h("a", { href: gh(`edit/main/${r.path}`), target: "_blank", rel: "noopener" }, r.id);
+  const reqs = (usedBy[asm.id] || []).filter((x) => prefix(x) === "REQ").map((x) => byId[x]);
+  return h("div", { class: "note" },
+    h("p", {}, "In the same pull request, also edit:"),
+    h("ul", {},
+      h("li", {}, edit(asm), ": set ", h("code", {}, "status: validated"), " and add ", h("code", {}, `promoted_to: ${factId}`)),
+      reqs.map((r) => h("li", {}, edit(r), ": in ", h("code", {}, "because"), ", replace ", h("code", {}, asm.id), " with ", h("code", {}, factId),
+        r.status === "provisional" ? ". If it now rests only on facts, it can become active." : ""))));
+}
 
 function capture(kind) {
   const def = CAPTURES[kind];
