@@ -10,6 +10,7 @@ ears_pattern: ubiquitous
 priority: p1
 underpinned_by:
 - ASM-0003
+- ASM-0004
 verified_by:
 - ACR-0003
 - ACR-0004
