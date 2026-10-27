@@ -262,8 +262,8 @@ class IngestTests(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertIsNone(out["fact"])
         self.assertEqual(out["validation"], exp_val)
-        # ASM-0002 (invalidated) plus both REQ-0002 and ACR-0002 (broken) are updated
-        self.assertEqual(len(out["updated_files"]), 3)
+        # ASM-0002 (invalidated) plus REQ-0002, ACR-0002, and DEC-0003 (broken) are updated
+        self.assertEqual(len(out["updated_files"]), 4)
         self.assertValid()
 
     def test_decision_capture_from_issue(self):
@@ -300,7 +300,7 @@ class IngestTests(unittest.TestCase):
             "### Blocks release until answered? (optional)\n\n"
             "true\n\n"
             "### Domain (optional)\n\n"
-            "auth\n"
+            "epistemic-graph\n"
         )
         code, out = ingest(self.root, "--issue-body-file", issue, "--issue-title", "[capture:question] Key rotation cache expiry behavior")
         self.assertEqual(code, 0, out)
@@ -319,10 +319,10 @@ class IngestTests(unittest.TestCase):
         self.assertValid()
 
     def test_tech_stack_leakage_warning_in_strict_mode(self):
-        req_file = self.root / "records/normative/requirements/REQ-0001-stateless-token-verification.md"
+        req_file = self.root / "records/normative/requirements/REQ-0001-atomic-graph-validation-and-epistemic-gating.md"
         text = req_file.read_text(encoding="utf-8")
         req_file.write_text(
-            text.replace("## Statement\n", "## Statement\nThe gateway MUST query PostgreSQL for every JWT token.\n"),
+            text.replace("## Statement\n", "## Statement\nThe validator MUST query PostgreSQL for every JWT token.\n"),
             encoding="utf-8",
         )
         v = validate(self.root)
@@ -350,12 +350,12 @@ class IndexTests(unittest.TestCase):
         p = subprocess.run([PY, str(REPO / "tools/build_index.py"), "--out", str(out)], capture_output=True, text=True)
         self.assertEqual(p.returncode, 0, p.stderr)
         idx = json.loads(out.read_text())
-        self.assertGreaterEqual(len(idx["records"]), 12)
+        self.assertGreaterEqual(len(idx["records"]), 27)
         self.assertTrue(idx["project"]["github"])
         req = next(r for r in idx["records"] if r["id"] == "REQ-0001")
         self.assertIn("Statement", req["sections"])
         val = next(r for r in idx["records"] if r["id"] == "VAL-0001")
-        self.assertEqual(val["artifacts"], ["benchmarks/2026-10-24-gateway-replay-results.json"])
+        self.assertEqual(val["artifacts"], ["tests/test_ingest.py"])
 
 
 class ProjectionTests(unittest.TestCase):
@@ -368,11 +368,11 @@ class ProjectionTests(unittest.TestCase):
             )
             self.assertEqual(p.returncode, 0, p.stderr)
             expected_files = [
-                out_root / "dist/openspec/specs/auth/spec.md",
-                out_root / "dist/openspec/changes/add-revocation-denylist/specs/auth/spec.md",
+                out_root / "dist/openspec/specs/asdlc-core/spec.md",
+                out_root / "dist/openspec/changes/add-open-question-epistemic-gate/specs/asdlc-core/spec.md",
                 out_root / "dist/speckit/.specify/memory/constitution.md",
-                out_root / "dist/speckit/specs/001-auth/spec.md",
-                out_root / "dist/speckit/specs/001-auth/plan.md",
+                out_root / "dist/speckit/specs/001-asdlc-core/spec.md",
+                out_root / "dist/speckit/specs/001-asdlc-core/plan.md",
             ]
             for f in expected_files:
                 self.assertTrue(f.exists(), f"Missing projected file: {f}")
@@ -417,7 +417,7 @@ class ProjectionTests(unittest.TestCase):
                 capture_output=True, text=True,
             )
             self.assertEqual(p.returncode, 0, p.stderr)
-            plan_txt = (out_root / "dist/speckit/specs/001-auth/plan.md").read_text(encoding="utf-8")
+            plan_txt = (out_root / "dist/speckit/specs/001-asdlc-core/plan.md").read_text(encoding="utf-8")
             self.assertIn("## 3. Target Tech-Stack Binding (PSM)", plan_txt)
             self.assertIn("`go-edge-production`", plan_txt)
             self.assertIn("**Token Format**: Ed25519 JWT", plan_txt)

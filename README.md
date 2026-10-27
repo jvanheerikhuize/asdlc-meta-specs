@@ -166,7 +166,7 @@ Local preview: `python tools/build_index.py && python -m http.server -d site 800
 | Area | Status |
 | :--- | :--- |
 | Record model, schemas, folder architecture | ✅ In place (`10` record schemas + `5` capture schemas) |
-| Canonical records (`auth`, `global`, `general`, `onboarding`, `performance`) | ✅ In place (`22` records across all `10` elemental types) |
+| Self-hosting blueprint corpus (`asdlc-core`, `epistemic-graph`, `capture`, `projection`, `workspace`, `onboarding`, `global`) | ✅ In place (`31` canonical records across all `10` elemental types) |
 | Validator, unit tests + CI | ✅ In place (`validate.py` incl. tech-stack agnosticism checks + `23` unit tests in `tests/test_ingest.py`) |
 | Projection compiler (`adapters/` → `dist/`) | ✅ In place (`tools/project.py` with `--check` and `--stack-profile` support) |
 | Pages workspace shell (dashboard, records, prose, pending) | ✅ In place — deploy gated behind `PAGES_ENABLED` |

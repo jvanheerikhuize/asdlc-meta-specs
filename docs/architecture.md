@@ -24,17 +24,17 @@ Every elemental record is stored as an individual Markdown file (`.md`) with a s
 <directory>/<PREFIX>-<4-DIGIT-ID>-<kebab-case-slug>.md
 ```
 
-Examples from this repository:
-- `records/epistemic/assumptions/ASM-0001-token-validation-load.md`
-- `records/epistemic/validations/VAL-0001-gateway-traffic-replay.md`
-- `records/epistemic/facts/FCT-0001-burst-token-verification-rate.md`
-- `records/epistemic/questions/QST-0001-revocation-fail-open-or-fail-closed.md`
-- `records/normative/constraints/CON-0001-zero-trust-hot-path.md`
-- `records/normative/requirements/REQ-0001-stateless-token-verification.md`
-- `records/normative/criteria/ACR-0001-expired-token-rejection.md`
-- `records/normative/decisions/DEC-0001-asymmetric-stateless-access-tokens.md`
-- `specs/capabilities/SPC-0001-authentication.md`
-- `specs/changes/CHG-0001-add-revocation-denylist.md`
+Examples from this self-hosting repository:
+- `records/epistemic/assumptions/ASM-0001-atomic-record-graph-eliminates-spec-drift.md`
+- `records/epistemic/validations/VAL-0001-graph-validator-and-projection-verification.md`
+- `records/epistemic/facts/FCT-0001-deterministic-atomic-graph-validation.md`
+- `records/epistemic/questions/QST-0001-auto-rewrite-or-manual-review-on-assumption-promotion.md`
+- `records/normative/constraints/CON-0001-epistemic-grounding-and-readiness-invariant.md`
+- `records/normative/requirements/REQ-0001-atomic-graph-validation-and-epistemic-gating.md`
+- `records/normative/criteria/ACR-0001-reject-unvalidated-active-records-and-broken-links.md`
+- `records/normative/decisions/DEC-0001-atomic-markdown-records-with-yaml-frontmatter.md`
+- `specs/capabilities/SPC-0001-asdlc-meta-spec-engine.md`
+- `specs/changes/CHG-0001-add-open-question-epistemic-gate.md`
 
 ### Why Markdown + YAML Frontmatter?
 1. **Atomic Git Operations**: Adding, modifying, or promoting a single record touches a concise, isolated file—preventing merge conflicts across concurrent agents or engineers.
