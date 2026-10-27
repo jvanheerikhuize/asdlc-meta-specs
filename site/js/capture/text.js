@@ -41,7 +41,7 @@ const VAGUE = [
 ];
 
 const TECH_STACK_TERMS = [
-  "postgresql", "postgres", "mysql", "mongodb", "dynamodb", "sqlite", "redis", "kafka", "rabbitmq",
+  "sql", "nosql", "postgresql", "postgres", "mysql", "mongodb", "dynamodb", "sqlite", "redis", "kafka", "rabbitmq",
   "react", "angular", "vue", "nextjs", "express", "fastapi", "django", "spring boot", "prisma",
   "hibernate", "graphql", "grpc", "protobuf", "jwt", "jti", "ed25519", "eddsa", "hmac-sha256",
   "rsa-2048", "kubernetes", "docker", "terraform",

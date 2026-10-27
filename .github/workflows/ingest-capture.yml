@@ -65,7 +65,7 @@ jobs:
         if: steps.ingest.outputs.code == '0'
         run: |
           set +e
-          python tools/validate.py > /tmp/validate.txt 2>&1
+          python tools/validate.py --strict > /tmp/validate.txt 2>&1
           echo "code=$?" >> "$GITHUB_OUTPUT"
           cat /tmp/validate.txt
 
@@ -119,7 +119,7 @@ jobs:
               jq -r '.error' /tmp/result.json 2>/dev/null || echo "Unexpected error — see the workflow log."
             else
               echo '```'
-              grep -E '^(ERROR|RESULT)' /tmp/validate.txt | head -n 30
+              grep -E '^(ERROR|WARN|RESULT)' /tmp/validate.txt | head -n 30
               echo '```'
             fi
             echo

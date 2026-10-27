@@ -74,6 +74,8 @@ epistemic_rules:
   auto_flag_broken_on_assumption_invalidation: true
   enforce_tech_stack_agnostic_specs: true
   forbidden_tech_terms:
+    - "sql"
+    - "nosql"
     - "postgresql"
     - "postgres"
     - "mysql"
