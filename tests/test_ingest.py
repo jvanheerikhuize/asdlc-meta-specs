@@ -14,7 +14,7 @@ PY = sys.executable
 
 sys.path.insert(0, str(REPO / "tools"))
 from recordlib import load_config  # noqa: E402
-from ingest_capture import load_existing, IdAllocator  # noqa: E402
+from ingest_capture import load_existing_full, IdAllocator  # noqa: E402
 
 
 def sandbox() -> Path:
@@ -49,7 +49,7 @@ class IngestTests(unittest.TestCase):
 
     def _allocator(self) -> IdAllocator:
         config = load_config(self.root)
-        existing = load_existing(self.root, config)
+        existing = load_existing_full(self.root, config)
         return IdAllocator(set(existing))
 
     def test_minimal_capture(self):
@@ -160,6 +160,11 @@ class IngestTests(unittest.TestCase):
         p.write_text(json.dumps(data))
         return str(p)
 
+    def _issue(self, body: str) -> str:
+        p = self.root / "issue.md"
+        p.write_text(body)
+        return str(p)
+
     def test_rejects_missing_why(self):
         code, out = ingest(self.root, "--payload-file", self._payload(
             {"kind": "requirement", "version": 1, "requirement": {"statement": "The system shall do a thing."}}))
@@ -190,6 +195,96 @@ class IngestTests(unittest.TestCase):
     def test_rejects_non_object_payload(self):
         code, _ = ingest(self.root, "--payload-file", self._payload(["not", "an", "object"]))
         self.assertEqual(code, 2)
+
+    def test_assumption_capture_and_underpins_update(self):
+        alloc = self._allocator()
+        exp_asm = alloc.next("ASM")
+        issue = self._issue(
+            "### What do we assume is true?\n\nRedis pub/sub replication across 12 edge PoPs stays under 50ms p99.\n\n"
+            "### How can we validate it?\n\nRun a cross-region synthetic pub/sub latency benchmark for 24 hours.\n\n"
+            "### What breaks if this is wrong? (optional)\n\nRevoked tokens could remain valid longer than the 30s window.\n\n"
+            "### Requirements, constraints or decisions that rely on this (optional)\n\nREQ-0001\n\n"
+            "### Risk if wrong (optional)\n\nhigh\n\n"
+            "### Initial confidence (optional)\n\n75%\n\n"
+            "### Domain (optional)\n\nauth\n"
+        )
+        code, out = ingest(self.root, "--issue-body-file", issue, "--issue-title", "[capture:assumption] Redis pub/sub replication latency")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["kind"], "assumption")
+        self.assertEqual(out["primary_id"], exp_asm)
+        self.assertEqual(out["underpins"], ["REQ-0001"])
+        self.assertEqual(len(out["updated_files"]), 1)
+        asm_text = (self.root / out["files"][0]).read_text()
+        self.assertIn("confidence: 0.75", asm_text)
+        self.assertIn("risk: high", asm_text)
+        req_text = (self.root / out["updated_files"][0]).read_text()
+        self.assertIn(exp_asm, req_text)
+        self.assertIn("status: provisional", req_text)
+        self.assertValid()
+
+    def test_fact_capture_promotes_open_assumption(self):
+        alloc = self._allocator()
+        exp_val = alloc.next("VAL")
+        exp_fct = alloc.next("FCT")
+        issue = self._issue(
+            "### What verified fact did we establish?\n\nRedis pub/sub denylist propagation completes within 45ms p99 across all gateway nodes.\n\n"
+            "### Assumptions tested (optional)\n\nASM-0002\n\n"
+            "### Validation outcome (optional)\n\nconfirmed\n\n"
+            "### Validation method (optional)\n\nbenchmark\n\n"
+            "### Validation findings & evidence (optional)\n\nMeasured 10,000 revocation events across 6 gateway instances; max propagation delay was 120ms.\n\n"
+            "### Evidence links or artifacts (optional)\n\nbenchmarks/2026-10-27-denylist-propagation.json\n"
+        )
+        code, out = ingest(self.root, "--issue-body-file", issue, "--issue-title", "[capture:fact] Denylist propagation completes within 45ms p99")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["kind"], "fact")
+        self.assertEqual(out["fact"], exp_fct)
+        self.assertEqual(out["validation"], exp_val)
+        self.assertEqual(len(out["updated_files"]), 1)
+        asm_text = (self.root / out["updated_files"][0]).read_text()
+        self.assertIn("status: promoted", asm_text)
+        self.assertIn(exp_val, asm_text)
+        self.assertIn(exp_fct, asm_text)
+        # Note: validate without --strict because REQ-0002 now points at promoted ASM-0002 (which emits a helpful review warning)
+        v = subprocess.run([PY, str(REPO / "tools/validate.py"), "--root", str(self.root)], capture_output=True, text=True)
+        self.assertEqual(v.returncode, 0, v.stdout)
+
+    def test_fact_capture_refutes_assumption_and_cascades_broken(self):
+        alloc = self._allocator()
+        exp_val = alloc.next("VAL")
+        issue = self._issue(
+            "### What verified fact did we establish?\n\n_No response_\n\n"
+            "### Assumptions tested (optional)\n\nASM-0002\n\n"
+            "### Validation outcome (optional)\n\nrefuted\n\n"
+            "### Validation method (optional)\n\nprototype_spike\n\n"
+            "### Validation findings & evidence (optional)\n\nDuring WAN partition tests, pub/sub messages were dropped and revocation took over 15 minutes.\n"
+        )
+        code, out = ingest(self.root, "--issue-body-file", issue, "--issue-title", "[capture:fact] Pub/sub drops messages under partition")
+        self.assertEqual(code, 0, out)
+        self.assertIsNone(out["fact"])
+        self.assertEqual(out["validation"], exp_val)
+        # ASM-0002 (invalidated) plus both REQ-0002 and ACR-0002 (broken) are updated
+        self.assertEqual(len(out["updated_files"]), 3)
+        self.assertValid()
+
+    def test_decision_capture_from_issue(self):
+        alloc = self._allocator()
+        exp_dec = alloc.next("DEC")
+        exp_asm = alloc.next("ASM")
+        issue = self._issue(
+            "### What did we decide?\n\nUse Redis Streams with consumer-group offsets instead of fire-and-forget pub/sub for revocation events.\n\n"
+            "### Which requirements or constraints does this satisfy?\n\nREQ-0002, CON-0001\n\n"
+            "### Existing facts or assumptions that justify this option (optional)\n\nFCT-0001\n\n"
+            "### New reasons or assumptions (optional)\n\nGateway nodes can replay missed stream entries on reconnect within 2 seconds.\n\n"
+            "### Alternatives considered (optional)\n\nKafka — rejected to avoid operating a separate JVM cluster.\n\n"
+            "### Consequences & trade-offs (optional)\n\nBounded stream memory on Redis (~10MB for 24h of revocations).\n"
+        )
+        code, out = ingest(self.root, "--issue-body-file", issue, "--issue-title", "[capture:decision] Use Redis Streams for revocation")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["kind"], "decision")
+        self.assertEqual(out["decision"], exp_dec)
+        self.assertEqual(out["assumptions"], [exp_asm])
+        self.assertEqual(out["status"], "provisional")
+        self.assertValid()
 
 
 class TitleTests(unittest.TestCase):

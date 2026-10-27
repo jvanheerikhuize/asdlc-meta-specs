@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://asdlc.local/schemas/captures/fact.capture.schema.json",
+  "title": "Fact & Validation Capture Payload",
+  "description": "Contract between capture interfaces (Pages app / Issue Form) and tools/ingest_capture.py for recording verified facts, validations, assumption promotions, or assumption refutations.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version"],
+  "properties": {
+    "kind": { "const": "fact" },
+    "version": { "const": 1 },
+    "domain": { "type": "string", "maxLength": 60 },
+    "notes": { "type": "string", "maxLength": 4000 },
+    "tests": {
+      "type": "array",
+      "maxItems": 20,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^ASM-[0-9]{4}$" }
+    },
+    "supersedes": {
+      "type": "array",
+      "maxItems": 20,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^FCT-[0-9]{4}$" }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "outcome", "findings"],
+      "properties": {
+        "title": { "type": "string", "maxLength": 140 },
+        "method": {
+          "enum": [
+            "benchmark",
+            "prototype_spike",
+            "user_research",
+            "documentation_audit",
+            "production_telemetry",
+            "formal_proof",
+            "stakeholder_signoff"
+          ]
+        },
+        "outcome": { "enum": ["confirmed", "refined", "refuted"] },
+        "findings": { "type": "string", "minLength": 10, "maxLength": 4000 },
+        "artifacts": {
+          "type": "array",
+          "maxItems": 20,
+          "items": { "type": "string", "minLength": 1, "maxLength": 500 }
+        }
+      }
+    },
+    "fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statement"],
+      "properties": {
+        "statement": { "type": "string", "minLength": 10, "maxLength": 2000 },
+        "title": { "type": "string", "maxLength": 140 },
+        "source": {
+          "enum": [
+            "empirical_validation",
+            "domain_invariant",
+            "external_contract",
+            "regulatory_mandate",
+            "hardware_limit",
+            "business_policy"
+          ]
+        },
+        "implications": { "type": "string", "maxLength": 4000 }
+      }
+    }
+  },
+  "anyOf": [
+    { "required": ["fact"] },
+    {
+      "required": ["tests", "validation"],
+      "properties": {
+        "tests": { "minItems": 1 },
+        "validation": {
+          "properties": { "outcome": { "const": "refuted" } }
+        }
+      }
+    }
+  ]
+}

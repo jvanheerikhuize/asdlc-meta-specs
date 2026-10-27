@@ -22,11 +22,12 @@ function readDraft(id) {
   try { return JSON.parse(localStorage.getItem(draftKey(id)) || "null"); } catch { return null; }
 }
 
-export function mountCapture(main, def, data) {
+export function mountCapture(main, def, data, params = new URLSearchParams()) {
   const key = draftKey(def.id);
-  const defaults = def.defaults(data);
+  const defaults = def.defaults(data, params);
   const saved = readDraft(def.id);
-  let values = { ...defaults, ...(saved?.values || {}) };
+  const urlSeed = def.fromParams ? def.fromParams(params, data) : {};
+  let values = { ...defaults, ...(saved?.values || {}), ...urlSeed };
   const controls = new Map();
 
   // ------------------------------------------------------------ fields

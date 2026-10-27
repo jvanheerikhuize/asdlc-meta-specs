@@ -46,7 +46,9 @@ export function dashboard(main, data) {
         })) : h("p", { class: "empty" }, "No specifications yet.")),
       h("section", { class: "card" }, h("h2", {}, "Assumptions waiting for validation"),
         openAsm.length ? h("ul", { class: "list" }, openAsm.sort((a, b) => (riskOrder[a.risk] ?? 9) - (riskOrder[b.risk] ?? 9)).slice(0, 8).map((a) =>
-          h("li", {}, idLink(data, a.id), h("span", {}, a.title), h("span", { class: `badge ${["high", "critical"].includes(a.risk) ? "danger" : ""}` }, `risk: ${a.risk}`))))
+          h("li", {}, idLink(data, a.id), h("span", {}, a.title),
+            h("span", { class: `badge ${["high", "critical"].includes(a.risk) ? "danger" : ""}` }, `risk: ${a.risk}`),
+            h("a", { href: `#/capture/fact?tests=${a.id}`, style: "margin-inline-start:auto;font-size:.82rem;white-space:nowrap" }, "Validate →"))))
           : h("p", { class: "empty" }, "None — everything rests on verified facts.")),
       h("section", { class: "card" }, h("h2", {}, "Recently captured"),
         recent.length ? h("ul", { class: "list" }, recent.map((r) => h("li", {}, idLink(data, r.id), h("span", {}, r.title), statusBadge(r))))
@@ -104,12 +106,18 @@ export function record(main, data, params, id) {
   const links = Object.entries(r.links || {});
   const incoming = data.referencedBy.get(id) || [];
   const comp = Object.entries(r.composition || r.deltas || {}).filter(([, v]) => v?.length);
+  const captureAction = r.type === "assumption" && OPEN_ASSUMPTION.has(r.status)
+    ? h("a", { class: "button primary", href: `#/capture/fact?tests=${r.id}` }, "Validate / promote →")
+    : (r.type === "requirement" || r.type === "constraint")
+      ? h("a", { class: "button", href: `#/capture/decision?satisfies=${r.id}` }, "＋ Record decision")
+      : null;
 
   clear(main).append(
     h("p", {}, h("a", { href: "#/records" }, "← All records")),
     h("div", { class: "page-head" },
       h("div", {}, h("div", { class: "badges" }, h("span", { class: "badge" }, r.id), statusBadge(r)), h("h1", { tabindex: "-1", style: "margin-top:.5rem" }, r.title)),
       h("div", { class: "form-actions" },
+        captureAction,
         h("a", { class: "button", href: `#/graph?focus=${r.id}` }, "Explore in graph"),
         h("a", { class: "button", href: githubUrl(data, `/blob/main/${r.path}`), target: "_blank", rel: "noopener" }, "View / edit on GitHub ↗"))),
     h("div", { class: "capture" },

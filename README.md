@@ -98,21 +98,25 @@ Open **Browse → Graph** (`#/graph`) to inspect how assumptions, validations, a
 - **Epistemic edge styling:** Solid green edges show verified facts underpinning active requirements; dashed amber edges highlight provisional links from unvalidated assumptions.
 - **Lineage & risk lenses:** Click any node to trace its full upstream grounding and downstream impact in the side inspector, filter by domain, isolate a single record's lineage, or spotlight open epistemic risks. Every record page (`#/record/:id`) also embeds a local 1–2 hop traceability mini-graph.
 
-### Capturing a requirement
+### Capturing records (Requirement, Assumption, Fact & validation, Decision)
 
 ```mermaid
 flowchart LR
     F["Capture form (Pages)"] -->|"pre-filled issue"| I["GitHub issue (label: capture)"]
-    I -->|"ingest-capture workflow"| P["PR with REQ / ASM / ACR files"]
+    I -->|"ingest-capture workflow"| P["PR with new/updated record files"]
     P -->|"validator passes, reviewer merges"| M["main = approved records"]
 ```
 
-1. Open **Capture → Requirement**. Only one field is required: *what should the system do?* Everything else (why, underpinning facts/assumptions, acceptance criteria, domain, priority) is optional. Drafts autosave in the browser.
-2. **Submit** opens the GitHub issue form with every field pre-filled (you can still edit them there); click *Create*. (No app login or token needed — your GitHub session is used.)
-3. The `ingest-capture` workflow allocates IDs, writes the records (status `provisional` when underpinned by new/open assumptions, otherwise `draft`), validates them, and opens a PR that closes the issue.
+1. Open any topic under **Capture** in the sidebar:
+   - **Requirement (`#/capture/requirement`):** *what should the system do* + *why* (existing facts/assumptions or new reasons, plus optional Given/When/Then scenarios).
+   - **Assumption (`#/capture/assumption`):** *what we assume is true* + *how we will validate it* (plus risk, initial confidence, and optional links to dependent `REQ`/`CON`/`DEC` records).
+   - **Fact & validation (`#/capture/fact`):** record a standalone verified `FCT`, or select an open `ASM-xxxx` to **promote** (`confirmed`/`refined` → mints `VAL` + `FCT` and marks `ASM` `promoted`) or **refute** (`refuted` → mints `VAL`, marks `ASM` `invalidated`, and cascades `broken`/`needs_review` onto dependent records).
+   - **Decision (`#/capture/decision`):** record an architectural/design choice (`DEC`), the `REQ`/`CON` records it satisfies, the `FCT`/`ASM` records that justify it, and considered alternatives/trade-offs.
+2. **Submit** opens the matching GitHub Issue Form with every field pre-filled (you can still edit them there); click *Create*. Drafts autosave in the browser per capture topic.
+3. The `ingest-capture` workflow allocates IDs, writes/updates the record files, validates the full graph, and opens a PR that closes the issue.
 4. **Approval = one approving review + merge.** A ruleset on `main` requires one approval from a collaborator with write access (the PR is opened by the bot, so any collaborator — including the capturer — can approve it). Approvals are dismissed if the capture is edited and the PR re-pushed. Repository admins can bypass.
 
-Without the app you can use the issue form directly (*New issue → Capture a requirement*). Only repository owners/members/collaborators can trigger ingestion.
+Without the app you can use the issue forms directly (*New issue → Capture a requirement / assumption / fact / decision*). Only repository owners/members/collaborators can trigger ingestion.
 
 ### Enabling the site
 
@@ -155,8 +159,8 @@ Local preview: `python tools/build_index.py && python -m http.server -d site 800
 | Projection compiler (`adapters/` → `dist/`) | 🔜 Planned — `dist/` currently holds hand-written samples of the intended output |
 | Pages workspace shell (dashboard, records, prose, pending) | ✅ In place — deploy gated behind `PAGES_ENABLED` |
 | Interactive Record Graph (`#/graph`) & per-record mini-graph | ✅ In place |
-| Requirement capture (app → issue → PR) | ✅ In place |
-| Assumption / fact / decision capture, in-app approval | 🔜 Planned |
+| Requirement, Assumption, Fact & validation, and Decision capture (app → issue → PR) | ✅ In place |
+| In-app PR review & approval | 🔜 Planned |
 
 ---
 

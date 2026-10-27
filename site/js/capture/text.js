@@ -66,3 +66,63 @@ export function requirementHints(statement) {
 export function splitLines(text) {
   return (text || "").split("\n").map((l) => l.replace(/^[\s\-*•]+/, "").trim()).filter(Boolean);
 }
+
+/** Non-blocking quality hints for an assumption capture. */
+export function assumptionHints(v) {
+  const s = (v.statement || "").trim();
+  const plan = (v.validation_plan || "").trim();
+  if (s.length < 10 && plan.length < 10) return [];
+  const hints = [];
+  if (s.length >= 10 && !/\d/.test(s)) {
+    hints.push({ level: "tip", text: "Numbers make assumptions easier to test (e.g. “under 200ms”, “more than 1,000 req/s”, “at least 80% of users”)." });
+  }
+  if (plan.length >= 10 && /\b(tbd|later|todo|somehow|ask|check)\b/i.test(plan)) {
+    hints.push({ level: "warn", text: "Try to name a concrete check (e.g. a benchmark, spike, log query, or 5 user interviews) so anyone can run it." });
+  }
+  if (["high", "critical"].includes(v.risk) && !(v.impact || "").trim()) {
+    hints.push({ level: "tip", text: "For high/critical risk assumptions, jotting down what breaks if it's false helps prioritize validation." });
+  }
+  if (s.length >= 10 && plan.length >= 10 && !hints.some((h) => h.level === "warn")) {
+    hints.push({ level: "good", text: "Clear hypothesis and validation plan." });
+  }
+  return hints;
+}
+
+/** Non-blocking quality hints for a fact & validation capture. */
+export function factHints(v) {
+  const stmt = (v.statement || "").trim();
+  const findings = (v.findings || "").trim();
+  const tests = v.tests || [];
+  if (!stmt && !findings && !tests.length) return [];
+  const hints = [];
+  if (v.outcome === "refuted" && tests.length) {
+    hints.push({ level: "warn", text: `Refuting ${tests.join(", ")} will mark the assumption invalidated and flag dependent requirements as broken for review.` });
+  } else if (tests.length && stmt) {
+    hints.push({ level: "good", text: `Promoting ${tests.join(", ")} will mint a verified FCT record, record a VAL record, and mark the assumption promoted.` });
+  }
+  if (stmt.length >= 10 && /\b(probably|maybe|assume|think|believe|might)\b/i.test(stmt)) {
+    hints.push({ level: "warn", text: "This sounds uncertain — if it hasn't been verified yet, capture it as an Assumption instead." });
+  }
+  if ((tests.length || v.source === "empirical_validation") && findings.length >= 10 && !splitLines(v.artifacts).length) {
+    hints.push({ level: "tip", text: "If you have a benchmark log, PR, or doc link, add it under Evidence links so reviewers can trace the proof." });
+  }
+  return hints;
+}
+
+/** Non-blocking quality hints for an architectural/design decision capture. */
+export function decisionHints(v) {
+  const s = (v.statement || "").trim();
+  if (s.length < 10) return [];
+  const hints = [];
+  if (!(v.alternatives || "").trim()) {
+    hints.push({ level: "tip", text: "Listing 1–2 rejected alternatives helps future readers understand why this option won." });
+  }
+  if (!(v.consequences || "").trim()) {
+    hints.push({ level: "tip", text: "Noting trade-offs or downsides makes the decision record much more useful." });
+  }
+  if ((v.satisfies || []).length && ((v.underpinned_by || []).length || splitLines(v.beliefs).length) && !hints.length) {
+    hints.push({ level: "good", text: "Well-grounded decision with clear alternatives and trade-offs." });
+  }
+  return hints;
+}
+

@@ -1,0 +1,74 @@
+name: "⚖️ Capture a decision"
+description: "Propose an architectural or design decision (ADR) linked to the requirements it satisfies and the facts/assumptions that justify it."
+title: "[capture:decision] "
+labels: ["capture"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Tip:** the guided capture app on GitHub Pages fills this in for you (with hints and a live preview).
+        Every decision links to the **requirements/constraints (`REQ`/`CON`) it satisfies** and the **facts/assumptions (`FCT`/`ASM`) that justify it**.
+
+  - type: textarea
+    id: statement
+    attributes:
+      label: "What did we decide?"
+      description: "State the chosen technical or design approach clearly. E.g. *Use EdDSA (Ed25519) asymmetric JWTs with 15-minute TTL for access tokens.*"
+    validations:
+      required: true
+
+  - type: input
+    id: satisfies
+    attributes:
+      label: "Which requirements or constraints does this satisfy?"
+      description: "At least one REQ-xxxx or CON-xxxx ID, e.g. REQ-0001, CON-0001"
+    validations:
+      required: true
+
+  - type: input
+    id: refs
+    attributes:
+      label: "Existing facts or assumptions that justify this option (optional)"
+      description: "IDs that underpin this decision, e.g. FCT-0001, ASM-0002"
+
+  - type: textarea
+    id: why
+    attributes:
+      label: "New reasons or assumptions (optional)"
+      description: "One reason per line. Recorded as assumptions (`ASM-xxxx`) if not already covered by existing facts/assumptions above."
+
+  - type: textarea
+    id: context
+    attributes:
+      label: "Context & problem (optional)"
+      description: "Why was a decision needed here?"
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: "Alternatives considered (optional)"
+      description: "Other options evaluated and why they were not chosen (one per line or markdown list)."
+
+  - type: textarea
+    id: consequences
+    attributes:
+      label: "Consequences & trade-offs (optional)"
+      description: "Positive outcomes, costs, or follow-up work introduced by this decision."
+
+  - type: input
+    id: supersedes
+    attributes:
+      label: "Supersedes older decisions (optional)"
+      description: "Older Decision IDs replaced by this decision, e.g. DEC-0001"
+
+  - type: input
+    id: domain
+    attributes:
+      label: "Domain (optional)"
+      description: "Area of the product, e.g. auth, billing. Defaults to 'general'."
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: "Notes (optional)"
+      description: "Anything else reviewers should know."

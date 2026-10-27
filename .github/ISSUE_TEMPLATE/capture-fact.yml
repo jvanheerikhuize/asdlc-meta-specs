@@ -1,0 +1,80 @@
+name: "🔬 Capture a fact or validation"
+description: "Record a verified truth, or record validation evidence that promotes or refutes an existing assumption."
+title: "[capture:fact] "
+labels: ["capture"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Tip:** the guided capture app on GitHub Pages fills this in for you (with hints and a live preview).
+        Use this form to **promote or refute an assumption (`ASM-xxxx`)** with validation evidence (`VAL`), or to **record a standalone verified fact (`FCT`)**.
+
+  - type: textarea
+    id: statement
+    attributes:
+      label: "What verified fact did we establish?"
+      description: "The verified domain truth, empirical measurement, or mandate. (Required unless you are refuting an assumption below.)"
+
+  - type: input
+    id: tests
+    attributes:
+      label: "Assumptions tested (optional)"
+      description: "Assumption IDs evaluated by this validation, e.g. ASM-0002"
+
+  # Plain inputs (not dropdowns) so the capture app can pre-fill them via the URL.
+  - type: input
+    id: outcome
+    attributes:
+      label: "Validation outcome (optional)"
+      description: "confirmed (promotes ASM → FCT) · refined (promotes ASM → FCT with sharper bounds) · refuted (marks ASM invalidated)"
+      placeholder: "confirmed"
+
+  - type: input
+    id: method
+    attributes:
+      label: "Validation method (optional)"
+      description: "benchmark · prototype_spike · user_research · documentation_audit · production_telemetry · formal_proof · stakeholder_signoff"
+      placeholder: "benchmark"
+
+  - type: textarea
+    id: findings
+    attributes:
+      label: "Validation findings & evidence (optional)"
+      description: "What was tested and observed? Required when testing an assumption or recording an empirical validation."
+
+  - type: textarea
+    id: artifacts
+    attributes:
+      label: "Evidence links or artifacts (optional)"
+      description: "One path or URL per line (benchmarks, logs, PRs, external docs)."
+
+  - type: input
+    id: source
+    attributes:
+      label: "Fact source (optional)"
+      description: "empirical_validation (default when evidence given) · domain_invariant · external_contract · regulatory_mandate · hardware_limit · business_policy"
+      placeholder: "empirical_validation"
+
+  - type: textarea
+    id: implications
+    attributes:
+      label: "Architectural or product implications (optional)"
+      description: "What does this truth mean for our requirements or design?"
+
+  - type: input
+    id: supersedes
+    attributes:
+      label: "Supersedes older facts (optional)"
+      description: "Older Fact IDs replaced by this fact, e.g. FCT-0001"
+
+  - type: input
+    id: domain
+    attributes:
+      label: "Domain (optional)"
+      description: "Area of the product, e.g. auth, billing. Defaults to 'general'."
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: "Notes (optional)"
+      description: "Anything else reviewers should know."

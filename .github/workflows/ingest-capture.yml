@@ -72,13 +72,13 @@ jobs:
       - name: Open or update pull request
         if: steps.ingest.outputs.code == '0' && steps.validate.outputs.code == '0'
         run: |
-          REQ=$(jq -r .requirement /tmp/result.json)
+          PRIMARY=$(jq -r '.primary_id // .requirement' /tmp/result.json)
           TITLE=$(jq -r .title /tmp/result.json)
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B "$BRANCH"
           git add records
-          git commit -m "capture: $REQ – $TITLE (#$ISSUE)"
+          git commit -m "capture: $PRIMARY – $TITLE (#$ISSUE)"
           git push --force origin "$BRANCH"
           gh api "repos/$GITHUB_REPOSITORY/statuses/$(git rev-parse HEAD)" -f state=success \
             -f context="validate-meta-specs (capture)" -f description="Record graph validated by ingest-capture" \
@@ -87,9 +87,10 @@ jobs:
           {
             echo "Captured from #$ISSUE by @$AUTHOR."
             echo
-            echo "| Record | File |"
-            echo "| :--- | :--- |"
-            jq -r '.files[] | "| `\(split("/")[-1] | split("-")[0:2] | join("-"))` | `\(.)` |"' /tmp/result.json
+            echo "| Record | Change | File |"
+            echo "| :--- | :--- | :--- |"
+            jq -r '.files[] | "| `\(split("/")[-1] | split("-")[0:2] | join("-"))` | new | `\(.)` |"' /tmp/result.json
+            jq -r '(.updated_files // [])[] | "| `\(split("/")[-1] | split("-")[0:2] | join("-"))` | updated | `\(.)` |"' /tmp/result.json
             echo
             echo "**To approve:** submit a review with *Approve* (1 collaborator approval required), then merge. Refine wording, status or links by editing the files in this PR first — the approval must come after the last push."
             echo "To change the capture itself, edit issue #$ISSUE — this PR is regenerated automatically."
@@ -99,14 +100,14 @@ jobs:
 
           PR=$(gh pr list --head "$BRANCH" --state open --json number -q '.[0].number')
           if [ -z "$PR" ]; then
-            gh pr create --head "$BRANCH" --base main --title "capture: $REQ – $TITLE" --body-file /tmp/pr.md --label capture
+            gh pr create --head "$BRANCH" --base main --title "capture: $PRIMARY – $TITLE" --body-file /tmp/pr.md --label capture
             PR=$(gh pr list --head "$BRANCH" --state open --json number -q '.[0].number')
             VERB="opened"
           else
-            gh pr edit "$PR" --title "capture: $REQ – $TITLE" --body-file /tmp/pr.md
+            gh pr edit "$PR" --title "capture: $PRIMARY – $TITLE" --body-file /tmp/pr.md
             VERB="updated"
           fi
-          gh issue comment "$ISSUE" --body "✅ Thanks! I $VERB pull request #$PR with **$REQ** and its linked records. Approving and merging that PR approves the requirement."
+          gh issue comment "$ISSUE" --body "✅ Thanks! I $VERB pull request #$PR with **$PRIMARY** and its linked records. Approving and merging that PR approves the capture."
 
       - name: Report problems on the issue
         if: steps.ingest.outputs.code != '0' || steps.validate.outputs.code != '0'

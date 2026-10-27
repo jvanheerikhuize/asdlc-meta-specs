@@ -5,10 +5,18 @@ import { h, clear } from "./dom.js";
 import { loadData, githubUrl } from "./data.js";
 import { mountCapture, hasDraft } from "./capture/engine.js";
 import { requirementCapture } from "./capture/requirement.js";
+import { assumptionCapture } from "./capture/assumption.js";
+import { factCapture } from "./capture/fact.js";
+import { decisionCapture } from "./capture/decision.js";
 import * as views from "./views/views.js";
 
 const main = document.getElementById("main");
-const CAPTURES = { requirement: requirementCapture };
+const CAPTURES = {
+  requirement: requirementCapture,
+  assumption: assumptionCapture,
+  fact: factCapture,
+  decision: decisionCapture,
+};
 let firstRender = true;
 
 function parseHash() {
@@ -31,7 +39,7 @@ async function render() {
 
   const [section, arg] = parts;
   let route = section;
-  if (section === "capture" && CAPTURES[arg]) { mountCapture(main, CAPTURES[arg], data); route = `capture/${arg}`; }
+  if (section === "capture" && CAPTURES[arg]) { mountCapture(main, CAPTURES[arg], data, params); route = `capture/${arg}`; }
   else if (section === "dashboard") views.dashboard(main, data);
   else if (section === "graph") views.graph(main, data, params);
   else if (section === "records") views.records(main, data, params);

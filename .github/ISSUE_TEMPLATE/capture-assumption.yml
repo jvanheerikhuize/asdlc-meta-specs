@@ -1,0 +1,65 @@
+name: "🤔 Capture an assumption"
+description: "Record an unverified hypothesis or premise and how we plan to test it. It becomes a reviewed Pull Request."
+title: "[capture:assumption] "
+labels: ["capture"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Tip:** the guided capture app on GitHub Pages fills this in for you (with hints and a live preview).
+        Filling it in here by hand works too — only the first two questions are needed. The issue title becomes the assumption's title (leave it as `[capture:assumption]` to derive one).
+
+  - type: textarea
+    id: statement
+    attributes:
+      label: "What do we assume is true?"
+      description: "State the unverified hypothesis or belief in plain language. E.g. *Peak token validation bursts exceed 1,000 req/s during flash events.*"
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation_plan
+    attributes:
+      label: "How can we validate it?"
+      description: "Concrete experiment, benchmark, spike, user interview, or audit to confirm or refute this assumption."
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: "What breaks if this is wrong? (optional)"
+      description: "Consequences for requirements, architecture, or users if this assumption turns out to be false."
+
+  - type: input
+    id: underpins
+    attributes:
+      label: "Requirements, constraints or decisions that rely on this (optional)"
+      description: "IDs that depend on this assumption, e.g. REQ-0002, DEC-0001"
+
+  # Plain inputs (not dropdowns) so the capture app can pre-fill them via the URL.
+  - type: input
+    id: risk
+    attributes:
+      label: "Risk if wrong (optional)"
+      description: "low · medium (default) · high · critical"
+      placeholder: "medium"
+
+  - type: input
+    id: confidence
+    attributes:
+      label: "Initial confidence (optional)"
+      description: "0.0 to 1.0 (or percentage like 50%). Defaults to 0.5."
+      placeholder: "0.5"
+
+  - type: input
+    id: domain
+    attributes:
+      label: "Domain (optional)"
+      description: "Area of the product, e.g. auth, billing. Defaults to 'general'."
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: "Notes (optional)"
+      description: "Anything else reviewers should know."
