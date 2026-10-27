@@ -9,7 +9,7 @@
 ## Epistemic Readiness Summary
 
 - **Spec ID**: `{{id}}`
-- **Status**: `{{status}}`
+- **Status**: `{{status}}`{{#if epistemic_readiness}} (Epistemic Readiness: `{{epistemic_readiness}}`){{/if}}
 - **Governing Constraints**: {{#each constraints}}`{{this.id}}` ({{this.title}}){{#unless @last}}, {{/unless}}{{/each}}
 
 ## Requirements

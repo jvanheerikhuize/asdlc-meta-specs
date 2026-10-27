@@ -9,7 +9,7 @@ Defines the authentication token verification and session revocation architectur
 ## 2. Epistemic Foundation (Facts & Assumptions)
 
 ### Verified Facts Underpinning This Spec
-- **`FCT-0001` — Peak token validation reaches 3,200 req/s and saturates synchronous session store lookups at 650 req/s**: Ingress authentication traffic experiences flash bursts up to 3,200 requests/second, whereas synchronous persistent session store lookups saturate connection pools at 650 requests/second (`VAL-0001`).
+- **`FCT-0001` — Peak token validation reaches 3,200 req/s and saturates synchronous session store lookups at 650 req/s**: Ingress authentication traffic experiences flash bursts up to **3,200 requests/second**, whereas synchronous persistent session store lookups saturate connection pools at **650 requests/second** (`VAL-0001`).
 
 ### Active Assumptions (Pending Validation)
 - **`ASM-0002` — Eventual consistency window of 30 seconds is acceptable for token revocation** *(Confidence: 0.5, Risk: high)*: We assume that when an administrator or user explicitly revokes an active session, a propagation delay of up to 30 seconds across edge gateway nodes is acceptable from a security and compliance standpoint.

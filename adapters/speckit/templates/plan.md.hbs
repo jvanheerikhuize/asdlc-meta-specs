@@ -6,7 +6,7 @@
 
 | Gate Check | Status | Details |
 | :--- | :--- | :--- |
-| **Governing Constraints Satisfied** | `{{constitution_gate_status}}` | {{#each constraints}}`{{this.id}}` {{/each}} |
+| **Governing Constraints Satisfied** | `{{constitution_gate_status}}` | {{#each constraints}}`{{this.id}}`{{#unless @last}}, {{/unless}}{{/each}} |
 | **High-Risk Unvalidated Assumptions** | `{{epistemic_gate_status}}` | {{unvalidated_high_risk_summary}} |
 
 ## 2. Architectural & Design Decisions
@@ -19,3 +19,11 @@
 {{this.body}}
 
 {{/each}}
+{{#if stack_profile}}
+## 3. Target Tech-Stack Binding (PSM)
+
+- **Profile**: `{{stack_profile.name}}`
+{{#each stack_profile.bindings}}
+- **{{this.category}}**: {{this.value}}
+{{/each}}
+{{/if}}

@@ -10,7 +10,8 @@
    - Concrete technology stacks (languages, frameworks, databases, wire protocols, cryptographic cipher suites) belong in external Tech-Stack Profiles and target projection adapters (`adapters/` -> `dist/`).
 
 3. **Graph Integrity & Verification**
-   - After creating or modifying any record or schema, always run:
+   - After creating or modifying any record, schema, or adapter template, always run:
      - `python3 tools/validate.py --strict`
+     - `python3 tools/project.py`
      - `python3 tools/build_index.py`
      - `python3 -m unittest discover -s tests -v`

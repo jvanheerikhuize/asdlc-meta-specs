@@ -94,13 +94,9 @@ To strengthen agent guardrails without adding ceremony, the following optional f
 
 ## 3. Tooling & Workspace Milestones
 
-### 3.1 Automated Projection Compiler (`tools/project.py`)
-- Implement a CLI compiler that reads canonical `SPC-xxxx` and `CHG-xxxx` records, applies the mapping rules in [`adapters/openspec-adapter.yaml`](../adapters/openspec-adapter.yaml) and [`adapters/speckit-adapter.yaml`](../adapters/speckit-adapter.yaml), optionally merges an external **Tech-Stack Profile**, and automatically generates:
-  - `dist/openspec/specs/<domain>/spec.md`
-  - `dist/openspec/changes/<slug>/specs/<domain>/spec.md`
-  - `dist/speckit/specs/<number>-<domain>/spec.md`
-  - `dist/speckit/specs/<number>-<domain>/plan.md`
-  - `dist/speckit/specs/<number>-<domain>/tasks.md` (with every task traceable to `REQ-xxxx` and `ACR-xxxx` IDs)
+### 3.1 Projection Compiler Extensions (`tools/project.py`)
+- **Implemented (`✅`)**: [`tools/project.py`](../tools/project.py) compiles `SPC-xxxx`, `CHG-xxxx`, `CON-xxxx`, and `FCT-xxxx` records through [`adapters/openspec/mapping.yaml`](../adapters/openspec/mapping.yaml) and [`adapters/speckit/mapping.yaml`](../adapters/speckit/mapping.yaml) into `dist/openspec/` and `dist/speckit/` (including `--check` drift detection and `--stack-profile <yaml>` PSM binding).
+- **Planned Next**: Extend `adapters/speckit/` to emit `dist/speckit/specs/<number>-<domain>/tasks.md` with ordered implementation tasks traceable to `REQ-xxxx`, `ACR-xxxx`, and `CTR-xxxx` IDs.
 
 ### 3.2 Closed-Loop Code & Test Traceability (`tools/verify_coverage.py`)
 - Scan target implementation repositories for `@verifies("ACR-xxxx")` and `@implements("REQ-xxxx")` annotations in test suites and source files, closing the loop between `ACR-xxxx` acceptance criteria, `VAL-xxxx` validation records, and executable tests.

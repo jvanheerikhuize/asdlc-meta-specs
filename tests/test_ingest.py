@@ -326,5 +326,73 @@ class IndexTests(unittest.TestCase):
         self.assertEqual(val["artifacts"], ["benchmarks/2026-10-24-gateway-replay-results.json"])
 
 
+class ProjectionTests(unittest.TestCase):
+    def test_project_compile_and_check(self):
+        out_root = Path(tempfile.mkdtemp(prefix="metaspec-proj-"))
+        try:
+            p = subprocess.run(
+                [PY, str(REPO / "tools/project.py"), "--root", str(REPO), "--out-root", str(out_root)],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(p.returncode, 0, p.stderr)
+            expected_files = [
+                out_root / "dist/openspec/specs/auth/spec.md",
+                out_root / "dist/openspec/changes/add-revocation-denylist/specs/auth/spec.md",
+                out_root / "dist/speckit/.specify/memory/constitution.md",
+                out_root / "dist/speckit/specs/001-auth/spec.md",
+                out_root / "dist/speckit/specs/001-auth/plan.md",
+            ]
+            for f in expected_files:
+                self.assertTrue(f.exists(), f"Missing projected file: {f}")
+
+            # --check should pass
+            chk = subprocess.run(
+                [PY, str(REPO / "tools/project.py"), "--root", str(REPO), "--out-root", str(out_root), "--check"],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(chk.returncode, 0, chk.stdout)
+
+            # Mutating a projected file should cause --check to fail
+            expected_files[0].write_text("stale content\n", encoding="utf-8")
+            chk_fail = subprocess.run(
+                [PY, str(REPO / "tools/project.py"), "--root", str(REPO), "--out-root", str(out_root), "--check"],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(chk_fail.returncode, 1)
+            self.assertIn("OUTDATED", chk_fail.stdout)
+        finally:
+            shutil.rmtree(out_root, ignore_errors=True)
+
+    def test_project_with_stack_profile(self):
+        out_root = Path(tempfile.mkdtemp(prefix="metaspec-psm-"))
+        try:
+            profile = out_root / "stack.yaml"
+            profile.write_text(
+                "name: go-edge-production\n"
+                "bindings:\n"
+                "  Token Format: Ed25519 JWT\n"
+                "  Edge Cache: Redis Cluster\n",
+                encoding="utf-8",
+            )
+            p = subprocess.run(
+                [
+                    PY, str(REPO / "tools/project.py"),
+                    "--root", str(REPO),
+                    "--out-root", str(out_root),
+                    "--adapter", "speckit",
+                    "--stack-profile", str(profile),
+                ],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(p.returncode, 0, p.stderr)
+            plan_txt = (out_root / "dist/speckit/specs/001-auth/plan.md").read_text(encoding="utf-8")
+            self.assertIn("## 3. Target Tech-Stack Binding (PSM)", plan_txt)
+            self.assertIn("`go-edge-production`", plan_txt)
+            self.assertIn("**Token Format**: Ed25519 JWT", plan_txt)
+        finally:
+            shutil.rmtree(out_root, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()
+

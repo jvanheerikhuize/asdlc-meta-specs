@@ -20,7 +20,7 @@ Using the mapping rules and templates in `adapters/`, the canonical elemental re
 | **`ASM-xxxx`** | Unvalidated belief | `> [!WARNING]` callout on provisional requirements | `## 2. Epistemic Foundation` in `spec.md` + **Epistemic Gate Check** in `plan.md` | Risk Register / Open Issues |
 
 > [!NOTE]
-> **Current Implementation Status**: The mapping definitions (`adapters/*/mapping.yaml`) and Handlebars templates (`adapters/*/templates/*.hbs`) are in place, and `dist/` contains reference sample projections for `SPC-0001` and `CHG-0001`. The automated projection compiler CLI is planned (see `README.md` Project Status).
+> **Compiling Projections (`tools/project.py`)**: Run `python tools/project.py` to compile all canonical records through `adapters/*/mapping.yaml` and `adapters/*/templates/*.hbs` into `dist/`. Run `python tools/project.py --check` to verify that `dist/` is in sync with the canonical graph, or pass `--stack-profile <path.yaml>` to bind an external Tech-Stack Profile (PSM) into Spec Kit technical plans.
 
 ---
 

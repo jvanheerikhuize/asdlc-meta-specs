@@ -45,7 +45,9 @@ flowchart LR
 pip install -r tools/requirements.txt
 python tools/validate.py                        # schema, links, reciprocity, epistemic consistency, readiness
 python tools/validate.py --strict               # also fail on warnings
-python -m unittest discover -s tests -v         # run capture ingestion & index unit tests
+python tools/project.py                         # compile canonical records into dist/openspec and dist/speckit
+python tools/project.py --check                 # verify dist/ projections are in sync with canonical records
+python -m unittest discover -s tests -v         # run capture ingestion, projection & index unit tests
 python tools/build_index.py                     # compile records into site/data/index.json
 ```
 
@@ -76,11 +78,12 @@ asdlc-meta-specs/
 ├── adapters/                          # Mapping rules & templates per target standard
 │   ├── openspec/
 │   └── speckit/
-├── dist/                              # Projected standard outputs (currently hand-written samples)
+├── dist/                              # Projected standard outputs compiled by tools/project.py
 ├── site/                              # GitHub Pages workspace (plain HTML/CSS/ES modules, no build step)
 ├── tools/
 │   ├── recordlib.py                   # shared record parsing / writing
 │   ├── validate.py                    # schema, links, epistemic consistency, readiness
+│   ├── project.py                     # projection compiler (adapters/ + records/ -> dist/)
 │   ├── build_index.py                 # records → site/data/index.json (built in CI)
 │   └── ingest_capture.py              # capture issue (or payload file) → new/updated record files
 ├── tests/                             # unit tests + fixtures for ingestion & index
@@ -161,8 +164,8 @@ Local preview: `python tools/build_index.py && python -m http.server -d site 800
 | :--- | :--- |
 | Record model, schemas, folder architecture | ✅ In place (`9` record schemas + `4` capture schemas) |
 | Canonical records (`auth`, `global`, `onboarding`, `performance`) | ✅ In place (`17` records across all `9` elemental types) |
-| Validator, unit tests + CI | ✅ In place (`validate.py` incl. tech-stack agnosticism checks + `20` unit tests in `tests/test_ingest.py`) |
-| Projection compiler (`adapters/` → `dist/`) | 🔜 Planned — `dist/` currently holds hand-written samples of the intended output ([see Roadmap](docs/roadmap.md)) |
+| Validator, unit tests + CI | ✅ In place (`validate.py` incl. tech-stack agnosticism checks + `22` unit tests in `tests/test_ingest.py`) |
+| Projection compiler (`adapters/` → `dist/`) | ✅ In place (`tools/project.py` with `--check` and `--stack-profile` support) |
 | Pages workspace shell (dashboard, records, prose, pending) | ✅ In place — deploy gated behind `PAGES_ENABLED` |
 | Interactive Record Graph (`#/graph`) & per-record mini-graph | ✅ In place |
 | Requirement, Assumption, Fact & validation, and Decision capture (app → issue → PR) | ✅ In place |
