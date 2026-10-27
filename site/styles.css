@@ -123,7 +123,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, .btn:focus-vi
 }
 .node.t-ASM { border-left-color: var(--assume); } .node.t-FCT { border-left-color: var(--fact); }
 .node.t-REQ { border-left-color: var(--req); } .node.t-SPC { border-left-color: var(--spec); }
-.node .rid { display: block; }
+.node-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; }
 .node.dim { opacity: .25; }
 .node.sel { outline: 2px solid var(--accent); }
 .edge { fill: none; stroke: var(--fact); stroke-width: 1.5; opacity: .7; transition: opacity .15s; }
