@@ -44,6 +44,7 @@ python tools/spec.py check --strict          # links, epistemic gates, spec DAG,
 python tools/spec.py impact FCT-0001         # what to revisit when FCT-0001 changes
 python tools/spec.py render --tier skeleton  # write dist/SPC-*.md
 python tools/spec.py render --format gherkin # write dist/SPC-*.feature
+python tools/spec.py index                   # write site/data/index.json for the workspace
 python -m unittest discover -s tests         # one test per acceptance scenario
 ```
 
@@ -54,6 +55,19 @@ Example output:
   SPC-0001 [skeleton] 100% ready  Record graph and epistemic check
   SPC-0002 [feature ]   0% ready  Rendering and guardrails
 ```
+
+## Workspace (GitHub Pages)
+
+**https://jvanheerikhuize.github.io/asdlc-meta-specs-lite/** is a small static site in `site/` (one HTML page, one script, no build step). It is rebuilt and deployed on every push to `main`.
+
+- **Dashboard:** how many requirements rest on facts, spec readiness in build order, and which open assumptions hold what back.
+- **Graph:** assumptions → facts → requirements → specs. Solid edges rest on facts, dashed edges on open assumptions. Click a record to trace its lineage.
+- **Records:** filter by type, search, and open any record to see its text, what it rests on, what uses it and what a change would affect.
+- **Capture:** a form per record type. It picks the next free ID, shows the file, and opens GitHub's editor with it filled in. Choose "create a new branch and start a pull request" and CI checks the record. There is no bot or ingest pipeline.
+
+Local preview: `python tools/spec.py index && python -m http.server -d site 8000`.
+
+To enable Pages on a fork: *Settings → Pages → Source: GitHub Actions*.
 
 ## Adding a record
 
@@ -86,6 +100,7 @@ The records in [`records/`](records/) are the spec for this repository. The skel
 
 ```text
 records/          all records, one file each (ASM, FCT, REQ, SPC)
-tools/spec.py     check · impact · render
+tools/spec.py     check · impact · render · index
+site/             the Pages workspace (index.html, app.js, styles.css)
 tests/            one test per acceptance scenario
 ```
