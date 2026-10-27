@@ -33,6 +33,7 @@ async function render() {
   let route = section;
   if (section === "capture" && CAPTURES[arg]) { mountCapture(main, CAPTURES[arg], data); route = `capture/${arg}`; }
   else if (section === "dashboard") views.dashboard(main, data);
+  else if (section === "graph") views.graph(main, data, params);
   else if (section === "records") views.records(main, data, params);
   else if (section === "record" && arg) { views.record(main, data, params, decodeURIComponent(arg)); route = "records"; }
   else if (section === "specs") views.specs(main, data);

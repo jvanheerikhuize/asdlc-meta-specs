@@ -2,6 +2,9 @@
 import { h, clear } from "../dom.js";
 import { typeLabel, statusTone, readiness, githubUrl, OPEN_ASSUMPTION } from "../data.js";
 import { renderMarkdown } from "../markdown.js";
+import { graph, renderMiniGraph } from "./graph.js";
+
+export { graph };
 
 const idLink = (data, id) => {
   const r = data.byId.get(id);
@@ -10,7 +13,7 @@ const idLink = (data, id) => {
 const statusBadge = (r) => h("span", { class: `badge ${statusTone(r)}` }, r.status);
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const head = (title, lead, ...actions) => h("div", { class: "page-head" },
-  h("div", {}, h("h1", { tabindex: "-1" }, title), lead ? h("p", { class: "lead" }, lead) : null), h("div", {}, actions));
+  h("div", {}, h("h1", { tabindex: "-1" }, title), lead ? h("p", { class: "lead" }, lead) : null), h("div", { class: "form-actions" }, actions));
 
 // ------------------------------------------------------------------ dashboard
 export function dashboard(main, data) {
@@ -24,6 +27,7 @@ export function dashboard(main, data) {
 
   clear(main).append(
     head("Dashboard", "Where our specifications stand, and what they rest on.",
+      h("a", { class: "button", href: "#/graph" }, "Explore graph"),
       h("a", { class: "button primary", href: "#/capture/requirement" }, "＋ Capture a requirement")),
     h("div", { class: "grid" },
       statCard(reqs.length, "Requirements", `${count(reqs, (r) => ["active", "accepted"].includes(r.status))} active · ${count(reqs, (r) => r.status === "provisional")} provisional · ${count(reqs, (r) => r.status === "draft")} draft`),
@@ -105,11 +109,19 @@ export function record(main, data, params, id) {
     h("p", {}, h("a", { href: "#/records" }, "← All records")),
     h("div", { class: "page-head" },
       h("div", {}, h("div", { class: "badges" }, h("span", { class: "badge" }, r.id), statusBadge(r)), h("h1", { tabindex: "-1", style: "margin-top:.5rem" }, r.title)),
-      h("a", { class: "button", href: githubUrl(data, `/blob/main/${r.path}`), target: "_blank", rel: "noopener" }, "View / edit on GitHub ↗")),
+      h("div", { class: "form-actions" },
+        h("a", { class: "button", href: `#/graph?focus=${r.id}` }, "Explore in graph"),
+        h("a", { class: "button", href: githubUrl(data, `/blob/main/${r.path}`), target: "_blank", rel: "noopener" }, "View / edit on GitHub ↗"))),
     h("div", { class: "capture" },
-      h("article", { class: "card prose" }, r.sections
-        ? Object.entries(r.sections).map(([title, body]) => [h("h2", {}, title), renderMarkdown(body)])
-        : h("p", { class: "empty" }, "Record text is not published on this site (metadata-only mode).")),
+      h("div", { class: "stack" },
+        h("article", { class: "card prose" }, r.sections
+          ? Object.entries(r.sections).map(([title, body]) => [h("h2", {}, title), renderMarkdown(body)])
+          : h("p", { class: "empty" }, "Record text is not published on this site (metadata-only mode).")),
+        h("section", { class: "card" },
+          h("div", { style: "display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-block-end:.75rem" },
+            h("h2", { style: "margin:0" }, "Traceability graph"),
+            h("a", { href: `#/graph?focus=${r.id}` }, "Open in full graph →")),
+          renderMiniGraph(data, r.id))),
       h("aside", { class: "capture-aside" },
         h("section", { class: "card" }, h("h2", {}, "Details"),
           h("dl", { class: "preview" }, meta.map(([k, v]) => [h("dt", {}, k), h("dd", {}, String(v))]))),

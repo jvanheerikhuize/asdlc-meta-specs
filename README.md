@@ -88,7 +88,15 @@ asdlc-meta-specs/
 
 ## GitHub Pages Workspace
 
-`site/` is a small, framework-free web app that serves as the human-facing workspace: dashboard, record browser, prose view per record, pending captures, and **capture interfaces** — all inside one persistent shell (header, navigation, search, draft indicators).
+`site/` is a small, framework-free web app that serves as the human-facing workspace: dashboard, interactive **Record Graph** (`#/graph`), record browser, prose + local traceability view per record (`#/record/:id`), pending captures, and **capture interfaces** — all inside one persistent shell (header, navigation, search, draft indicators).
+
+### Exploring the Record Graph
+
+Open **Browse → Graph** (`#/graph`) to inspect how assumptions, validations, and verified facts underpin constraints, requirements, acceptance criteria, decisions, and specifications:
+
+- **Stratified 5-tier flow:** Columns map directly to the epistemic lifecycle (`1 · Hypotheses & Evidence` → `2 · Verified Truths` → `3 · Normative Core` → `4 · Verification & Design` → optional `5 · Composition`).
+- **Epistemic edge styling:** Solid green edges show verified facts underpinning active requirements; dashed amber edges highlight provisional links from unvalidated assumptions.
+- **Lineage & risk lenses:** Click any node to trace its full upstream grounding and downstream impact in the side inspector, filter by domain, isolate a single record's lineage, or spotlight open epistemic risks. Every record page (`#/record/:id`) also embeds a local 1–2 hop traceability mini-graph.
 
 ### Capturing a requirement
 
@@ -146,6 +154,7 @@ Local preview: `python tools/build_index.py && python -m http.server -d site 800
 | Validator + CI | ✅ In place |
 | Projection compiler (`adapters/` → `dist/`) | 🔜 Planned — `dist/` currently holds hand-written samples of the intended output |
 | Pages workspace shell (dashboard, records, prose, pending) | ✅ In place — deploy gated behind `PAGES_ENABLED` |
+| Interactive Record Graph (`#/graph`) & per-record mini-graph | ✅ In place |
 | Requirement capture (app → issue → PR) | ✅ In place |
 | Assumption / fact / decision capture, in-app approval | 🔜 Planned |
 
