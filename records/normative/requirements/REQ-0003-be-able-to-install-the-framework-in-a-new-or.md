@@ -1,7 +1,7 @@
 ---
 id: REQ-0003
 type: requirement
-title: Be able to install the framework in a new or exissting repository
+title: Be able to install the framework in a new or existing repository
 domain: onboarding
 status: provisional
 category: non_functional
@@ -23,7 +23,7 @@ updated_at: '2026-10-27'
 ---
 
 ## Statement
-The enduser should be able to install the framework in a new or exissting repository.
+The enduser should be able to install the framework in a new or existing repository.
 
 ## Rationale
 Underpinned by: `ASM-0003`.

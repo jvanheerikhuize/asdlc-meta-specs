@@ -26,7 +26,7 @@ updated_at: "2026-10-26"
 ---
 
 ## Statement
-WHEN an active session is explicitly revoked, THE Auth Service SHALL publish the revoked token's unique identifier (`jti`) to an in-memory edge denylist synchronized across all API Gateway nodes within 30 seconds.
+WHEN an active session is explicitly revoked, THE Auth Service SHALL publish the revoked credential's unique identifier to an in-memory edge denylist synchronized across all Gateway nodes within 30 seconds.
 
 ## Rationale & Provisional Notice
 - Requires in-memory edge lookup to obey `CON-0001` and `FCT-0001`.

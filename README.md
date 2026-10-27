@@ -34,17 +34,22 @@ flowchart LR
 3. **Standard-Agnostic Projections**
    External SDD formats — **OpenSpec**, **GitHub Spec Kit**, EARS, Gherkin, ADRs — are treated as **target projections** (`adapters/` → `dist/`) of the canonical record graph.
 
+4. **Tech-Stack Agnostic Specifications (PIM vs. PSM)**
+   Canonical specifications (`SPC`, `CHG`), requirements (`REQ`), acceptance criteria (`ACR`), constraints (`CON`), decisions (`DEC`), and domain assumptions/facts (`ASM`, `FCT`) are **strictly tech-stack agnostic**. They express domain behavior, architectural topology, and invariants without locking in specific databases, frameworks, wire protocols, or cipher suites (which are defined externally and bound during projection). `tools/validate.py` and the capture workspace actively warn against tech-stack leakage.
+
 ---
 
 ## Quickstart
 
 ```bash
 pip install -r tools/requirements.txt
-python tools/validate.py            # schema, links, reciprocity, epistemic consistency, readiness
-python tools/validate.py --strict   # also fail on warnings
+python tools/validate.py                        # schema, links, reciprocity, epistemic consistency, readiness
+python tools/validate.py --strict               # also fail on warnings
+python -m unittest discover -s tests -v         # run capture ingestion & index unit tests
+python tools/build_index.py                     # compile records into site/data/index.json
 ```
 
-**Adding a record:** copy an existing record of the same type, take the next free ID (`REQ-0003`), name the file `<ID>-<kebab-slug>.md`, fill in the frontmatter, and run the validator. Dates must be quoted strings (`created_at: "2026-10-26"`).
+**Adding a record manually:** copy an existing record of the same type, take the next free ID (e.g. `REQ-0004`), name the file `<ID>-<kebab-slug>.md`, fill in the frontmatter, and run `python tools/validate.py`. Dates must be quoted strings (`created_at: "2026-10-27"`).
 
 ---
 
@@ -54,6 +59,7 @@ python tools/validate.py --strict   # also fail on warnings
 asdlc-meta-specs/
 ├── meta-spec.config.yaml              # ID prefixes, directories, schemas, epistemic rules, adapters
 ├── schema/                            # JSON Schemas (Draft 2020-12) for record frontmatter
+│   └── captures/                      # Strict schemas for untrusted capture payloads
 ├── records/                           # Canonical atomic store (source of truth)
 │   ├── epistemic/
 │   │   ├── assumptions/               # ASM-xxxx: unverified hypotheses
@@ -76,10 +82,10 @@ asdlc-meta-specs/
 │   ├── recordlib.py                   # shared record parsing / writing
 │   ├── validate.py                    # schema, links, epistemic consistency, readiness
 │   ├── build_index.py                 # records → site/data/index.json (built in CI)
-│   └── ingest_capture.py              # capture issue (or payload file) → new record files
+│   └── ingest_capture.py              # capture issue (or payload file) → new/updated record files
 ├── tests/                             # unit tests + fixtures for ingestion & index
 ├── .github/
-│   ├── ISSUE_TEMPLATE/                # capture-requirement issue form (fallback capture path)
+│   ├── ISSUE_TEMPLATE/                # capture-{requirement,assumption,fact,decision} issue forms
 │   └── workflows/                     # validate · ingest-capture · pages (gated)
 └── docs/                              # Architecture, lifecycle & mapping guides
 ```
@@ -153,19 +159,20 @@ Local preview: `python tools/build_index.py && python -m http.server -d site 800
 
 | Area | Status |
 | :--- | :--- |
-| Record model, schemas, folder architecture | ✅ In place |
-| Reference example (auth capability) | ✅ In place |
-| Validator + CI | ✅ In place |
-| Projection compiler (`adapters/` → `dist/`) | 🔜 Planned — `dist/` currently holds hand-written samples of the intended output |
+| Record model, schemas, folder architecture | ✅ In place (`9` record schemas + `4` capture schemas) |
+| Canonical records (`auth`, `global`, `onboarding`, `performance`) | ✅ In place (`17` records across all `9` elemental types) |
+| Validator, unit tests + CI | ✅ In place (`validate.py` incl. tech-stack agnosticism checks + `20` unit tests in `tests/test_ingest.py`) |
+| Projection compiler (`adapters/` → `dist/`) | 🔜 Planned — `dist/` currently holds hand-written samples of the intended output ([see Roadmap](docs/roadmap.md)) |
 | Pages workspace shell (dashboard, records, prose, pending) | ✅ In place — deploy gated behind `PAGES_ENABLED` |
 | Interactive Record Graph (`#/graph`) & per-record mini-graph | ✅ In place |
 | Requirement, Assumption, Fact & validation, and Decision capture (app → issue → PR) | ✅ In place |
-| In-app PR review & approval | 🔜 Planned |
+| Planned record types (`TRM`, `QST`, `CTR`) & in-app PR review | 🔜 Planned ([see Roadmap](docs/roadmap.md)) |
 
 ---
 
 ## Documentation
 
-- **[Architecture & Data Model](docs/architecture.md)** — record graph, frontmatter conventions, traceability rules.
+- **[Architecture & Data Model](docs/architecture.md)** — record graph, frontmatter conventions, traceability & tech-stack agnosticism rules.
 - **[Epistemic Lifecycle](docs/epistemic-lifecycle.md)** — capturing assumptions, validating, promoting to facts, cascading updates.
 - **[Standard Mappings](docs/standard-mappings.md)** — how records project into OpenSpec, Spec Kit, EARS, and Gherkin.
+- **[Roadmap & Planned Evolution](docs/roadmap.md)** — PIM vs. PSM separation, planned tech-stack-agnostic records (`TRM`, `QST`, `CTR`), schema enrichments, and projection tooling.

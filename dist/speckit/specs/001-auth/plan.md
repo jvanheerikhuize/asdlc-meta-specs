@@ -11,8 +11,8 @@
 
 ## 2. Architectural & Design Decisions
 
-### DEC-0001: Use EdDSA (Ed25519) asymmetric JWTs with 15-minute TTL for access tokens (Status: `accepted`)
+### DEC-0001: Use short-lived asymmetric cryptographic bearer tokens (15-minute TTL) with cached public verification keys (Status: `accepted`)
 - **Satisfies**: `REQ-0001`, `CON-0001`
 - **Underpinned By**: `FCT-0001`
 
-We will issue short-lived (15-minute TTL) JSON Web Tokens (JWTs) signed asymmetrically using **EdDSA (Ed25519)**. Public verification keys (`JWKS`) will be cached in memory on all API Gateway nodes with background key-rotation refresh.
+We will issue short-lived (15-minute TTL) self-contained bearer tokens signed with an asymmetric private key by the Auth Service. Public verification keys will be cached in memory on all Gateway nodes with background key-rotation refresh. *(Concrete token encoding and signature curve—such as Ed25519 JWTs—are bound by the target repository's tech-stack configuration.)*

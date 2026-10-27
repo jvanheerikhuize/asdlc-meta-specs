@@ -1,5 +1,5 @@
-// Generic, schema-driven capture engine. Every capture interface (requirement now; assumption, fact,
-// decision… later) is a small definition object rendered by this engine, so they all share the same
+// Generic, schema-driven capture engine. Every capture interface (requirement, assumption, fact,
+// decision) is a small definition object rendered by this engine, so they all share the same
 // layout, autosave, validation, live preview, hints and "submit via GitHub" flow.
 //
 // Definition shape (see capture/requirement.js):

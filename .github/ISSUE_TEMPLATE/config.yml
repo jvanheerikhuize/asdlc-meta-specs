@@ -2,4 +2,4 @@ blank_issues_enabled: true
 contact_links:
   - name: "🧭 Guided capture app (GitHub Pages)"
     url: "https://jvanheerikhuize.github.io/asdlc-meta-specs/#/capture/requirement"
-    about: "Capture requirements with hints, existing-fact pickers and a live preview."
+    about: "Capture requirements, assumptions, facts/validations, and decisions with live previews, record pickers, and quality hints."

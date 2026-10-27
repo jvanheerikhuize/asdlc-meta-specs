@@ -20,7 +20,7 @@ LINK_FIELDS = [
     "evidence", "supersedes", "parent", "target_spec",
 ]
 META_FIELDS = [
-    "confidence", "risk", "validation_plan", "method", "outcome", "source", "scope",
+    "confidence", "risk", "validation_plan", "method", "outcome", "artifacts", "source", "scope",
     "enforcement", "category", "normative", "ears_pattern", "priority", "format",
     "owners", "tags", "created_at", "updated_at",
 ]

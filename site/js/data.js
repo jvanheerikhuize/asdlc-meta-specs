@@ -17,12 +17,19 @@ export async function loadData() {
   const raw = await res.json();
   const byId = new Map(raw.records.map((r) => [r.id, r]));
   const referencedBy = new Map();
+  const addRef = (t, id, field) => {
+    if (!referencedBy.has(t)) referencedBy.set(t, []);
+    referencedBy.get(t).push({ id, field });
+  };
   for (const r of raw.records) {
     for (const [field, targets] of Object.entries(r.links || {})) {
-      for (const t of [].concat(targets)) {
-        if (!referencedBy.has(t)) referencedBy.set(t, []);
-        referencedBy.get(t).push({ id: r.id, field });
-      }
+      for (const t of [].concat(targets)) addRef(t, r.id, field);
+    }
+    for (const [group, targets] of Object.entries(r.composition || {})) {
+      for (const t of targets || []) addRef(t, r.id, `composition.${group}`);
+    }
+    for (const [group, targets] of Object.entries(r.deltas || {})) {
+      for (const t of targets || []) addRef(t, r.id, `deltas.${group}`);
     }
   }
   cache = { ...raw, byId, referencedBy };

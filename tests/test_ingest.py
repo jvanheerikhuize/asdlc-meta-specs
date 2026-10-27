@@ -286,6 +286,17 @@ class IngestTests(unittest.TestCase):
         self.assertEqual(out["status"], "provisional")
         self.assertValid()
 
+    def test_tech_stack_leakage_warning_in_strict_mode(self):
+        req_file = self.root / "records/normative/requirements/REQ-0001-stateless-token-verification.md"
+        text = req_file.read_text(encoding="utf-8")
+        req_file.write_text(
+            text.replace("## Statement\n", "## Statement\nThe gateway MUST query PostgreSQL for every JWT token.\n"),
+            encoding="utf-8",
+        )
+        v = validate(self.root)
+        self.assertEqual(v.returncode, 1)
+        self.assertIn("tech-stack term(s)", v.stdout)
+
 
 class TitleTests(unittest.TestCase):
     def test_titles_keep_meaning(self):
@@ -311,6 +322,8 @@ class IndexTests(unittest.TestCase):
         self.assertTrue(idx["project"]["github"])
         req = next(r for r in idx["records"] if r["id"] == "REQ-0001")
         self.assertIn("Statement", req["sections"])
+        val = next(r for r in idx["records"] if r["id"] == "VAL-0001")
+        self.assertEqual(val["artifacts"], ["benchmarks/2026-10-24-gateway-replay-results.json"])
 
 
 if __name__ == "__main__":

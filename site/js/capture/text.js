@@ -40,6 +40,13 @@ const VAGUE = [
   "as soon as possible", "asap", "etc", "and/or", "tbd", "several", "optimal", "state-of-the-art", "modern",
 ];
 
+const TECH_STACK_TERMS = [
+  "postgresql", "postgres", "mysql", "mongodb", "dynamodb", "sqlite", "redis", "kafka", "rabbitmq",
+  "react", "angular", "vue", "nextjs", "express", "fastapi", "django", "spring boot", "prisma",
+  "hibernate", "graphql", "grpc", "protobuf", "jwt", "jti", "ed25519", "eddsa", "hmac-sha256",
+  "rsa-2048", "kubernetes", "docker", "terraform",
+];
+
 /** Non-blocking quality hints for a requirement statement. */
 export function requirementHints(statement) {
   const s = statement.trim();
@@ -50,6 +57,10 @@ export function requirementHints(statement) {
   if (vague.length) {
     hints.push({ level: "warn", text: `“${vague.slice(0, 3).join("”, “")}” is hard to test. Can you make it measurable? (e.g. “within 2 seconds”, “in 3 clicks”)` });
   }
+  const tech = TECH_STACK_TERMS.filter((w) => new RegExp(`(^|[^\\w-])${w.replace(/[/-]/g, "\\$&")}([^\\w-]|$)`, "i").test(lower));
+  if (tech.length) {
+    hints.push({ level: "warn", text: `“${tech.slice(0, 3).join("”, “")}” is a tech-stack detail. Keep requirements tech-stack agnostic and record technical choices in a Decision (DEC) or external stack config.` });
+  }
   const modals = lower.match(/\b(shall|must|should|may|will)\b/g) || [];
   if (!modals.length) {
     hints.push({ level: "tip", text: "Say how binding it is: shall (mandatory), should (recommended) or may (optional). Without one, it is recorded as SHALL." });
@@ -58,7 +69,7 @@ export function requirementHints(statement) {
   }
   if (s.length > 300) hints.push({ level: "warn", text: "Long statements are harder to verify. Can you split it or move detail to notes?" });
   if (/\b(shall|must|should) not\b/i.test(s)) hints.push({ level: "tip", text: "Negative requirements are hard to test. If possible, also state what should happen instead." });
-  if (!hints.length) hints.push({ level: "good", text: "Clear and testable — nice." });
+  if (!hints.length) hints.push({ level: "good", text: "Clear, testable, and tech-stack agnostic — nice." });
   return hints;
 }
 

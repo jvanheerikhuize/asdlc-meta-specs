@@ -72,6 +72,39 @@ epistemic_rules:
   require_criteria_for_active_requirements: true
   auto_flag_stale_on_assumption_promotion: true
   auto_flag_broken_on_assumption_invalidation: true
+  enforce_tech_stack_agnostic_specs: true
+  forbidden_tech_terms:
+    - "postgresql"
+    - "postgres"
+    - "mysql"
+    - "mongodb"
+    - "dynamodb"
+    - "sqlite"
+    - "redis"
+    - "kafka"
+    - "rabbitmq"
+    - "react"
+    - "angular"
+    - "vue"
+    - "nextjs"
+    - "express"
+    - "fastapi"
+    - "django"
+    - "spring boot"
+    - "prisma"
+    - "hibernate"
+    - "graphql"
+    - "grpc"
+    - "protobuf"
+    - "jwt"
+    - "jti"
+    - "ed25519"
+    - "eddsa"
+    - "hmac-sha256"
+    - "rsa-2048"
+    - "kubernetes"
+    - "docker"
+    - "terraform"
   readiness_gates:
     release_ready:
       allow_unvalidated_high_risk_assumptions: false

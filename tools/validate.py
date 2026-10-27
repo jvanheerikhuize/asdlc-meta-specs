@@ -16,6 +16,7 @@ Exit code is non-zero when errors are found.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -23,7 +24,7 @@ from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from recordlib import ROOT as DEFAULT_ROOT, iter_record_files, parse_record  # noqa: E402
+from recordlib import ROOT as DEFAULT_ROOT, iter_record_files, parse_record, sections  # noqa: E402
 from recordlib import load_config as _load_config  # noqa: E402
 
 ROOT = DEFAULT_ROOT
@@ -55,12 +56,12 @@ def load_schemas() -> tuple[dict, Registry]:
     return schemas, registry
 
 
-def load_records(config: dict) -> dict[str, tuple[Path, dict]]:
-    records: dict[str, tuple[Path, dict]] = {}
+def load_records(config: dict) -> dict[str, tuple[Path, dict, str]]:
+    records: dict[str, tuple[Path, dict, str]] = {}
     for type_name, path in iter_record_files(config, ROOT):
         rel = path.relative_to(ROOT)
         try:
-            meta, _ = parse_record(path)
+            meta, body = parse_record(path)
         except ValueError as exc:
             err(f"{rel}: {exc}")
             continue
@@ -75,13 +76,13 @@ def load_records(config: dict) -> dict[str, tuple[Path, dict]]:
         if rid in records:
             err(f"{rel}: duplicate id {rid} (also in {records[rid][0]})")
             continue
-        records[rid] = (rel, meta)
+        records[rid] = (rel, meta, body)
     return records
 
 
 def validate_schemas(records, schemas, registry, config) -> None:
     by_type = {t: Path(s["schema"]).name for t, s in config["records"]["types"].items()}
-    for rid, (rel, meta) in records.items():
+    for rid, (rel, meta, _) in records.items():
         schema = schemas.get(by_type.get(meta.get("type"), ""))
         if schema is None:
             err(f"{rel}: no schema for type '{meta.get('type')}'")
@@ -113,7 +114,7 @@ def references(meta: dict):
 
 
 def validate_references(records) -> None:
-    for rid, (rel, meta) in records.items():
+    for rid, (rel, meta, _) in records.items():
         for field, target in references(meta):
             if target not in records:
                 err(f"{rel}: {field} -> {target} does not exist")
@@ -124,7 +125,7 @@ def reciprocal(records, src_field: str, dst_field: str, label: str) -> None:
     def as_list(v):
         return v if isinstance(v, list) else ([v] if v else [])
 
-    for rid, (rel, meta) in records.items():
+    for rid, (rel, meta, _) in records.items():
         for target in as_list(meta.get(src_field)):
             if target in records and rid not in as_list(records[target][1].get(dst_field)):
                 err(f"{rel}: {src_field} -> {target}, but {target}.{dst_field} does not reference {rid} ({label})")
@@ -159,7 +160,7 @@ def epistemic_state(records, rid: str) -> str:
 
 def validate_epistemics(records, config) -> None:
     rules = config.get("epistemic_rules", {})
-    for rid, (rel, meta) in records.items():
+    for rid, (rel, meta, _) in records.items():
         if meta.get("type") not in {"constraint", "requirement", "criterion", "decision"}:
             continue
         states = {u: epistemic_state(records, u) for u in meta.get("underpinned_by") or [] if u in records}
@@ -178,9 +179,35 @@ def validate_epistemics(records, config) -> None:
             err(f"{rel}: active requirement has no acceptance criteria (verified_by)")
 
 
+STACK_AGNOSTIC_TYPES = {"constraint", "requirement", "criterion", "spec", "change"}
+STACK_AGNOSTIC_SECTIONS = ("Statement", "Scenario", "Purpose", "What Changes")
+
+
+def validate_tech_agnostic(records, config) -> None:
+    rules = config.get("epistemic_rules", {})
+    if not rules.get("enforce_tech_stack_agnostic_specs"):
+        return
+    terms = [t.strip() for t in (rules.get("forbidden_tech_terms") or []) if t.strip()]
+    if not terms:
+        return
+    pattern = re.compile(r"(?<![\w-])(" + "|".join(re.escape(t) for t in terms) + r")(?![\w-])", re.I)
+    for rid, (rel, meta, body) in records.items():
+        rtype = meta.get("type")
+        if rtype not in STACK_AGNOSTIC_TYPES:
+            continue
+        secs = sections(body)
+        checked_text = " ".join([
+            str(meta.get("title", "")),
+            *(text for heading, text in secs.items() if heading.startswith(STACK_AGNOSTIC_SECTIONS)),
+        ])
+        hits = sorted({m.group(1).lower() for m in pattern.finditer(checked_text)})
+        if hits:
+            warn(f"{rel}: tech-stack term(s) {hits} found in stack-agnostic {rtype}; keep tech-stack choices in DEC or external stack config")
+
+
 def readiness_report(records) -> list[str]:
     lines = []
-    for rid, (rel, meta) in sorted(records.items()):
+    for rid, (rel, meta, _) in sorted(records.items()):
         if meta.get("type") != "spec":
             continue
         reqs = (meta.get("composition") or {}).get("requirements") or []
@@ -202,6 +229,7 @@ def main() -> int:
     validate_references(records)
     validate_reciprocity(records)
     validate_epistemics(records, config)
+    validate_tech_agnostic(records, config)
 
     print(f"Checked {len(records)} records against {len(schemas)} schemas.")
     for w in warnings:

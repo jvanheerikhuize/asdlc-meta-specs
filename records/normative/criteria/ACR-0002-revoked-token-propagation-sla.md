@@ -20,8 +20,8 @@ updated_at: "2026-10-26"
 ---
 
 ## Scenario: Revoked token blocked at edge gateway
-- **GIVEN** an authenticated user has an unexpired access token with identifier `jti-9941`
-- **WHEN** the session is revoked via `POST /v1/auth/revoke`
+- **GIVEN** an authenticated user has an unexpired access token with unique identifier `cred-9941`
+- **WHEN** the session is explicitly revoked
 - **AND** `30 seconds` have elapsed for edge denylist synchronization (`ASM-0002`)
-- **THEN** any subsequent request bearing `jti-9941` SHALL be rejected by the API Gateway with `401 Unauthorized`
+- **THEN** any subsequent request bearing `cred-9941` SHALL be rejected by the Gateway as unauthorized
 - **AND** the denylist check SHALL be served entirely from local gateway memory

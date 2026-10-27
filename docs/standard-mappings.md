@@ -8,45 +8,60 @@ Using the mapping rules and templates in `adapters/`, the canonical elemental re
 
 ## 1. Cross-Standard Translation Matrix
 
-| Canonical Record | Semantic Role | **OpenSpec** Target | **GitHub Spec Kit** Target | **EARS / IEEE / Gherkin / ADR** |
+| Canonical Record | Semantic Role | **OpenSpec** Target (`adapters/openspec/`) | **GitHub Spec Kit** Target (`adapters/speckit/`) | **EARS / IEEE / Gherkin / ADR** |
 | :--- | :--- | :--- | :--- | :--- |
-| **`CON-xxxx`** | Global / domain guardrail | `openspec/specs/principles/spec.md` | `.specify/memory/constitution.md` | System Constraints / Non-Functional Invariants |
-| **`SPC-xxxx`** | Capability / feature manifest | `openspec/specs/<domain>/spec.md` (`# <Title>` & `## Purpose`) | `specs/NNN-<domain>/spec.md` (Feature Header & Scope) | SRS Section 3 (Specific Requirements) |
-| **`REQ-xxxx`** | Atomic normative requirement | `### Requirement: <title>` under `## Requirements` | Requirement item under `## Requirements` in `spec.md` | EARS sentence (`WHEN ... THE system SHALL ...`) |
-| **`ACR-xxxx`** | Testable verification scenario | `#### Scenario: <title>` (`GIVEN`/`WHEN`/`THEN`) nested under `REQ` | `### Acceptance Scenarios` in `spec.md` | Cucumber `.feature` Scenario block |
-| **`DEC-xxxx`** | Architectural design choice | `openspec/changes/<id>/design.md` | `specs/NNN-<domain>/plan.md` (Architecture & Technical Plan) | MADR / Nygard ADR (`docs/adr/ADR-xxxx.md`) |
-| **`CHG-xxxx`** | Scoped delta proposal | `openspec/changes/<id>/proposal.md` + `specs/<domain>/spec.md` (`ADDED`/`MODIFIED`/`REMOVED`) | Feature branch delta + `specs/NNN-<domain>/tasks.md` | Change Request (CR) / RFC |
-| **`FCT-xxxx`** | Verified domain truth | Provenance metadata / rationale block | Constitution fact base & `plan.md` context | Domain Model Invariants |
-| **`ASM-xxxx`** | Unvalidated belief | `> [!WARNING]` callout on provisional requirements | **Epistemic Gate Check** warning in `plan.md` | Risk Register / Open Issues |
+| **`CON-xxxx`** | Global / domain guardrail | Governing constraints in `specs/<domain>/spec.md` (or `specs/principles/spec.md`) | `.specify/memory/constitution.md` (`templates/constitution.md.hbs`) | System Constraints / Non-Functional Invariants |
+| **`SPC-xxxx`** | Capability / feature manifest | `specs/<domain>/spec.md` (`templates/spec.md.hbs`) | `specs/NNN-<domain>/spec.md` (`templates/spec.md.hbs`) | SRS Section 3 (Specific Requirements) |
+| **`REQ-xxxx`** | Atomic normative requirement | `### Requirement: <title>` under `## Requirements` | `### REQ-xxxx: <title>` under `## 3. Requirements` in `spec.md` | EARS sentence (`WHEN ... THE system SHALL ...`) |
+| **`ACR-xxxx`** | Testable verification scenario | `#### Scenario: <title>` (`GIVEN`/`WHEN`/`THEN`) nested under `REQ` | `### ACR-xxxx: <title>` under `## 4. Acceptance Scenarios` in `spec.md` | Cucumber `.feature` Scenario block |
+| **`DEC-xxxx`** | Architectural design choice | `changes/<slug>/design.md` (or architectural context) | `specs/NNN-<domain>/plan.md` (`templates/plan.md.hbs`) | MADR / Nygard ADR (`docs/adr/ADR-xxxx.md`) |
+| **`CHG-xxxx`** | Scoped delta proposal | `changes/<file_slug>/specs/<domain>/spec.md` (`templates/delta-spec.md.hbs`) | Feature branch delta + `specs/NNN-<domain>/tasks.md` | Change Request (CR) / RFC |
+| **`FCT-xxxx`** | Verified domain truth | Provenance comments & rationale | Constitution fact base & `## 2. Epistemic Foundation` in `spec.md` | Domain Model Invariants |
+| **`ASM-xxxx`** | Unvalidated belief | `> [!WARNING]` callout on provisional requirements | `## 2. Epistemic Foundation` in `spec.md` + **Epistemic Gate Check** in `plan.md` | Risk Register / Open Issues |
+
+> [!NOTE]
+> **Current Implementation Status**: The mapping definitions (`adapters/*/mapping.yaml`) and Handlebars templates (`adapters/*/templates/*.hbs`) are in place, and `dist/` contains reference sample projections for `SPC-0001` and `CHG-0001`. The automated projection compiler CLI is planned (see `README.md` Project Status).
 
 ---
 
 ## 2. Target 1: OpenSpec Projection (`adapters/openspec/`)
 
-OpenSpec organizes specifications into two top-level directories:
-- `openspec/specs/<capability>/spec.md` (current source of truth)
-- `openspec/changes/<change-slug>/` (proposed delta with `proposal.md`, `design.md`, `tasks.md`, and delta `specs/`)
+OpenSpec organizes specifications into two top-level directories under `dist/openspec/`:
+- `specs/<domain>/spec.md` (current capability specification)
+- `changes/<file_slug>/specs/<domain>/spec.md` (proposed delta partitioned into `ADDED`, `MODIFIED`, and `REMOVED` requirements)
 
-### How `asdlc-meta-specs` Compiles to OpenSpec
-1. For each active `SPC-xxxx` manifest:
-   - Generates `dist/openspec/specs/<domain>/spec.md`.
-   - Renders the `SPC` Markdown summary under `## Purpose`.
-   - Iterates through `composition.requirements` (`REQ-xxxx`), rendering each as `### Requirement: <REQ.title>` followed by its RFC 2119 / EARS statement.
-   - If a `REQ` is underpinned by any unvalidated `ASM-xxxx`, injects an epistemic warning callout so agents know the requirement is provisional.
+### Derived Variables (`adapters/openspec/mapping.yaml`)
+- `file_slug`: Record filename without the ID prefix and `.md` extension (e.g., `CHG-0001-add-revocation-denylist.md` $\rightarrow$ `add-revocation-denylist`).
+- `section:<Heading>`: Markdown body content under `## <Heading>` (e.g., `section:Purpose`, `section:Statement`, `section:Scenario*`).
+
+### How `asdlc-meta-specs` Maps to OpenSpec
+1. **Capability Spec (`projections.capability_spec` $\rightarrow$ `templates/spec.md.hbs`)**:
+   - Generates `dist/openspec/specs/{{domain}}/spec.md` from each `SPC-xxxx` manifest (sample: `dist/openspec/specs/auth/spec.md`).
+   - Renders `SPC` `## Purpose` and an `## Epistemic Readiness Summary` listing governing `CON-xxxx` constraints.
+   - Iterates through `composition.requirements` (`REQ-xxxx`), rendering each as `### Requirement: <REQ.title>` with provenance comments (`<!-- Canonical ID: REQ-xxxx | Status: ... | Underpinned by: ... -->`) followed by its `## Statement`.
+   - If a `REQ` is underpinned by any unvalidated `ASM-xxxx`, injects a `> [!WARNING]` callout identifying the provisional requirement and the risk of each unvalidated assumption.
    - Nests each linked `ACR-xxxx` (`verified_by`) directly beneath its parent requirement as `#### Scenario: <ACR.title>`.
-2. For each `CHG-xxxx` delta manifest:
-   - Generates `dist/openspec/changes/<chg-slug>/proposal.md`, `design.md` (from linked `DEC-xxxx`), and `specs/<domain>/spec.md` partitioned into `## ADDED Requirements`, `## MODIFIED Requirements`, and `## REMOVED Requirements`.
+2. **Change Proposal (`projections.change_proposal` $\rightarrow$ `templates/delta-spec.md.hbs`)**:
+   - Generates `dist/openspec/changes/{{file_slug}}/specs/{{domain}}/spec.md` from each `CHG-xxxx` manifest (sample: `dist/openspec/changes/add-revocation-denylist/specs/auth/spec.md`), partitioning `deltas.added`, `deltas.modified`, and `deltas.removed` requirements into `## ADDED Requirements`, `## MODIFIED Requirements`, and `## REMOVED Requirements`.
 
 ---
 
 ## 3. Target 2: GitHub Spec Kit Projection (`adapters/speckit/`)
 
-GitHub Spec Kit follows a phased artifact pipeline (`.specify/memory/constitution.md` $\rightarrow$ `specs/NNN-<feature>/spec.md` $\rightarrow$ `plan.md` $\rightarrow$ `tasks.md`).
+GitHub Spec Kit follows a phased artifact pipeline (`.specify/memory/constitution.md` $\rightarrow$ `specs/NNN-<domain>/spec.md` $\rightarrow$ `specs/NNN-<domain>/plan.md`).
 
-### How `asdlc-meta-specs` Compiles to Spec Kit
-1. **Constitution (`.specify/memory/constitution.md`)**:
-   - Compiled from all active `CON-xxxx` (Constraints) and global `FCT-xxxx` (Facts), complete with their empirical `VAL-xxxx` provenance.
-2. **Feature Spec (`specs/NNN-<domain>/spec.md`)**:
-   - Compiled from `SPC-xxxx`, rendering `REQ-xxxx` items, `ACR-xxxx` acceptance scenarios, and an **Epistemic Foundation** appendix listing all underpinning `FCT` and `ASM` records.
-3. **Technical Blueprint (`specs/NNN-<domain>/plan.md`)**:
-   - Compiled from `DEC-xxxx` (Architectural Decisions) and an automated **Constitution & Epistemic Gate Check** table that flags any unvalidated assumptions (`ASM`) before implementation tasks are executed.
+### Derived Variables (`adapters/speckit/mapping.yaml`)
+- `feature_number`: Numeric part of the `SPC` ID zero-padded to 3 digits (`SPC-0001` $\rightarrow$ `001`), matching Spec Kit's `specs/NNN-<feature>/` directory convention.
+- `section:<Heading>`: Markdown body content under `## <Heading>`.
+
+### How `asdlc-meta-specs` Maps to Spec Kit
+1. **Constitution (`projections.constitution` $\rightarrow$ `templates/constitution.md.hbs`)**:
+   - Output target: `dist/speckit/.specify/memory/constitution.md`.
+   - Compiled from all `active` `CON-xxxx` (Constraints) and verified `FCT-xxxx` (Facts), including their `source` and `promoted_from` lineage.
+2. **Feature Spec (`projections.feature_spec` $\rightarrow$ `templates/spec.md.hbs`)**:
+   - Output target: `dist/speckit/specs/{{feature_number}}-{{domain}}/spec.md` (sample: `dist/speckit/specs/001-auth/spec.md`).
+   - Compiled from `SPC-xxxx`, rendering `## 1. Overview & Purpose`, `## 2. Epistemic Foundation (Facts & Assumptions)` (including confidence, risk, and validation plans for open assumptions), `## 3. Requirements`, and `## 4. Acceptance Scenarios`.
+3. **Technical Plan (`projections.technical_plan` $\rightarrow$ `templates/plan.md.hbs`)**:
+   - Output target: `dist/speckit/specs/{{feature_number}}-{{domain}}/plan.md` (sample: `dist/speckit/specs/001-auth/plan.md`).
+   - Compiled from `SPC-xxxx` and its `composition.decisions` (`DEC-xxxx`), preceded by a **Constitution & Epistemic Gate Check** table that flags any high-risk unvalidated assumptions (`WARN (PROVISIONAL)`) before implementation tasks are executed.
+

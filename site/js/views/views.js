@@ -95,6 +95,9 @@ const FIELD_LABEL = {
   underpinned_by: "Underpinned by", governed_by: "Governed by", verified_by: "Verified by", verifies: "Verifies",
   satisfies: "Satisfies", validated_by: "Validated by", promoted_to: "Promoted to", promoted_from: "Promoted from",
   tests: "Tests", establishes: "Establishes", evidence: "Evidence", supersedes: "Supersedes", parent: "Parent", target_spec: "Target spec",
+  "composition.constraints": "Composed in", "composition.requirements": "Composed in",
+  "composition.criteria": "Composed in", "composition.decisions": "Composed in",
+  "deltas.added": "Added in", "deltas.modified": "Modified in", "deltas.removed": "Removed in",
 };
 
 export function record(main, data, params, id) {
@@ -102,7 +105,8 @@ export function record(main, data, params, id) {
   if (!r) return notFound(main, `No record ${id}.`);
   const meta = [["Type", typeLabel(r.type)], ["Domain", r.domain], ["Priority", r.priority], ["Strength", r.normative],
     ["Risk", r.risk], ["Confidence", r.confidence], ["Outcome", r.outcome], ["Method", r.method], ["Source", r.source],
-    ["Owners", (r.owners || []).join(", ")], ["Created", r.created_at], ["Updated", r.updated_at]].filter(([, v]) => v !== undefined && v !== "");
+    ["Artifacts", (r.artifacts || []).join(", ")], ["Owners", (r.owners || []).join(", ")],
+    ["Created", r.created_at], ["Updated", r.updated_at]].filter(([, v]) => v !== undefined && v !== "");
   const links = Object.entries(r.links || {});
   const incoming = data.referencedBy.get(id) || [];
   const comp = Object.entries(r.composition || r.deltas || {}).filter(([, v]) => v?.length);
