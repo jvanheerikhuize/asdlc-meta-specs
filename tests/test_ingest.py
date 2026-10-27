@@ -12,6 +12,10 @@ REPO = Path(__file__).resolve().parent.parent
 FIX = REPO / "tests/fixtures"
 PY = sys.executable
 
+sys.path.insert(0, str(REPO / "tools"))
+from recordlib import load_config  # noqa: E402
+from ingest_capture import load_existing, IdAllocator  # noqa: E402
+
 
 def sandbox() -> Path:
     tmp = Path(tempfile.mkdtemp(prefix="metaspec-"))
@@ -43,11 +47,19 @@ class IngestTests(unittest.TestCase):
         v = validate(self.root)
         self.assertEqual(v.returncode, 0, v.stdout)
 
+    def _allocator(self) -> IdAllocator:
+        config = load_config(self.root)
+        existing = load_existing(self.root, config)
+        return IdAllocator(set(existing))
+
     def test_minimal_capture(self):
+        alloc = self._allocator()
+        exp_req = alloc.next("REQ")
+        exp_asm = alloc.next("ASM")
         code, out = ingest(self.root, "--payload-file", str(FIX / "capture-minimal.json"), "--issue", "7", "--author", "alice")
         self.assertEqual(code, 0, out)
-        self.assertEqual(out["requirement"], "REQ-0003")
-        self.assertEqual(out["assumptions"], ["ASM-0003"])
+        self.assertEqual(out["requirement"], exp_req)
+        self.assertEqual(out["assumptions"], [exp_asm])
         self.assertEqual(out["status"], "provisional")
         text = (self.root / out["files"][0]).read_text()
         self.assertIn("issue #7 by @alice", text)
@@ -55,14 +67,19 @@ class IngestTests(unittest.TestCase):
         self.assertValid()
 
     def test_full_capture(self):
+        alloc = self._allocator()
+        exp_req = alloc.next("REQ")
+        exp_acr1 = alloc.next("ACR")
+        exp_acr2 = alloc.next("ACR")
         code, out = ingest(self.root, "--payload-file", str(FIX / "capture-full.json"))
         self.assertEqual(code, 0, out)
-        self.assertEqual(out["criteria"], ["ACR-0003", "ACR-0004"])
+        self.assertEqual(out["requirement"], exp_req)
+        self.assertEqual(out["criteria"], [exp_acr1, exp_acr2])
         req = (self.root / out["files"][0]).read_text()
         self.assertIn("domain: auth", req)
         self.assertIn("normative: SHALL", req)
         self.assertIn("ears_pattern: event_driven", req)
-        acr = next(f for f in out["files"] if "ACR-0003" in f)
+        acr = next(f for f in out["files"] if exp_acr1 in f)
         self.assertIn("- **AND** no database query is executed", (self.root / acr).read_text())
         self.assertValid()
 
@@ -76,7 +93,8 @@ class IngestTests(unittest.TestCase):
         for expected in ("domain: privacy", "priority: p1", "category: data", "FCT-0001",
                          "ears_pattern: event_driven", "## Notes\nCoordinate with the DPO"):
             self.assertIn(expected, req)
-        acr = (self.root / next(f for f in out["files"] if "ACR-0003" in f)).read_text()
+        acr_file = next(f for f in out["files"] if "/ACR-" in f or "ACR-" in Path(f).name)
+        acr = (self.root / acr_file).read_text()
         self.assertIn("- **GIVEN** a logged-in user", acr)
         self.assertIn("- **WHEN** they click Export", acr)
         self.assertValid()
@@ -120,10 +138,16 @@ class IngestTests(unittest.TestCase):
         self.assertValid()
 
     def test_reserved_ids_are_skipped(self):
+        alloc = self._allocator()
+        r1 = alloc.next("REQ")
+        r2 = alloc.next("REQ")
+        a1 = alloc.next("ASM")
+        exp_req = alloc.next("REQ")
+        exp_asm = alloc.next("ASM")
         ids = self.root / "ids.txt"
-        ids.write_text("REQ-0003\nREQ-0004\nASM-0003\n")
+        ids.write_text(f"{r1}\n{r2}\n{a1}\n")
         code, out = ingest(self.root, "--payload-file", str(FIX / "capture-minimal.json"), "--reserved-ids-file", str(ids))
-        self.assertEqual((code, out["requirement"], out["assumptions"]), (0, "REQ-0005", ["ASM-0004"]))
+        self.assertEqual((code, out["requirement"], out["assumptions"]), (0, exp_req, [exp_asm]))
 
     def test_dry_run_writes_nothing(self):
         before = sorted(p.name for p in self.root.rglob("*.md"))
