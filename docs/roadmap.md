@@ -17,26 +17,18 @@ To keep specifications durable and reusable across stacks, the repository enforc
    - Concrete frameworks, languages, databases, wire protocols, and cryptographic cipher suites are defined **outside** the normative records (e.g., in an external Tech-Stack Profile or target repository constitution).
    - Projection adapters combine the tech-stack-agnostic `SPC`/`CHG` graph with the external tech-stack profile to emit stack-bound execution plans (`plan.md`, `tasks.md`) into `dist/`.
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│  Canonical Graph (Tech-Stack Agnostic / PIM)                 │
-│  ASM / FCT / VAL / CON / DEC / REQ / ACR / SPC / CHG         │
-│  + Planned: TRM / QST / CTR                                  │
-└──────────────────────────────┬───────────────────────────────┘
-                               │
-                               ▼
-                 ┌───────────────────────────┐
-                 │    Projection Compiler    │◄─── External Tech-Stack Profile (PSM)
-                 │        (adapters/)        │     (Languages, Frameworks, Storage,
-                 └─────────────┬─────────────┘      Protocols, Security Primitives)
-                               │
-              ┌────────────────┴────────────────┐
-              ▼                                 ▼
-┌───────────────────────────┐     ┌───────────────────────────┐
-│   dist/openspec/          │     │   dist/speckit/           │
-│   Spec Deltas & Prompts   │     │   spec.md / plan.md /     │
-│                           │     │   tasks.md                │
-└───────────────────────────┘     └───────────────────────────┘
+```mermaid
+flowchart TD
+    PIM["Canonical Graph (PIM): ASM, FCT, VAL, CON, DEC, REQ, ACR, SPC, CHG + Planned TRM, QST, CTR"]
+    PSM["External Tech-Stack Profile (PSM): Languages, Frameworks, Storage, Protocols, Security"]
+    COMP["Projection Compiler (adapters/)"]
+    OS["dist/openspec/ (Spec Deltas & Prompts)"]
+    SK["dist/speckit/ (spec.md, plan.md, tasks.md)"]
+
+    PIM --> COMP
+    PSM --> COMP
+    COMP --> OS
+    COMP --> SK
 ```
 
 ---
