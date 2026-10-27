@@ -60,7 +60,8 @@ Example output:
 
 **https://jvanheerikhuize.github.io/asdlc-meta-specs-lite/** is a small static site in `site/` (one HTML page, one script, no build step). It is rebuilt and deployed on every push to `main`.
 
-- **Dashboard:** how many requirements rest on facts, spec readiness in build order, and which open assumptions hold what back.
+- **Dashboard:** the state of the spec at a glance. Each record type gets a bar coloured green (done), amber (needs attention) or red (broken), and every segment links to those records. Below it: the specs that need attention and exactly what blocks them, and the open assumptions that hold things back.
+- **Tasks:** what a human must do next, worked out from the records: *fix now* (broken requirements, check errors), *test assumptions* (ranked by what they unlock, with "it held → record the fact" and "it failed → mark invalidated" buttons), *quick wins* (requirements or specs that can be activated) and *tidy up*.
 - **Graph:** assumptions → facts → requirements → specs. Solid edges rest on facts, dashed edges on open assumptions. Click a record to trace its lineage.
 - **Records:** filter by type, search, and open any record to see its text, what it rests on, what uses it and what a change would affect.
 - **Capture:** a form per record type. It picks the next free ID, shows the file, and opens GitHub's editor with it filled in. Choose "create a new branch and start a pull request" and CI checks the record. There is no bot or ingest pipeline.

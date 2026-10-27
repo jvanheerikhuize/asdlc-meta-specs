@@ -15,7 +15,7 @@ function h(tag, attrs = {}, ...kids) {
     else if (k === "html") el.innerHTML = v;
     else el.setAttribute(k, v === true ? "" : v);
   }
-  for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid instanceof Node ? kid : String(kid));
+  for (const kid of kids.flat(Infinity)) if (kid != null && kid !== false) el.append(kid instanceof Node ? kid : String(kid));
   return el;
 }
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -66,55 +66,156 @@ function markdown(src) {
   return out.join("\n");
 }
 
+// ---------- state ----------
+// Every status maps to one tone: done (green), wait (amber, needs a human), bad (red), off (grey, retired).
+const TONES = {
+  FCT: { active: ["done", "known"], deprecated: ["off", "retired"] },
+  ASM: { validated: ["done", "proven"], open: ["wait", "need testing"], invalidated: ["off", "refuted"] },
+  REQ: { active: ["done", "active"], ready: ["wait", "ready to activate"], provisional: ["wait", "waiting on assumptions"], broken: ["bad", "broken"] },
+  SPC: { active: ["done", "ready"], draft: ["wait", "in progress"] },
+};
+/** The status a record really has: a requirement resting on something refuted is broken, and one resting only on facts is ready, whatever its file says. */
+function effective(r) {
+  if (prefix(r.id) !== "REQ" || r.status === "active") return r.status;
+  const grounds = (r.because || []).map((g) => byId[g]).filter(Boolean);
+  if (grounds.some((g) => tone(g) === "off")) return "broken";
+  return grounds.length && grounds.every((g) => prefix(g.id) === "FCT") ? "ready" : r.status;
+}
+function tone(r) { return (TONES[prefix(r.id)][r.status] || ["off", r.status])[0]; }
+const section = (body, heading) => (body.match(new RegExp(`^## ${heading}\\s*\\n([\\s\\S]*?)(?=^## |$(?![\\s\\S]))`, "m")) || [, ""])[1].trim();
+const editLink = (r, label = "Edit on GitHub") => h("a", { class: "btn ghost", href: gh(`edit/main/${r.path}`), target: "_blank", rel: "noopener" }, label);
+const idList = (ids) => ids.flatMap((d, i) => [i ? ", " : "", rid(d)]);
+
+/** Why a requirement is not active yet, in one line. */
+function blocker(req) {
+  const grounds = (req.because || []).map((g) => byId[g]).filter(Boolean);
+  const dead = grounds.filter((g) => tone(g) === "off");
+  const open = grounds.filter((g) => g.status === "open");
+  if (req.status === "broken" || dead.length) return ["bad", ["rests on ", ...idList(dead.map((g) => g.id)), dead.length > 1 ? ", which are" : ", which is", " no longer true. Rework it."]];
+  if (open.length) return ["wait", ["waiting on ", ...idList(open.map((g) => g.id)), " to be tested."]];
+  return ["ready", ["all its grounds are facts. Set ", h("code", {}, "status: active"), "."]];
+}
+
+/** Everything a human can do to move the spec forward, most urgent first. */
+function tasks() {
+  const out = [];
+  const add = (level, r, title, why, actions, unlocks = []) => out.push({ level, r, title, why, actions, unlocks });
+  for (const r of ofType("REQ")) {
+    if (r.status !== "active") {
+      const [kind, why] = blocker(r);
+      if (kind === "bad") add("fix", r, ["Rework ", rid(r.id)], why, [editLink(r)], r.downstream);
+      if (kind === "ready") add("quick", r, ["Activate ", rid(r.id)], why, [editLink(r)], r.downstream);
+    }
+    if (!data.records.some((s) => (s.requirements || []).includes(r.id)))
+      add("tidy", r, ["Put ", rid(r.id), " in a spec"], ["It is not part of any spec yet, so nothing will build it."], [h("a", { class: "btn ghost", href: "#/capture/spec" }, "New spec"), editLink(r, "Or edit an existing spec")]);
+  }
+  for (const a of ofType("ASM").filter((a) => a.status === "open").sort((x, y) => y.downstream.length - x.downstream.length)) {
+    const plan = section(a.body, "How we validate it");
+    add("test", a, ["Test ", rid(a.id)], [plan ? [h("strong", {}, "How: "), plan] : "No validation plan yet. Add one."],
+      [h("a", { class: "btn", href: `#/capture/fact?promote=${a.id}` }, "It held → record the fact"),
+       editLink(a, "It failed → set status: invalidated")], a.downstream);
+  }
+  for (const sp of ofType("SPC").filter((s) => s.status !== "active" && s.readiness === 100))
+    add("quick", sp, ["Activate ", rid(sp.id)], ["Every requirement in it is active. Set ", h("code", {}, "status: active"), "."], [editLink(sp)]);
+  for (const r of data.records) for (const issue of r.issues) {
+    const [lvl, msg] = issue.split(": ", 2);
+    const level = lvl === "error" ? "fix" : "tidy";
+    const same = out.find((t) => t.r === r && t.level === level);
+    if (same) same.why = [same.why, h("div", { class: "muted" }, `Check says: ${msg}`)];
+    else add(level, r, [lvl === "error" ? "Fix " : "Check ", rid(r.id)], [msg], [editLink(r)]);
+  }
+  return out;
+}
+const LEVELS = {
+  fix: ["Fix now", "Something is wrong or no longer true. CI fails until these are done."],
+  test: ["Test assumptions", "Each test turns guesswork into a fact, or tells you early that a requirement is wrong."],
+  quick: ["Quick wins", "Already earned. Just flip the status."],
+  tidy: ["Tidy up", "Not blocking, but worth doing."],
+};
+
 // ---------- views ----------
 function dashboard() {
-  const open = ofType("ASM").filter((r) => r.status === "open");
-  const reqs = ofType("REQ");
-  const count = (rs, s) => rs.filter((r) => r.status === s).length;
-  const s = data.summary;
+  const todo = tasks();
+  const per = (lvl) => todo.filter((t) => t.level === lvl).length;
+  const open = ofType("ASM").filter((r) => r.status === "open").sort((a, b) => b.downstream.length - a.downstream.length);
+  const attention = data.spec_order.map((id) => byId[id]).filter((sp) => sp.status !== "active" || sp.issues.length);
+  const fine = data.spec_order.filter((id) => !attention.includes(byId[id]));
+
   main.append(
     h("h1", {}, "Dashboard"),
-    h("p", { class: "muted" }, "Every requirement says ", h("em", {}, "because"), ". This page shows how much of the spec rests on facts, and which assumptions hold the rest back."),
-    h("div", { class: "tiles" },
-      tile(count(ofType("FCT"), "active"), "facts"),
-      tile(open.length, "open assumptions"),
-      tile(`${count(reqs, "active")}/${reqs.length}`, "requirements active"),
-      tile(count(reqs, "broken"), "broken requirements"),
-      tile(s.errors ? `${s.errors} ✗` : "✓", s.errors ? "check errors" : `check passes${s.warnings ? `, ${s.warnings} warnings` : ""}`)),
-    h("h2", {}, "Specs in build order"),
-    h("div", { class: "cards" }, data.spec_order.map((id) => specCard(byId[id]))),
+    todo.length
+      ? h("a", { class: `callout ${per("fix") ? "bad" : "wait"}`, href: "#/tasks" },
+          h("b", {}, `${todo.length} task${todo.length > 1 ? "s" : ""} need you`),
+          h("span", {}, Object.keys(LEVELS).filter(per).map((l) => `${per(l)} ${LEVELS[l][0].toLowerCase()}`).join(" · ")),
+          h("span", { class: "go" }, "Open tasks →"))
+      : h("div", { class: "callout done" }, h("b", {}, "Nothing needs you"), h("span", {}, "Every requirement rests on facts and every spec is ready.")),
+
+    h("h2", {}, "State of the spec"),
+    h("div", { class: "legend" }, ...[["done", "done"], ["wait", "needs attention"], ["bad", "broken"], ["off", "retired"]].map(([t, l]) => h("span", {}, h("span", { class: `dot ${t}` }), l))),
+    h("div", { class: "states" }, PREFIXES.map(stateRow)),
+
+    h("h2", {}, "Specs requiring attention"),
+    attention.length ? h("div", { class: "cards" }, attention.map(specCard)) : h("p", { class: "muted" }, "None. All specs are ready."),
+    fine.length ? h("p", { class: "muted" }, "Ready: ", idList(fine), " ✓") : "",
+
     h("h2", {}, "What's holding things back"),
     open.length
-      ? h("ul", { class: "list" }, open
-          .sort((a, b) => b.downstream.length - a.downstream.length)
-          .map((a) => h("li", {}, rid(a.id),
-            h("div", { class: "grow" }, a.title, h("div", { class: "muted" },
-              `confidence ${a.confidence ?? "?"} · holds back `, a.downstream.length ? a.downstream.flatMap((d, i) => [i ? ", " : "", rid(d)]) : "nothing")))))
+      ? h("ul", { class: "list" }, open.map((a) => h("li", {}, rid(a.id),
+          h("div", { class: "grow" }, a.title, h("div", { class: "muted" },
+            `confidence ${a.confidence ?? "?"} · holds back `, a.downstream.length ? idList(a.downstream) : "nothing")),
+          h("a", { href: `#/capture/fact?promote=${a.id}` }, "Record result"))))
       : h("p", { class: "muted" }, "No open assumptions. Everything rests on facts."));
-  const withIssues = data.records.filter((r) => r.issues.length);
-  if (withIssues.length) {
-    main.append(h("h2", {}, "Check findings"), h("ul", { class: "list" }, withIssues.map((r) =>
-      h("li", {}, rid(r.id), h("div", { class: "grow" }, r.issues.join(" · "))))));
-  }
 }
-const tile = (n, label) => h("div", { class: "tile" }, h("b", {}, n), h("span", {}, label));
+
+function stateRow(p) {
+  const rs = ofType(p);
+  const groups = Object.entries(TONES[p]).map(([status, [t, label]]) => ({ status, t, label, n: rs.filter((r) => effective(r) === status).length })).filter((g) => g.n);
+  const link = (g) => `#/records?type=${p}&status=${g.status}`;
+  return h("div", { class: "state" },
+    h("a", { class: "state-name", href: `#/records?type=${p}` }, LABELS[p], h("span", { class: "muted" }, ` ${rs.length}`)),
+    h("div", { class: "seg" }, groups.map((g) => h("a", { class: `seg-${g.t}`, href: link(g), style: `flex:${g.n}`, title: `${g.n} ${g.label}` }))),
+    h("div", { class: "seg-legend" }, groups.map((g) => h("a", { href: link(g) }, h("span", { class: `dot ${g.t}` }), `${g.n} ${g.label}`))));
+}
 
 function specCard(sp) {
+  const reqs = (sp.requirements || []).map((id) => byId[id]).filter(Boolean);
+  const pending = reqs.filter((r) => r.status !== "active");
   return h("div", { class: "card" },
     h("div", {}, rid(sp.id), " ", badge(sp.status), " ", h("span", { class: "badge" }, sp.tier)),
     h("h3", {}, h("a", { href: `#/record/${sp.id}` }, sp.title)),
     h("div", { class: "bar", title: `${sp.readiness}% of requirements active` }, h("i", { style: `width:${sp.readiness}%` })),
-    h("div", { class: "muted" }, `${sp.readiness}% ready · ${(sp.requirements || []).length} requirements`,
-      (sp.depends_on || []).length ? [" · builds on ", ...sp.depends_on.map(rid)] : ""));
+    h("div", { class: "muted" }, `${reqs.length - pending.length} of ${reqs.length} requirements active`),
+    h("ul", { class: "blockers" },
+      sp.issues.map((i) => h("li", { class: "bad" }, i)),
+      pending.length ? pending.map((r) => { const [t, why] = blocker(r); return h("li", { class: t }, rid(r.id), " ", why); })
+        : sp.status !== "active" ? h("li", { class: "ready" }, "All requirements active. Set ", h("code", {}, "status: active"), ".") : ""));
+}
+
+function tasksView() {
+  const todo = tasks();
+  main.append(h("h1", {}, "Tasks"),
+    h("p", { class: "muted" }, "What a human needs to do to move the spec forward, worked out from the records. Each action opens GitHub; CI checks the change."));
+  if (!todo.length) return main.append(h("div", { class: "callout done" }, h("b", {}, "Nothing to do"), h("span", {}, "Every requirement rests on facts and every spec is ready.")));
+  for (const [lvl, [title, intro]] of Object.entries(LEVELS)) {
+    const group = todo.filter((t) => t.level === lvl);
+    if (!group.length) continue;
+    main.append(h("h2", {}, title, h("span", { class: `count ${lvl}` }, group.length)), h("p", { class: "muted" }, intro),
+      h("div", { class: "tasks" }, group.map((t) => h("div", { class: `task ${lvl}` },
+        h("div", { class: "task-title" }, t.title, " ", h("span", { class: "muted" }, t.r.title)),
+        h("div", { class: "task-why" }, t.why),
+        t.unlocks.length ? h("div", { class: "muted" }, "Unlocks ", idList(t.unlocks)) : "",
+        h("div", { class: "task-actions" }, t.actions)))));
+  }
 }
 
 function records(params) {
   const type = params.get("type") || "";
+  const status = params.get("status") || "";
   const list = h("ul", { class: "list" });
   const search = h("input", { type: "search", placeholder: "Search id, title or text…", "aria-label": "Search records" });
   const fill = () => {
     const q = search.value.toLowerCase();
-    const rows = data.records.filter((r) => (!type || prefix(r.id) === type) &&
+    const rows = data.records.filter((r) => (!type || prefix(r.id) === type) && (!status || effective(r) === status) &&
       (!q || `${r.id} ${r.title} ${r.body}`.toLowerCase().includes(q)));
     list.replaceChildren(...(rows.length ? rows.map((r) => h("li", {}, rid(r.id),
       h("a", { class: "grow", href: `#/record/${r.id}`, style: "color:inherit" }, r.title), badge(r.status)))
@@ -125,6 +226,7 @@ function records(params) {
     h("div", { class: "toolbar" },
       ["", ...PREFIXES].map((p) => h("a", { class: "chip", href: p ? `#/records?type=${p}` : "#/records", "aria-pressed": String(p === type) },
         p ? `${LABELS[p]} (${ofType(p).length})` : `All (${data.records.length})`)),
+      status ? h("a", { class: "chip", "aria-pressed": "true", href: type ? `#/records?type=${type}` : "#/records", title: "Clear status filter" }, `${status} ×`) : "",
       search),
     list);
   fill();
@@ -320,12 +422,13 @@ function promotionNote(asm, factId) {
         r.status === "provisional" ? ". If it now rests only on facts, it can become active." : ""))));
 }
 
-function capture(kind) {
+function capture(kind, params) {
   const def = CAPTURES[kind];
   if (!def) return notFound();
   const key = `capture:${kind}`;
   const fields = def.fields();
   const values = Object.assign(Object.fromEntries(fields.map((f) => [f.key, f.type === "checks" ? [] : f.initial ?? ""])), store.get(key) || {});
+  if (kind === "fact" && byId[params.get("promote")]) values.promoted_from = params.get("promote");
   const id = nextId(def.prefix);
   const preview = h("pre", { class: "preview" });
   const submit = h("a", { class: "btn", target: "_blank", rel: "noopener" }, "Propose on GitHub");
@@ -403,7 +506,8 @@ function route() {
   else if (section === "records") records(params);
   else if (section === "record") record(decodeURIComponent(arg || ""));
   else if (section === "graph") graph(params);
-  else if (section === "capture") capture(arg || "requirement");
+  else if (section === "capture") capture(arg || "requirement", params);
+  else if (section === "tasks") tasksView();
   else notFound();
   document.querySelectorAll(".top nav a").forEach((a) => {
     const on = a.dataset.route === section || (section === "record" && a.dataset.route === "records");
@@ -427,6 +531,8 @@ async function start() {
   usedBy = {};
   for (const r of data.records) for (const up of upstream(r)) (usedBy[up] ||= []).push(r.id);
   document.getElementById("repo-link").href = gh("");
+  const all = tasks();
+  if (all.length) document.querySelector('.top nav a[data-route="tasks"]').append(h("span", { class: `count ${all.some((t) => t.level === "fix") ? "fix" : "test"}` }, all.length));
   addEventListener("hashchange", route);
   addEventListener("resize", () => redraw?.());
   route();
