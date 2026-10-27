@@ -1,8 +1,8 @@
 # Core Agent Directives (`asdlc-meta-specs`)
 
-1. **Always Use Mermaid for Diagrams**
-   - Whenever creating or updating diagrams in documentation, specifications, records, or responses, **always use Mermaid (` ```mermaid `) code blocks**.
-   - Never use ASCII box-drawing diagrams (`┌──┐`, `│`, `└──┘`).
+1. **Always Use Mermaid for Diagrams in Markdown (`.md`) Files**
+   - Whenever creating or updating diagrams inside Markdown (`.md`) files (documentation, specifications, records, or artifacts), **always use Mermaid (` ```mermaid `) code blocks**.
+   - Never use ASCII box-drawing diagrams (`┌──┐`, `│`, `└──┘`) in `.md` files.
    - Quote Mermaid node labels that contain parentheses, brackets, or special characters (e.g., `ID["Label (Detail)"]`) and avoid HTML tags inside labels.
 
 2. **Tech-Stack Agnostic Specifications (PIM vs. PSM)**
