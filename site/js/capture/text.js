@@ -137,3 +137,26 @@ export function decisionHints(v) {
   return hints;
 }
 
+/** Non-blocking quality hints for an open question capture. */
+export function questionHints(v) {
+  const s = (v.statement || "").trim();
+  if (s.length < 10) return [];
+  const hints = [];
+  const lower = s.toLowerCase();
+  const tech = TECH_STACK_TERMS.filter((w) => new RegExp(`(^|[^\\w-])${w.replace(/[/-]/g, "\\$&")}([^\\w-]|$)`, "i").test(lower));
+  if (tech.length) {
+    hints.push({ level: "warn", text: `“${tech.slice(0, 3).join("”, “")}” is a tech-stack detail. Keep open questions focused on domain or behavioral ambiguity.` });
+  }
+  if (!s.includes("?")) {
+    hints.push({ level: "tip", text: "Phrase the clarification as a direct question ending with “?” so reviewers know exactly what needs to be decided." });
+  }
+  if (!(v.context || "").trim()) {
+    hints.push({ level: "tip", text: "Listing 2–3 candidate options or trade-offs makes it much faster for stakeholders to answer." });
+  }
+  if ((v.affects || []).length && (v.context || "").trim() && !hints.length) {
+    hints.push({ level: "good", text: "Clear, actionable question with options and affected records." });
+  }
+  return hints;
+}
+
+

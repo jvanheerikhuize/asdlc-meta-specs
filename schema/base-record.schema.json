@@ -16,7 +16,7 @@
   "properties": {
     "id": {
       "type": "string",
-      "pattern": "^(ASM|VAL|FCT|CON|REQ|ACR|DEC|SPC|CHG)-[0-9]{4}$",
+      "pattern": "^(ASM|VAL|FCT|QST|CON|REQ|ACR|DEC|SPC|CHG)-[0-9]{4}$",
       "description": "Unique canonical identifier for the elemental record."
     },
     "type": {
@@ -25,6 +25,7 @@
         "assumption",
         "validation",
         "fact",
+        "question",
         "constraint",
         "requirement",
         "criterion",

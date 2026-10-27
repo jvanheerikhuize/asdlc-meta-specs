@@ -19,7 +19,7 @@ To keep specifications durable and reusable across stacks, the repository enforc
 
 ```mermaid
 flowchart TD
-    PIM["Canonical Graph (PIM): ASM, FCT, VAL, CON, DEC, REQ, ACR, SPC, CHG + Planned TRM, QST, CTR"]
+    PIM["Canonical Graph (PIM): ASM, FCT, VAL, QST, CON, DEC, REQ, ACR, SPC, CHG + Planned TRM, CTR"]
     PSM["External Tech-Stack Profile (PSM): Languages, Frameworks, Storage, Protocols, Security"]
     COMP["Projection Compiler (adapters/)"]
     OS["dist/openspec/ (Spec Deltas & Prompts)"]
@@ -33,11 +33,11 @@ flowchart TD
 
 ---
 
-## 1. Planned Tech-Stack-Agnostic Record Types
+## 1. Tech-Stack-Agnostic Record Types
 
-When evaluating the specification graph holistically for autonomous coding agents, three additional tech-stack-agnostic record types are planned to eliminate hallucination vectors:
+When evaluating the specification graph holistically for autonomous coding agents, three additional tech-stack-agnostic record types were identified to eliminate hallucination vectors:
 
-### 1.1 `TRM-xxxx` — Domain Term / Ubiquitous Language (`records/normative/terms/`)
+### 1.1 `TRM-xxxx` — Domain Term / Ubiquitous Language (`records/normative/terms/`) — 🔜 Planned
 
 - **Problem**: Agents frequently invent inconsistent terminology across modules (`User`, `Account`, `Principal`, `Subject`, or `Session` vs. `CredentialGrant`), causing subtle semantic drift across requirements and code.
 - **Tech-Stack-Agnostic Role**: Defines the pure domain concept, its invariants, and its forbidden synonyms—never database table names or language-specific types.
@@ -50,21 +50,17 @@ When evaluating the specification graph holistically for autonomous coding agent
   - `related_records`: `["REQ-0001", "SPC-0001"]`
   - **Markdown Sections**: `## Definition`, `## Domain Invariants`, `## Disambiguation`
 
-### 1.2 `QST-xxxx` — Open Question / Clarification (`records/epistemic/questions/`)
+### 1.2 `QST-xxxx` — Open Question / Clarification (`records/epistemic/questions/`) — ✅ Implemented
 
-- **Problem**: When an agent or human encounters an underspecified edge case, they must not silently guess. Currently, Spec-Kit projections rely on inline `[NEEDS CLARIFICATION]` text markers, which are invisible to graph queries (`validate.py`, `build_index.py`) and cannot systematically block specification promotion.
-- **Tech-Stack-Agnostic Role**: Tracks domain or behavioral ambiguities as first-class epistemic graph nodes until resolved by a Fact (`FCT`), Assumption (`ASM`), Decision (`DEC`), or Requirement (`REQ`).
-- **Planned Frontmatter & Sections**:
-  - `id`: `QST-0001`
-  - `type`: `question`
-  - `domain`: `<domain>`
-  - `status`: `open` | `answered` | `deferred`
-  - `blocking`: `true` | `false` (when `true`, `validate.py` prevents the parent `SPC` or `CHG` from transitioning out of `draft`/`proposed`)
-  - `affects`: `["REQ-0002", "SPC-0001"]`
-  - `resolved_by`: `["DEC-0001"]`
-  - **Markdown Sections**: `## Question`, `## Options Under Consideration`, `## Resolution`
+- **Problem**: When an agent or human encounters an underspecified edge case, they must not silently guess. Previously, Spec-Kit projections relied on inline `[NEEDS CLARIFICATION]` text markers, which were invisible to graph queries (`validate.py`, `build_index.py`) and could not systematically block specification promotion.
+- **Tech-Stack-Agnostic Role**: Tracks domain or behavioral ambiguities as first-class epistemic graph nodes until resolved by a Fact (`FCT`), Assumption (`ASM`), Decision (`DEC`), Constraint (`CON`), or Requirement (`REQ`).
+- **Implemented Frontmatter, Capture & Projection**:
+  - Schema: [`schema/question.schema.json`](../schema/question.schema.json) & [`schema/captures/question.capture.schema.json`](../schema/captures/question.capture.schema.json)
+  - Issue Form & Web Capture: [`.github/ISSUE_TEMPLATE/capture-question.yml`](../.github/ISSUE_TEMPLATE/capture-question.yml) & [`site/js/capture/question.js`](../site/js/capture/question.js) (`#/capture/question`)
+  - Validation & Cascade: `blocking: true` prevents affected records (`affects`) from being `active`/`accepted` in `tools/validate.py` and cascades `provisional` during `tools/ingest_capture.py`.
+  - Projection: Rendered into `dist/speckit/specs/*/spec.md` under `### Open Questions ([NEEDS CLARIFICATION])`.
 
-### 1.3 `CTR-xxxx` — Logical Domain & Interaction Contract (`records/normative/contracts/`)
+### 1.3 `CTR-xxxx` — Logical Domain & Interaction Contract (`records/normative/contracts/`) — 🔜 Planned
 
 - **Problem**: Agents need formal boundaries for inputs, outputs, preconditions, postconditions, and failure modes between capabilities, but traditional interface definitions (OpenAPI, Protobuf, GraphQL, SQL DDL) prematurely lock in a wire protocol or storage engine.
 - **Tech-Stack-Agnostic Role**: Defines a **Logical Operation Contract** using abstract domain types (referencing `TRM-xxxx` records), logical preconditions/postconditions, idempotency guarantees, and logical error states.

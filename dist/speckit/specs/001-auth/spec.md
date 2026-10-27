@@ -15,6 +15,9 @@ Defines the authentication token verification and session revocation architectur
 - **`ASM-0002` — Eventual consistency window of 30 seconds is acceptable for token revocation** *(Confidence: 0.5, Risk: high)*: We assume that when an administrator or user explicitly revokes an active session, a propagation delay of up to 30 seconds across edge gateway nodes is acceptable from a security and compliance standpoint.
   - *Validation Plan*: Conduct security compliance audit with CISO and review enterprise customer SLA contracts regarding immediate session termination.
 
+### Open Questions (`[NEEDS CLARIFICATION]`)
+- **`QST-0001` — Should gateway nodes fail-open or fail-closed if revocation synchronization exceeds 30 seconds?** *(blocking, affects: `REQ-0002`, `SPC-0001`)*: If an edge Gateway node loses connectivity to the revocation synchronization stream for longer than the 30-second propagation window (`ASM-0002`), should it **fail-open** (continue accepting unexpired credentials using its last-known denylist snapshot) or **fail-closed** (reject protected requests until synchronization is restored)?
+
 ## 3. Requirements
 
 ### REQ-0001: Stateless Cryptographic Access Token Verification (`SHALL` | Status: `active`)

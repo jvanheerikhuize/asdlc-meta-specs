@@ -202,6 +202,17 @@ def parse_source(text: str) -> str | None:
     raise CaptureError(f"Fact source `{text.strip()}` is not recognised — use one of: {', '.join(SOURCES)}.")
 
 
+def parse_blocking(text: str) -> bool | None:
+    t = text.strip().lower().split()[0] if text.strip() else ""
+    if not t:
+        return None
+    if t in ("true", "yes", "1", "blocking"):
+        return True
+    if t in ("false", "no", "0", "non-blocking", "non_blocking"):
+        return False
+    raise CaptureError(f"Blocking value `{text.strip()}` is not recognised — use true or false.")
+
+
 def title_from_issue(issue_title: str | None) -> str:
     t = re.sub(r"^\s*\[capture(?::[a-z_]+)?\]\s*", "", issue_title or "", flags=re.I).strip()
     return t[:140]
@@ -209,7 +220,7 @@ def title_from_issue(issue_title: str | None) -> str:
 
 def detect_issue_kind(secs: dict[str, str], issue_title: str | None) -> str:
     m = re.match(r"^\s*\[capture:([a-z_]+)\]", issue_title or "", flags=re.I)
-    if m and m.group(1).lower() in {"requirement", "assumption", "fact", "decision"}:
+    if m and m.group(1).lower() in {"requirement", "assumption", "fact", "decision", "question"}:
         return m.group(1).lower()
     if any(k.lower().startswith("what do we assume") for k in secs):
         return "assumption"
@@ -217,6 +228,8 @@ def detect_issue_kind(secs: dict[str, str], issue_title: str | None) -> str:
         return "fact"
     if any(k.lower().startswith(("what did we decide", "which requirements or constraints")) for k in secs):
         return "decision"
+    if any(k.lower().startswith("what needs clarification") for k in secs):
+        return "question"
     return "requirement"
 
 
@@ -356,6 +369,26 @@ def payload_from_issue(body: str, issue_title: str | None = None) -> dict:
             payload["supersedes"] = sorted(set(supersedes))
         return payload
 
+    if kind == "question":
+        qst: dict = {
+            "statement": find(secs, "What needs clarification"),
+        }
+        if title := title_from_issue(issue_title):
+            qst["title"] = title
+        if domain := find(secs, "Domain"):
+            qst["domain"] = domain
+        if (blocking := parse_blocking(find(secs, "Blocks release"))) is not None:
+            qst["blocking"] = blocking
+        if context := find(secs, "Context"):
+            qst["context"] = context
+        if notes := find(secs, "Notes"):
+            qst["notes"] = notes
+        payload = {"kind": "question", "version": 1, "question": qst}
+        affects = re.findall(r"\b(?:REQ|CON|ACR|DEC|SPC|CHG)-\d{4}\b", find(secs, "Requirements, constraints"))
+        if affects:
+            payload["affects"] = sorted(set(affects))
+        return payload
+
     raise CaptureError(f"Unknown capture kind `{kind}`.")
 
 
@@ -466,7 +499,7 @@ def ingest(payload: dict, root: Path, issue: int | None, author: str | None,
            reserved: set[str], dry_run: bool) -> dict:
     config = load_config(root)
     kind = payload.get("kind", "requirement")
-    if kind not in {"requirement", "assumption", "fact", "decision"}:
+    if kind not in {"requirement", "assumption", "fact", "decision", "question"}:
         raise CaptureError(f"Unsupported capture kind `{kind}`.")
 
     schema_path = root / f"schema/captures/{kind}.capture.schema.json"
@@ -499,6 +532,8 @@ def ingest(payload: dict, root: Path, issue: int | None, author: str | None,
         return _ingest_assumption(payload, root, existing, alloc, dirs, default_domain, owners, today, provenance, dry_run)
     if kind == "fact":
         return _ingest_fact(payload, root, existing, alloc, dirs, default_domain, owners, today, provenance, dry_run)
+    if kind == "question":
+        return _ingest_question(payload, root, existing, alloc, dirs, default_domain, owners, today, provenance, dry_run)
     return _ingest_decision(payload, root, existing, alloc, dirs, default_domain, owners, today, provenance, dry_run)
 
 
@@ -816,6 +851,59 @@ def _ingest_decision(payload: dict, root: Path, existing: dict[str, tuple[Path, 
         "status": status,
         "satisfies": satisfies,
         "assumptions": asm_ids,
+        "files": [str(p.relative_to(root)) for p, _, _ in created],
+        "updated_files": [str(p.relative_to(root)) for p, _, _ in updated],
+    }
+
+
+def _ingest_question(payload: dict, root: Path, existing: dict[str, tuple[Path, dict, str]], alloc: IdAllocator,
+                     dirs: dict[str, Path], default_domain: str, owners: list[str], today: str, provenance: str, dry_run: bool) -> dict:
+    affects = payload.get("affects", [])
+    check_refs(affects, existing, {"requirement", "constraint", "criterion", "decision", "spec", "change"})
+    qst_in = payload["question"]
+    statement = re.sub(r"[ \t]+", " ", qst_in["statement"]).strip()
+    title = (qst_in.get("title") or "").strip() or derive_title(statement)
+    blocking = qst_in.get("blocking", True)
+
+    inferred_domain = existing[affects[0]][1].get("domain") if affects else None
+    domain = slugify(qst_in.get("domain") or inferred_domain or default_domain, 40)
+
+    qst_id = alloc.next("QST")
+    meta: dict = {
+        "id": qst_id, "type": "question", "title": title, "domain": domain,
+        "status": "open", "blocking": bool(blocking),
+    }
+    if affects:
+        meta["affects"] = affects
+    meta.update({"owners": owners, "tags": ["captured"], "created_at": today, "updated_at": today})
+
+    body = f"## Question\n{statement}"
+    if (qst_in.get("context") or "").strip():
+        body += f"\n\n## Context & Options\n{qst_in['context'].strip()}"
+    if (qst_in.get("notes") or "").strip():
+        body += f"\n\n## Notes\n{qst_in['notes'].strip()}"
+    body += f"\n\n## Provenance\n{provenance}"
+    created = [(dirs["question"] / f"{qst_id}-{slugify(title)}.md", dump_record(meta, body), meta)]
+
+    updated: list[tuple[Path, str, dict]] = []
+    if blocking:
+        for target_id in affects:
+            t_path, t_meta, t_body = existing[target_id]
+            if t_meta.get("status") in ACTIVE_STATES:
+                t_meta = dict(t_meta)
+                t_meta["status"] = "provisional"
+                t_meta["updated_at"] = today
+                updated.append((t_path, dump_record(t_meta, t_body), t_meta))
+
+    _write_files(created, updated, dry_run)
+    return {
+        "kind": "question",
+        "primary_id": qst_id,
+        "question": qst_id,
+        "title": title,
+        "status": "open",
+        "blocking": bool(blocking),
+        "affects": affects,
         "files": [str(p.relative_to(root)) for p, _, _ in created],
         "updated_files": [str(p.relative_to(root)) for p, _, _ in updated],
     }

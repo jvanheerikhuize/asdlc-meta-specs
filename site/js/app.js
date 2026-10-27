@@ -6,6 +6,7 @@ import { loadData, githubUrl } from "./data.js";
 import { mountCapture, hasDraft } from "./capture/engine.js";
 import { requirementCapture } from "./capture/requirement.js";
 import { assumptionCapture } from "./capture/assumption.js";
+import { questionCapture } from "./capture/question.js";
 import { factCapture } from "./capture/fact.js";
 import { decisionCapture } from "./capture/decision.js";
 import * as views from "./views/views.js";
@@ -14,6 +15,7 @@ const main = document.getElementById("main");
 const CAPTURES = {
   requirement: requirementCapture,
   assumption: assumptionCapture,
+  question: questionCapture,
   fact: factCapture,
   decision: decisionCapture,
 };

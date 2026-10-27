@@ -5,7 +5,7 @@ import { h, svg, clear } from "../dom.js";
 import { typeLabel, statusTone, githubUrl, OPEN_ASSUMPTION } from "../data.js";
 
 export const TIERS = [
-  { col: 0, key: "epistemic_open", title: "1 · Hypotheses & Evidence", sub: "Assumptions (ASM) · Validations (VAL)", types: ["assumption", "validation"] },
+  { col: 0, key: "epistemic_open", title: "1 · Hypotheses & Evidence", sub: "Assumptions (ASM) · Questions (QST) · Validations (VAL)", types: ["assumption", "question", "validation"] },
   { col: 1, key: "epistemic_fact", title: "2 · Verified Truths", sub: "Facts (FCT)", types: ["fact"] },
   { col: 2, key: "normative_core", title: "3 · Normative Core", sub: "Constraints (CON) · Requirements (REQ)", types: ["constraint", "requirement"] },
   { col: 3, key: "normative_ver", title: "4 · Verification & Design", sub: "Criteria (ACR) · Decisions (DEC)", types: ["criterion", "decision"] },
@@ -13,9 +13,9 @@ export const TIERS = [
 ];
 
 const TYPE_COL = new Map(TIERS.flatMap((t) => t.types.map((type) => [type, t.col])));
-const TYPE_ORDER = { assumption: 0, validation: 1, fact: 2, constraint: 3, requirement: 4, criterion: 5, decision: 6, spec: 7, change: 8 };
+const TYPE_ORDER = { assumption: 0, question: 1, validation: 2, fact: 3, constraint: 4, requirement: 5, criterion: 6, decision: 7, spec: 8, change: 9 };
 const SHORT_TYPE = {
-  assumption: "ASM", validation: "VAL", fact: "FCT", constraint: "CON",
+  assumption: "ASM", question: "QST", validation: "VAL", fact: "FCT", constraint: "CON",
   requirement: "REQ", criterion: "ACR", decision: "DEC", spec: "SPC", change: "CHG",
 };
 
@@ -33,13 +33,18 @@ export function extractCanonicalEdges(records, byId) {
 
   for (const r of records) {
     const L = r.links || {};
-    // 1. Epistemic validation & promotion lineage (ASM -> VAL -> FCT, ASM -> FCT)
+    // 1. Epistemic validation & promotion lineage (ASM -> VAL -> FCT, ASM -> FCT, QST -> target)
     for (const valId of [].concat(L.validated_by || [])) add(r.id, valId, "lineage", "validated by");
     for (const asmId of [].concat(L.tests || [])) add(asmId, r.id, "lineage", "tested by");
     for (const fctId of [].concat(L.establishes || [])) add(r.id, fctId, "lineage", "establishes");
     for (const valId of [].concat(L.evidence || [])) add(valId, r.id, "lineage", "establishes");
     for (const fctId of [].concat(L.promoted_to || [])) add(r.id, fctId, "promoted", "promoted to");
     if (L.promoted_from) add(L.promoted_from, r.id, "promoted", "promoted to");
+    for (const affId of [].concat(L.affects || [])) {
+      const kind = r.status === "open" ? "underpins_asm" : "lineage";
+      add(r.id, affId, kind, r.status === "open" ? "open question affects" : "clarified for");
+    }
+    for (const resId of [].concat(L.resolved_by || [])) add(resId, r.id, "lineage", "resolves question");
 
     // 2. Epistemic grounding (FCT / ASM -> CON / REQ / ACR / DEC)
     for (const uId of [].concat(L.underpinned_by || [])) {
@@ -175,10 +180,11 @@ export function layoutGraph(records, edges, includeComposition = false) {
     }
   }
 
-  // Keep VAL directly below the ASM it tests in Column 0
+  // Keep VAL directly below the ASM it tests in Column 0, followed by QST
   if (cols[0]) {
     const asms = cols[0].nodes.filter((n) => n.type === "assumption");
     const vals = cols[0].nodes.filter((n) => n.type === "validation");
+    const qsts = cols[0].nodes.filter((n) => n.type === "question");
     const placedVals = new Set();
     const orderedCol0 = [];
     for (const a of asms) {
@@ -191,6 +197,7 @@ export function layoutGraph(records, edges, includeComposition = false) {
       }
     }
     for (const v of vals) if (!placedVals.has(v.id)) orderedCol0.push(v);
+    for (const q of qsts) orderedCol0.push(q);
     cols[0].nodes = orderedCol0;
     assignOrder(cols[0]);
   }
@@ -382,10 +389,10 @@ export function graph(main, data, params) {
       list = list.filter((r) => domIds.has(r.id));
     }
     if (lens === "risk") {
-      // Unvalidated assumptions + everything downstream of them
+      // Unvalidated assumptions, open questions + everything downstream of them
       const riskSet = new Set();
       for (const r of list) {
-        if (r.type === "assumption" && OPEN_ASSUMPTION.has(r.status)) {
+        if ((r.type === "assumption" && OPEN_ASSUMPTION.has(r.status)) || (r.type === "question" && r.status === "open")) {
           const lin = computeLineage(r.id, allEdges);
           riskSet.add(r.id);
           for (const d of lin.downstreamNodes) riskSet.add(d);
@@ -422,20 +429,21 @@ export function graph(main, data, params) {
     clear(inspectorWrap);
     if (!selectedId || !data.byId.has(selectedId)) {
       const openAsm = data.records.filter((r) => r.type === "assumption" && OPEN_ASSUMPTION.has(r.status)).length;
+      const openQst = data.records.filter((r) => r.type === "question" && r.status === "open").length;
       const provReq = data.records.filter((r) => r.type === "requirement" && r.status === "provisional").length;
       inspectorWrap.append(
         h("h2", {}, "Inspector"),
         h("p", { class: "muted" }, "Click any node in the graph to lock its upstream grounding and downstream impact chain, or hover to preview."),
         h("dl", { class: "preview" },
           h("dt", {}, "Epistemic flow"),
-          h("dd", {}, "Left-to-right: Assumptions & Validations → Verified Facts → Constraints & Requirements → Criteria & Decisions → Specs."),
+          h("dd", {}, "Left-to-right: Assumptions, Validations & Questions → Verified Facts → Constraints & Requirements → Criteria & Decisions → Specs."),
           h("dt", {}, "Current health"),
-          h("dd", {}, `${openAsm} open assumption${openAsm === 1 ? "" : "s"} · ${provReq} provisional requirement${provReq === 1 ? "" : "s"}`)),
+          h("dd", {}, `${openAsm} open assumption${openAsm === 1 ? "" : "s"} · ${openQst} open question${openQst === 1 ? "" : "s"} · ${provReq} provisional requirement${provReq === 1 ? "" : "s"}`)),
         h("div", { class: "graph-legend" },
           h("h3", { style: "font-size:.9rem;margin-block:1rem .4rem" }, "Relationship legend"),
           h("ul", { class: "list" },
             h("li", {}, h("span", { class: "legend-line verified" }), "Verified fact underpinning (solid)"),
-            h("li", {}, h("span", { class: "legend-line provisional" }), "Open assumption underpinning (dashed amber)"),
+            h("li", {}, h("span", { class: "legend-line provisional" }), "Open assumption / question (dashed amber)"),
             h("li", {}, h("span", { class: "legend-line lineage" }), "Validation & promotion lineage"),
             h("li", {}, h("span", { class: "legend-line structural" }), "Governs / verifies / satisfies"))));
       return;
@@ -477,7 +485,7 @@ export function graph(main, data, params) {
         h("dt", {}, `Upstream grounding (${incoming.length} direct · ${lin.upstreamNodes.size} total)`),
         h("dd", {}, incoming.length
           ? h("ul", { class: "list" }, incoming.map((e) => chipRow(e, e.source)))
-          : h("span", { class: "empty" }, r.type === "assumption" || r.type === "fact" ? "Root epistemic record" : "No upstream links")),
+          : h("span", { class: "empty" }, ["assumption", "fact", "question"].includes(r.type) ? "Root epistemic record" : "No upstream links")),
         h("dt", {}, `Downstream impact (${outgoing.length} direct · ${lin.downstreamNodes.size} total)`),
         h("dd", {}, outgoing.length
           ? h("ul", { class: "list" }, outgoing.map((e) => chipRow(e, e.target)))

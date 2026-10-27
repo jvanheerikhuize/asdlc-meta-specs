@@ -275,6 +275,16 @@ def _build_decision(dec: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _build_question(qst: dict[str, Any]) -> dict[str, Any]:
+    sec = qst["_sections"]
+    return {
+        **qst,
+        "statement": sec.get("Question", sec.get("Statement", qst["_body"].strip())),
+        "context": sec.get("Context & Options", sec.get("Context", "")),
+        "blocking_label": "blocking" if qst.get("blocking", True) else "non-blocking",
+    }
+
+
 def _load_stack_profile(profile_path: Path | None) -> dict[str, Any] | None:
     if not profile_path:
         return None
@@ -318,6 +328,7 @@ def build_spec_context(
         epistemic_readiness = "100%"
 
     # Collect underpinning Facts and open Assumptions across composed records
+    composed_ids = {spc["id"], *con_ids, *req_ids, *acr_ids, *dec_ids}
     composed_records = [records[i] for i in (con_ids + req_ids + acr_ids + dec_ids) if i in records]
     fact_ids: list[str] = []
     open_asm_dependents: dict[str, list[str]] = {}
@@ -335,6 +346,13 @@ def build_spec_context(
 
     facts = [_build_fact(records[fid]) for fid in sorted(fact_ids)]
     assumptions = [_build_assumption(records[aid]) for aid in sorted(open_asm_dependents)]
+    open_questions = [
+        _build_question(r)
+        for _, r in sorted(records.items())
+        if r.get("type") == "question"
+        and r.get("status") == "open"
+        and any(target in composed_ids for target in (r.get("affects") or []))
+    ]
 
     # Gate checks for Spec Kit technical_plan
     all_cons_active = all(c.get("status") == "active" for c in constraints)
@@ -368,6 +386,7 @@ def build_spec_context(
         "decisions": decisions,
         "facts": facts,
         "assumptions": assumptions,
+        "open_questions": open_questions,
         "constitution_gate_status": constitution_gate_status,
         "epistemic_gate_status": epistemic_gate_status,
         "unvalidated_high_risk_summary": unvalidated_high_risk_summary,

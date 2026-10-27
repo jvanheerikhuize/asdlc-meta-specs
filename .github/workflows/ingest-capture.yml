@@ -45,7 +45,7 @@ jobs:
         run: |
           : > /tmp/reserved.txt
           for b in $(git branch -r --format='%(refname:short)' | grep '^origin/capture/' | grep -vx "origin/${BRANCH}" || true); do
-            git ls-tree -r --name-only "$b" -- records | grep -oE '(ASM|VAL|FCT|CON|REQ|ACR|DEC)-[0-9]{4}' >> /tmp/reserved.txt || true
+            git ls-tree -r --name-only "$b" -- records | grep -oE '(ASM|VAL|FCT|QST|CON|REQ|ACR|DEC)-[0-9]{4}' >> /tmp/reserved.txt || true
           done
           sort -u -o /tmp/reserved.txt /tmp/reserved.txt
           wc -l < /tmp/reserved.txt

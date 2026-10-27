@@ -1,0 +1,50 @@
+name: "❓ Capture an open question"
+description: "Record an ambiguity or open question that needs clarification before dependent requirements or specs are finalized."
+title: "[capture:question] "
+labels: ["capture"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Tip:** the guided capture app on GitHub Pages fills this in for you (with hints and a live preview).
+        Filling it in here by hand works too — only the first question is needed. The issue title becomes the question's title (leave it as `[capture:question]` to derive one).
+
+  - type: textarea
+    id: statement
+    attributes:
+      label: "What needs clarification?"
+      description: "State the domain or behavioral question clearly. E.g. *Should edge gateway nodes fail-open or fail-closed if the revocation synchronization stream is unreachable for longer than 30 seconds?*"
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: "Context or options under consideration (optional)"
+      description: "Why is this ambiguous, and what candidate options or trade-offs are being weighed?"
+
+  - type: input
+    id: affects
+    attributes:
+      label: "Requirements, constraints, decisions or specs affected (optional)"
+      description: "IDs affected or blocked by this question, e.g. REQ-0002, SPC-0001"
+
+  # Plain inputs (not dropdowns) so the capture app can pre-fill them via the URL.
+  - type: input
+    id: blocking
+    attributes:
+      label: "Blocks release until answered? (optional)"
+      description: "true (default) · false"
+      placeholder: "true"
+
+  - type: input
+    id: domain
+    attributes:
+      label: "Domain (optional)"
+      description: "Area of the product, e.g. auth, billing. Defaults to 'general'."
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: "Notes (optional)"
+      description: "Anything else reviewers should know."

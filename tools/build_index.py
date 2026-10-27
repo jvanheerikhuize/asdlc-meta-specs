@@ -17,10 +17,10 @@ from recordlib import ROOT, iter_record_files, load_config, parse_record, sectio
 LINK_FIELDS = [
     "underpinned_by", "governed_by", "verified_by", "verifies", "satisfies",
     "validated_by", "promoted_to", "promoted_from", "tests", "establishes",
-    "evidence", "supersedes", "parent", "target_spec",
+    "evidence", "supersedes", "parent", "target_spec", "affects", "resolved_by",
 ]
 META_FIELDS = [
-    "confidence", "risk", "validation_plan", "method", "outcome", "artifacts", "source", "scope",
+    "confidence", "risk", "validation_plan", "blocking", "method", "outcome", "artifacts", "source", "scope",
     "enforcement", "category", "normative", "ears_pattern", "priority", "format",
     "owners", "tags", "created_at", "updated_at",
 ]

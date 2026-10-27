@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://asdlc.local/schemas/captures/question.capture.schema.json",
+  "title": "Open Question Capture Payload",
+  "description": "Contract between capture interfaces (Pages app / Issue Form) and tools/ingest_capture.py for open questions (QST).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "question"],
+  "properties": {
+    "kind": { "const": "question" },
+    "version": { "const": 1 },
+    "question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statement"],
+      "properties": {
+        "statement": { "type": "string", "minLength": 10, "maxLength": 2000 },
+        "title": { "type": "string", "maxLength": 140 },
+        "domain": { "type": "string", "maxLength": 60 },
+        "blocking": { "type": "boolean" },
+        "context": { "type": "string", "maxLength": 4000 },
+        "notes": { "type": "string", "maxLength": 4000 }
+      }
+    },
+    "affects": {
+      "type": "array",
+      "maxItems": 30,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^(REQ|CON|ACR|DEC|SPC|CHG)-[0-9]{4}$" }
+    }
+  }
+}

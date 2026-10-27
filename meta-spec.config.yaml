@@ -18,7 +18,7 @@ site:
 
 # Canonical Elemental Record Prefixes & Storage Paths
 records:
-  id_format: "^(ASM|VAL|FCT|CON|REQ|ACR|DEC|SPC|CHG)-[0-9]{4}$"
+  id_format: "^(ASM|VAL|FCT|QST|CON|REQ|ACR|DEC|SPC|CHG)-[0-9]{4}$"
   types:
     assumption:
       prefix: "ASM"
@@ -35,6 +35,11 @@ records:
       layer: "epistemic"
       directory: "records/epistemic/facts"
       schema: "schema/fact.schema.json"
+    question:
+      prefix: "QST"
+      layer: "epistemic"
+      directory: "records/epistemic/questions"
+      schema: "schema/question.schema.json"
     constraint:
       prefix: "CON"
       layer: "normative"

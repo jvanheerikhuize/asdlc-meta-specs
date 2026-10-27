@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://asdlc.local/schemas/question.schema.json",
+  "title": "Open Question Record (QST)",
+  "description": "An explicit domain or behavioral ambiguity requiring clarification before dependent specifications or requirements can be finalized.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "title",
+    "domain",
+    "status",
+    "blocking",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^QST-[0-9]{4}$"
+    },
+    "type": {
+      "const": "question"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "answered",
+        "deferred"
+      ],
+      "description": "Lifecycle status of the question. When 'answered', resolved_by must reference at least one record."
+    },
+    "blocking": {
+      "type": "boolean",
+      "description": "Whether this open question blocks affected requirements or specifications from being marked active."
+    },
+    "affects": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^(REQ|CON|ACR|DEC|SPC|CHG)-[0-9]{4}$"
+      },
+      "uniqueItems": true,
+      "description": "Normative or composition records affected by this open question."
+    },
+    "resolved_by": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^(FCT|ASM|DEC|REQ|CON)-[0-9]{4}$"
+      },
+      "uniqueItems": true,
+      "description": "Records (FCT, ASM, DEC, REQ, CON) that answered or resolved this question."
+    }
+  },
+  "allOf": [
+    {
+      "$ref": "./base-record.schema.json"
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "answered"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "resolved_by"
+        ],
+        "properties": {
+          "resolved_by": {
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ]
+}

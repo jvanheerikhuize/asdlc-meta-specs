@@ -1,8 +1,8 @@
 // Loads the compiled record index (site/data/index.json, built by tools/build_index.py).
 const TYPE_LABEL = {
-  assumption: "Assumption", validation: "Validation", fact: "Fact", constraint: "Constraint",
-  requirement: "Requirement", criterion: "Acceptance criterion", decision: "Decision",
-  spec: "Specification", change: "Change",
+  assumption: "Assumption", validation: "Validation", fact: "Fact", question: "Open question",
+  constraint: "Constraint", requirement: "Requirement", criterion: "Acceptance criterion",
+  decision: "Decision", spec: "Specification", change: "Change",
 };
 export const typeLabel = (t) => TYPE_LABEL[t] || t;
 export const OPEN_ASSUMPTION = new Set(["unvalidated", "validating"]);
@@ -43,6 +43,7 @@ export function githubUrl(data, path = "") {
 export function statusTone(r) {
   if (r.type === "fact") return r.status === "active" ? "fact" : "danger";
   if (r.type === "assumption") return OPEN_ASSUMPTION.has(r.status) ? "assumption" : r.status === "promoted" ? "ok" : "danger";
+  if (r.type === "question") return r.status === "open" ? "warn" : r.status === "answered" ? "ok" : "";
   if (ACTIVE.has(r.status)) return "ok";
   if (["broken", "rejected"].includes(r.status)) return "danger";
   if (["provisional", "needs_review", "draft", "proposed"].includes(r.status)) return "warn";

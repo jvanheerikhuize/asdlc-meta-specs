@@ -10,7 +10,7 @@ The repository separates **what we believe or know about the world** (Epistemic 
 
 | Layer | Directory | Record Types | Role |
 | :--- | :--- | :--- | :--- |
-| **1. Epistemic** | `records/epistemic/` | `ASM`, `VAL`, `FCT` | Establishes truth, tracks uncertainty, and records validation evidence. |
+| **1. Epistemic** | `records/epistemic/` | `ASM`, `VAL`, `FCT`, `QST` | Establishes truth, tracks uncertainty and open questions, and records validation evidence. |
 | **2. Normative** | `records/normative/` | `CON`, `REQ`, `ACR`, `DEC` | Defines atomic behavioral requirements, verification criteria, guardrails, and architectural decisions. |
 | **3. Composition & Projection** | `specs/`, `adapters/`, `dist/` | `SPC`, `CHG` | Assembles atomic records into capability specs or change deltas and compiles them into target standards (`openspec`, `speckit`). |
 
@@ -28,6 +28,7 @@ Examples from this repository:
 - `records/epistemic/assumptions/ASM-0001-token-validation-load.md`
 - `records/epistemic/validations/VAL-0001-gateway-traffic-replay.md`
 - `records/epistemic/facts/FCT-0001-burst-token-verification-rate.md`
+- `records/epistemic/questions/QST-0001-revocation-fail-open-or-fail-closed.md`
 - `records/normative/constraints/CON-0001-zero-trust-hot-path.md`
 - `records/normative/requirements/REQ-0001-stateless-token-verification.md`
 - `records/normative/criteria/ACR-0001-expired-token-rejection.md`
@@ -51,6 +52,7 @@ flowchart LR
     ASM["ASM (Assumption)"]
     VAL["VAL (Validation)"]
     FCT["FCT (Fact)"]
+    QST["QST (Question)"]
     CON["CON (Constraint)"]
     REQ["REQ (Requirement)"]
     ACR["ACR (Criterion)"]
@@ -63,6 +65,7 @@ flowchart LR
     ASM <-->|"promoted_to / promoted_from"| FCT
 
     CON & REQ & ACR & DEC -->|"underpinned_by"| FCT & ASM
+    QST -.->|"affects"| REQ & CON & DEC & SPC & CHG
 
     REQ -->|"governed_by"| CON
     REQ <-->|"verified_by / verifies"| ACR
@@ -82,7 +85,8 @@ flowchart LR
    - **Fact Evidence**: `VAL.establishes` $\leftrightarrow$ `FCT.evidence`
    - **Acceptance Coverage**: `REQ.verified_by` $\leftrightarrow$ `ACR.verifies`
 3. **Active Requirement Verification**: When `epistemic_rules.require_criteria_for_active_requirements` is enabled in `meta-spec.config.yaml`, any `REQ` with `status: active` must reference at least one `ACR-xxxx` in `verified_by`.
-4. **Evolution & Hierarchy Links**:
+4. **Blocking Open Questions (`QST-xxxx`)**: Any `QST` with `status: open` and `blocking: true` prevents the records it `affects` from having `status: active` or `status: accepted` (they must remain `provisional` or `draft` until the question is answered).
+5. **Evolution & Hierarchy Links**:
    - `FCT.supersedes: [FCT-xxxx]` and `DEC.supersedes: [DEC-xxxx]` track replaced facts and decisions (setting the older record's `status` to `superseded`).
    - `REQ.parent: REQ-xxxx` supports optional hierarchical requirement decomposition.
 
@@ -97,6 +101,7 @@ All frontmatter is validated against Draft 2020-12 JSON Schemas in `schema/`. Ev
 | **`ASM`** | `assumption` | `assumption.schema.json` | `unvalidated`, `validating`, `promoted`, `invalidated`, `retired` | `confidence` (`0.0`–`1.0`), `risk` (`low`\|`medium`\|`high`\|`critical`), `validation_plan`, `validated_by`, `promoted_to` |
 | **`VAL`** | `validation` | `validation.schema.json` | `planned`, `in_progress`, `completed`, `aborted` | `method`, `outcome` (`pending`\|`confirmed`\|`refined`\|`refuted`), `tests`, `establishes`, `artifacts` |
 | **`FCT`** | `fact` | `fact.schema.json` | `active`, `superseded`, `deprecated` | `source`, `promoted_from`, `evidence`, `supersedes` |
+| **`QST`** | `question` | `question.schema.json` | `open`, `answered`, `deferred` | `blocking` (`boolean`), `affects` (`REQ`/`CON`/`ACR`/`DEC`/`SPC`/`CHG`), `resolved_by` (`FCT`/`ASM`/`DEC`/`REQ`/`CON`) |
 | **`CON`** | `constraint` | `constraint.schema.json` | `draft`, `provisional`, `active`, `needs_review`, `deprecated` | `scope` (`global`\|`domain`\|`security`\|`performance`\|`compliance`), `enforcement` (`mandatory`\|`advisory`), `underpinned_by` |
 | **`REQ`** | `requirement` | `requirement.schema.json` | `draft`, `provisional`, `active`, `needs_review`, `broken`, `deprecated` | `category`, `normative` (`MUST`\|`SHALL`\|`SHOULD`\|`MAY`), `ears_pattern`, `priority` (`p0`–`p3`), `underpinned_by`, `governed_by`, `verified_by`, `parent` |
 | **`ACR`** | `criterion` | `criterion.schema.json` | `draft`, `provisional`, `active`, `needs_review`, `deprecated` | `format` (`gherkin`\|`invariant`\|`metric_threshold`\|`checklist`), `verifies`, `underpinned_by` |
@@ -110,15 +115,15 @@ All frontmatter is validated against Draft 2020-12 JSON Schemas in `schema/`. Ev
 
 ### Python Tooling (`tools/`)
 - **`tools/recordlib.py`**: Shared library that loads `meta-spec.config.yaml`, iterates canonical record files, splits YAML frontmatter and `## <Heading>` Markdown sections, and serializes records back to disk with ISO date strings preserved.
-- **`tools/validate.py`**: Validates every record against `schema/*.schema.json`, checks file placement and ID uniqueness, verifies that all link targets exist, enforces the 4 reciprocal link rules, checks epistemic consistency between normative statuses and their underpinnings, enforces tech-stack agnosticism on specifications and normative records, and reports per-`SPC` Epistemic Readiness scores.
-- **`tools/project.py`**: Compiles canonical records (`SPC`, `CHG`, `CON`, `REQ`, `ACR`, `DEC`, `FCT`, `ASM`) through `adapters/*/mapping.yaml` and `.hbs` templates into `dist/openspec/` and `dist/speckit/`, with `--check` mode for CI and `--stack-profile <yaml>` for binding external PSM tech-stack profiles.
+- **`tools/validate.py`**: Validates every record against `schema/*.schema.json`, checks file placement and ID uniqueness, verifies that all link targets exist, enforces the 4 reciprocal link rules, checks epistemic consistency between normative statuses and their underpinnings (including blocking `QST` records), enforces tech-stack agnosticism on specifications and normative records, and reports per-`SPC` Epistemic Readiness scores.
+- **`tools/project.py`**: Compiles canonical records (`SPC`, `CHG`, `CON`, `REQ`, `ACR`, `DEC`, `FCT`, `ASM`, `QST`) through `adapters/*/mapping.yaml` and `.hbs` templates into `dist/openspec/` and `dist/speckit/`, with `--check` mode for CI and `--stack-profile <yaml>` for binding external PSM tech-stack profiles.
 - **`tools/build_index.py`**: Compiles the canonical record graph into `site/data/index.json` (respecting `site.publish: "full" | "metadata"` in `meta-spec.config.yaml`).
 - **`tools/ingest_capture.py`**: Parses untrusted capture submissions from GitHub Issue Forms (`.github/ISSUE_TEMPLATE/capture-*.yml`) or JSON/YAML payload files, validates them against `schema/captures/<kind>.capture.schema.json`, allocates collision-free IDs (accounting for open `capture/*` branches), writes new records, and cascades updates to existing records.
 
 ### GitHub Pages Workspace (`site/`)
 `site/` is a zero-build, dependency-free Single-Page Application using ES modules and safe DOM construction (`site/js/dom.js`):
 - **Stratified Record Graph (`site/js/views/graph.js`, `#/graph`)**: Canonicalizes reciprocal links into a 5-column epistemic-to-normative flow (`1 · Hypotheses & Evidence` $\rightarrow$ `2 · Verified Truths` $\rightarrow$ `3 · Normative Core` $\rightarrow$ `4 · Verification & Design` $\rightarrow$ `5 · Composition`), applies barycenter crossing reduction, highlights upstream grounding and downstream impact chains via BFS (`computeLineage`), and embeds a neighborhood mini-graph on every `#/record/:id` page.
-- **Schema-Driven Capture Engine (`site/js/capture/`)**: Renders guided forms for `requirement`, `assumption`, `fact` (including validation, promotion, and refutation), and `decision`, complete with live preview, non-blocking quality hints (`text.js`), `localStorage` draft autosave, and URL pre-filling into `.github/ISSUE_TEMPLATE/capture-*.yml`.
+- **Schema-Driven Capture Engine (`site/js/capture/`)**: Renders guided forms for `requirement`, `assumption`, `fact` (including validation, promotion, and refutation), `decision`, and `question`, complete with live preview, non-blocking quality hints (`text.js`), `localStorage` draft autosave, and URL pre-filling into `.github/ISSUE_TEMPLATE/capture-*.yml`.
 
 ---
 
@@ -130,9 +135,9 @@ Canonical specifications in this repository represent a **Platform-Independent M
 | :--- | :--- |
 | **`CON`, `REQ`, `ACR`, `SPC`, `CHG`** | **Strictly tech-stack agnostic.** Titles, statements, scenarios, and scope sections are checked by `tools/validate.py` against `epistemic_rules.forbidden_tech_terms` in `meta-spec.config.yaml` and by `site/js/capture/text.js` during capture. |
 | **`DEC`** | **Pattern-level architectural topology.** Captures abstract patterns (e.g., *Asymmetric Self-Contained Access Credentials* vs. *Opaque Session Identifiers*) rather than vendor libraries or specific cipher suites. |
-| **`ASM`, `FCT`** | **Domain & operational invariants.** Expresses traffic rates, latency bounds, and user/system behavior in stack-neutral terms. |
+| **`ASM`, `FCT`, `QST`** | **Domain & operational invariants.** Expresses traffic rates, latency bounds, domain ambiguities, and user/system behavior in stack-neutral terms. |
 | **`VAL`** | **Empirical evidence.** May reference concrete benchmark rigs or measurement harnesses as historical test context without making those tools normative requirements. |
 
-See [Roadmap & Planned Evolution](roadmap.md) for how planned record types (`TRM-xxxx`, `QST-xxxx`, `CTR-xxxx`) and the projection compiler extend this separation.
+See [Roadmap & Planned Evolution](roadmap.md) for how planned record types (`TRM-xxxx`, `CTR-xxxx`) and the projection compiler extend this separation.
 
 

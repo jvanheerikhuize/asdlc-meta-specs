@@ -95,6 +95,7 @@ def validate_schemas(records, schemas, registry, config) -> None:
 LIST_LINKS = [
     "validated_by", "promoted_to", "tests", "establishes", "evidence", "supersedes",
     "underpinned_by", "governed_by", "verified_by", "verifies", "satisfies",
+    "affects", "resolved_by",
 ]
 
 
@@ -161,6 +162,11 @@ def epistemic_state(records, rid: str) -> str:
 def validate_epistemics(records, config) -> None:
     rules = config.get("epistemic_rules", {})
     for rid, (rel, meta, _) in records.items():
+        if meta.get("type") == "question" and meta.get("status") == "open" and meta.get("blocking", True):
+            for target in meta.get("affects") or []:
+                if target in records and records[target][1].get("status") in ACTIVE_STATES:
+                    t_status = records[target][1].get("status")
+                    err(f"{rel}: open blocking question affects {target} which is '{t_status}' (expected provisional/draft/needs_review until question is answered)")
         if meta.get("type") not in {"constraint", "requirement", "criterion", "decision"}:
             continue
         states = {u: epistemic_state(records, u) for u in meta.get("underpinned_by") or [] if u in records}
@@ -179,8 +185,8 @@ def validate_epistemics(records, config) -> None:
             err(f"{rel}: active requirement has no acceptance criteria (verified_by)")
 
 
-STACK_AGNOSTIC_TYPES = {"constraint", "requirement", "criterion", "spec", "change"}
-STACK_AGNOSTIC_SECTIONS = ("Statement", "Scenario", "Purpose", "What Changes")
+STACK_AGNOSTIC_TYPES = {"question", "constraint", "requirement", "criterion", "spec", "change"}
+STACK_AGNOSTIC_SECTIONS = ("Question", "Statement", "Scenario", "Purpose", "What Changes")
 
 
 def validate_tech_agnostic(records, config) -> None:

@@ -95,6 +95,7 @@ const FIELD_LABEL = {
   underpinned_by: "Underpinned by", governed_by: "Governed by", verified_by: "Verified by", verifies: "Verifies",
   satisfies: "Satisfies", validated_by: "Validated by", promoted_to: "Promoted to", promoted_from: "Promoted from",
   tests: "Tests", establishes: "Establishes", evidence: "Evidence", supersedes: "Supersedes", parent: "Parent", target_spec: "Target spec",
+  affects: "Affects", resolved_by: "Resolved by",
   "composition.constraints": "Composed in", "composition.requirements": "Composed in",
   "composition.criteria": "Composed in", "composition.decisions": "Composed in",
   "deltas.added": "Added in", "deltas.modified": "Modified in", "deltas.removed": "Removed in",
@@ -104,7 +105,8 @@ export function record(main, data, params, id) {
   const r = data.byId.get(id);
   if (!r) return notFound(main, `No record ${id}.`);
   const meta = [["Type", typeLabel(r.type)], ["Domain", r.domain], ["Priority", r.priority], ["Strength", r.normative],
-    ["Risk", r.risk], ["Confidence", r.confidence], ["Outcome", r.outcome], ["Method", r.method], ["Source", r.source],
+    ["Risk", r.risk], ["Confidence", r.confidence], ["Blocking", r.blocking !== undefined ? (r.blocking ? "Yes (blocks active readiness)" : "No") : undefined],
+    ["Outcome", r.outcome], ["Method", r.method], ["Source", r.source],
     ["Artifacts", (r.artifacts || []).join(", ")], ["Owners", (r.owners || []).join(", ")],
     ["Created", r.created_at], ["Updated", r.updated_at]].filter(([, v]) => v !== undefined && v !== "");
   const links = Object.entries(r.links || {});
@@ -113,7 +115,10 @@ export function record(main, data, params, id) {
   const captureAction = r.type === "assumption" && OPEN_ASSUMPTION.has(r.status)
     ? h("a", { class: "button primary", href: `#/capture/fact?tests=${r.id}` }, "Validate / promote →")
     : (r.type === "requirement" || r.type === "constraint")
-      ? h("a", { class: "button", href: `#/capture/decision?satisfies=${r.id}` }, "＋ Record decision")
+      ? [
+          h("a", { class: "button", href: `#/capture/question?affects=${r.id}` }, "❓ Ask question"),
+          h("a", { class: "button", href: `#/capture/decision?satisfies=${r.id}` }, "＋ Record decision"),
+        ]
       : null;
 
   clear(main).append(

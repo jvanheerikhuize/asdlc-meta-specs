@@ -286,6 +286,38 @@ class IngestTests(unittest.TestCase):
         self.assertEqual(out["status"], "provisional")
         self.assertValid()
 
+    def test_question_capture_from_issue(self):
+        alloc = self._allocator()
+        exp_qst = alloc.next("QST")
+        issue = self._issue(
+            "### What needs clarification?\n\n"
+            "Should token verification fail open or fail closed when the local key rotation cache expires during a control-plane outage?\n\n"
+            "### Context or options under consideration (optional)\n\n"
+            "- **Option A (Fail closed)**: Reject all requests once the key rotation cache expires.\n"
+            "- **Option B (Fail open with grace window)**: Continue accepting requests signed by the last known key for up to 15 minutes.\n\n"
+            "### Requirements, constraints, decisions or specs affected (optional)\n\n"
+            "REQ-0001, SPC-0001\n\n"
+            "### Blocks release until answered? (optional)\n\n"
+            "true\n\n"
+            "### Domain (optional)\n\n"
+            "auth\n"
+        )
+        code, out = ingest(self.root, "--issue-body-file", issue, "--issue-title", "[capture:question] Key rotation cache expiry behavior")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["kind"], "question")
+        self.assertEqual(out["question"], exp_qst)
+        self.assertEqual(out["primary_id"], exp_qst)
+        self.assertTrue(out["blocking"])
+        self.assertEqual(out["affects"], ["REQ-0001", "SPC-0001"])
+        # REQ-0001 was active, so a blocking question cascades it to provisional
+        self.assertEqual(len(out["updated_files"]), 1)
+        req_text = (self.root / out["updated_files"][0]).read_text(encoding="utf-8")
+        self.assertIn("status: provisional", req_text)
+        qst_text = (self.root / out["files"][0]).read_text(encoding="utf-8")
+        self.assertIn("blocking: true", qst_text)
+        self.assertIn("## Context & Options", qst_text)
+        self.assertValid()
+
     def test_tech_stack_leakage_warning_in_strict_mode(self):
         req_file = self.root / "records/normative/requirements/REQ-0001-stateless-token-verification.md"
         text = req_file.read_text(encoding="utf-8")

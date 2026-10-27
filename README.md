@@ -66,7 +66,8 @@ asdlc-meta-specs/
 │   ├── epistemic/
 │   │   ├── assumptions/               # ASM-xxxx: unverified hypotheses
 │   │   ├── validations/               # VAL-xxxx: spikes, benchmarks, interviews, evidence
-│   │   └── facts/                     # FCT-xxxx: verified truths & promoted assumptions
+│   │   ├── facts/                     # FCT-xxxx: verified truths & promoted assumptions
+│   │   └── questions/                 # QST-xxxx: open questions & clarifications
 │   └── normative/
 │       ├── constraints/               # CON-xxxx: project guardrails & invariants
 │       ├── requirements/              # REQ-xxxx: atomic functional & non-functional requirements
@@ -88,7 +89,7 @@ asdlc-meta-specs/
 │   └── ingest_capture.py              # capture issue (or payload file) → new/updated record files
 ├── tests/                             # unit tests + fixtures for ingestion & index
 ├── .github/
-│   ├── ISSUE_TEMPLATE/                # capture-{requirement,assumption,fact,decision} issue forms
+│   ├── ISSUE_TEMPLATE/                # capture-{requirement,assumption,fact,decision,question} issue forms
 │   └── workflows/                     # validate · ingest-capture · pages (gated)
 └── docs/                              # Architecture, lifecycle & mapping guides
 ```
@@ -101,13 +102,13 @@ asdlc-meta-specs/
 
 ### Exploring the Record Graph
 
-Open **Browse → Graph** (`#/graph`) to inspect how assumptions, validations, and verified facts underpin constraints, requirements, acceptance criteria, decisions, and specifications:
+Open **Browse → Graph** (`#/graph`) to inspect how assumptions, validations, open questions, and verified facts underpin constraints, requirements, acceptance criteria, decisions, and specifications:
 
 - **Stratified 5-tier flow:** Columns map directly to the epistemic lifecycle (`1 · Hypotheses & Evidence` → `2 · Verified Truths` → `3 · Normative Core` → `4 · Verification & Design` → optional `5 · Composition`).
-- **Epistemic edge styling:** Solid green edges show verified facts underpinning active requirements; dashed amber edges highlight provisional links from unvalidated assumptions.
+- **Epistemic edge styling:** Solid green edges show verified facts underpinning active requirements; dashed amber edges highlight provisional links from unvalidated assumptions or open questions.
 - **Lineage & risk lenses:** Click any node to trace its full upstream grounding and downstream impact in the side inspector, filter by domain, isolate a single record's lineage, or spotlight open epistemic risks. Every record page (`#/record/:id`) also embeds a local 1–2 hop traceability mini-graph.
 
-### Capturing records (Requirement, Assumption, Fact & validation, Decision)
+### Capturing records (Requirement, Assumption, Fact & validation, Decision, Open question)
 
 ```mermaid
 flowchart LR
@@ -121,11 +122,12 @@ flowchart LR
    - **Assumption (`#/capture/assumption`):** *what we assume is true* + *how we will validate it* (plus risk, initial confidence, and optional links to dependent `REQ`/`CON`/`DEC` records).
    - **Fact & validation (`#/capture/fact`):** record a standalone verified `FCT`, or select an open `ASM-xxxx` to **promote** (`confirmed`/`refined` → mints `VAL` + `FCT` and marks `ASM` `promoted`) or **refute** (`refuted` → mints `VAL`, marks `ASM` `invalidated`, and cascades `broken`/`needs_review` onto dependent records).
    - **Decision (`#/capture/decision`):** record an architectural/design choice (`DEC`), the `REQ`/`CON` records it satisfies, the `FCT`/`ASM` records that justify it, and considered alternatives/trade-offs.
+   - **Open question (`#/capture/question`):** record an unresolved behavioral or domain ambiguity (`QST`), the `REQ`/`CON`/`DEC`/`SPC`/`CHG` records it `affects`, whether it is `blocking: true` (which cascades `provisional` onto affected active records), and candidate options.
 2. **Submit** opens the matching GitHub Issue Form with every field pre-filled (you can still edit them there); click *Create*. Drafts autosave in the browser per capture topic.
 3. The `ingest-capture` workflow allocates IDs, writes/updates the record files, validates the full graph, and opens a PR that closes the issue.
 4. **Approval = one approving review + merge.** A ruleset on `main` requires one approval from a collaborator with write access (the PR is opened by the bot, so any collaborator — including the capturer — can approve it). Approvals are dismissed if the capture is edited and the PR re-pushed. Repository admins can bypass.
 
-Without the app you can use the issue forms directly (*New issue → Capture a requirement / assumption / fact / decision*). Only repository owners/members/collaborators can trigger ingestion.
+Without the app you can use the issue forms directly (*New issue → Capture a requirement / assumption / fact / decision / question*). Only repository owners/members/collaborators can trigger ingestion.
 
 ### Enabling the site
 
@@ -149,6 +151,7 @@ Local preview: `python tools/build_index.py && python -m http.server -d site 800
 | **`ASM`** | Epistemic | `assumption` | Unverified belief with explicit `confidence`, `risk`, and `validation_plan`. |
 | **`VAL`** | Epistemic | `validation` | Experiment, benchmark, test, or citation that `tests` an assumption or `establishes` a fact. |
 | **`FCT`** | Epistemic | `fact` | Verified truth or invariant (native, or `promoted_from` an `ASM` via a `VAL`). |
+| **`QST`** | Epistemic | `question` | Open question or clarification (`blocking`, `affects`, `resolved_by`). |
 | **`CON`** | Normative | `constraint` | Project principle, compliance boundary, or architectural invariant. |
 | **`REQ`** | Normative | `requirement` | Atomic normative statement (`MUST`/`SHALL`/`SHOULD`/`MAY`). |
 | **`ACR`** | Normative | `criterion` | Testable scenario (`GIVEN`/`WHEN`/`THEN` or assertion) verifying a `REQ`. |
@@ -162,14 +165,14 @@ Local preview: `python tools/build_index.py && python -m http.server -d site 800
 
 | Area | Status |
 | :--- | :--- |
-| Record model, schemas, folder architecture | ✅ In place (`9` record schemas + `4` capture schemas) |
-| Canonical records (`auth`, `global`, `onboarding`, `performance`) | ✅ In place (`17` records across all `9` elemental types) |
-| Validator, unit tests + CI | ✅ In place (`validate.py` incl. tech-stack agnosticism checks + `22` unit tests in `tests/test_ingest.py`) |
+| Record model, schemas, folder architecture | ✅ In place (`10` record schemas + `5` capture schemas) |
+| Canonical records (`auth`, `global`, `onboarding`, `performance`) | ✅ In place (`18` records across all `10` elemental types) |
+| Validator, unit tests + CI | ✅ In place (`validate.py` incl. tech-stack agnosticism checks + `23` unit tests in `tests/test_ingest.py`) |
 | Projection compiler (`adapters/` → `dist/`) | ✅ In place (`tools/project.py` with `--check` and `--stack-profile` support) |
 | Pages workspace shell (dashboard, records, prose, pending) | ✅ In place — deploy gated behind `PAGES_ENABLED` |
 | Interactive Record Graph (`#/graph`) & per-record mini-graph | ✅ In place |
-| Requirement, Assumption, Fact & validation, and Decision capture (app → issue → PR) | ✅ In place |
-| Planned record types (`TRM`, `QST`, `CTR`) & in-app PR review | 🔜 Planned ([see Roadmap](docs/roadmap.md)) |
+| Requirement, Assumption, Fact & validation, Decision, and Open Question capture (app → issue → PR) | ✅ In place |
+| Planned record types (`TRM`, `CTR`) & in-app PR review | 🔜 Planned ([see Roadmap](docs/roadmap.md)) |
 
 ---
 
