@@ -20,6 +20,7 @@ export function dashboard(main, data) {
   const by = (t) => data.records.filter((r) => r.type === t);
   const reqs = by("requirement");
   const openAsm = by("assumption").filter((r) => OPEN_ASSUMPTION.has(r.status));
+  const openQst = by("question").filter((r) => r.status === "open");
   const riskOrder = { critical: 0, high: 1, medium: 2, low: 3 };
   const recent = data.records.filter((r) => (r.tags || []).includes("captured"))
     .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || "") || b.id.localeCompare(a.id)).slice(0, 6);
@@ -32,7 +33,7 @@ export function dashboard(main, data) {
     h("div", { class: "grid" },
       statCard(reqs.length, "Requirements", `${count(reqs, (r) => ["active", "accepted"].includes(r.status))} active · ${count(reqs, (r) => r.status === "provisional")} provisional · ${count(reqs, (r) => r.status === "draft")} draft`),
       statCard(count(by("fact"), (r) => r.status === "active"), "Verified facts", plural(by("validation").length, "validation") + " recorded"),
-      statCard(openAsm.length, "Open assumptions", `${count(openAsm, (r) => ["high", "critical"].includes(r.risk))} high-risk`),
+      statCard(openAsm.length, "Open assumptions", `${count(openAsm, (r) => ["high", "critical"].includes(r.risk))} high-risk · ${plural(openQst.length, "open question")}`),
       statCard(by("spec").length, "Specifications", plural(by("change").length, "change proposal"))),
     h("div", { class: "grid", style: "margin-block-start:1rem; grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));" },
       h("section", { class: "card" }, h("h2", {}, "Specification readiness"),
@@ -44,11 +45,16 @@ export function dashboard(main, data) {
             h("div", { class: "bar", role: "img", "aria-label": `${r.pct}% ready` }, h("span", { style: `width:${r.pct}%` })),
             h("small", { class: "muted" }, `${r.active} of ${r.total} requirements active`));
         })) : h("p", { class: "empty" }, "No specifications yet.")),
-      h("section", { class: "card" }, h("h2", {}, "Assumptions waiting for validation"),
-        openAsm.length ? h("ul", { class: "list" }, openAsm.sort((a, b) => (riskOrder[a.risk] ?? 9) - (riskOrder[b.risk] ?? 9)).slice(0, 8).map((a) =>
-          h("li", {}, idLink(data, a.id), h("span", {}, a.title),
-            h("span", { class: `badge ${["high", "critical"].includes(a.risk) ? "danger" : ""}` }, `risk: ${a.risk}`),
-            h("a", { href: `#/capture/fact?tests=${a.id}`, style: "margin-inline-start:auto;font-size:.82rem;white-space:nowrap" }, "Validate →"))))
+      h("section", { class: "card" }, h("h2", {}, "Open assumptions & questions"),
+        openAsm.length || openQst.length ? h("ul", { class: "list" }, [
+          ...openAsm.sort((a, b) => (riskOrder[a.risk] ?? 9) - (riskOrder[b.risk] ?? 9)).slice(0, 6).map((a) =>
+            h("li", {}, idLink(data, a.id), h("span", {}, a.title),
+              h("span", { class: `badge ${["high", "critical"].includes(a.risk) ? "danger" : ""}` }, `risk: ${a.risk}`),
+              h("a", { href: `#/capture/fact?tests=${a.id}`, style: "margin-inline-start:auto;font-size:.82rem;white-space:nowrap" }, "Validate →"))),
+          ...openQst.slice(0, 4).map((q) =>
+            h("li", {}, idLink(data, q.id), h("span", {}, q.title),
+              h("span", { class: `badge ${q.blocking ? "danger" : ""}` }, q.blocking ? "blocking" : "non-blocking"))),
+        ])
           : h("p", { class: "empty" }, "None — everything rests on verified facts.")),
       h("section", { class: "card" }, h("h2", {}, "Recently captured"),
         recent.length ? h("ul", { class: "list" }, recent.map((r) => h("li", {}, idLink(data, r.id), h("span", {}, r.title), statusBadge(r))))
@@ -101,6 +107,8 @@ const FIELD_LABEL = {
   "deltas.added": "Added in", "deltas.modified": "Modified in", "deltas.removed": "Removed in",
 };
 
+const AFFECTABLE_TYPES = new Set(["requirement", "constraint", "criterion", "decision", "spec", "change"]);
+
 export function record(main, data, params, id) {
   const r = data.byId.get(id);
   if (!r) return notFound(main, `No record ${id}.`);
@@ -114,10 +122,12 @@ export function record(main, data, params, id) {
   const comp = Object.entries(r.composition || r.deltas || {}).filter(([, v]) => v?.length);
   const captureAction = r.type === "assumption" && OPEN_ASSUMPTION.has(r.status)
     ? h("a", { class: "button primary", href: `#/capture/fact?tests=${r.id}` }, "Validate / promote →")
-    : (r.type === "requirement" || r.type === "constraint")
+    : AFFECTABLE_TYPES.has(r.type)
       ? [
           h("a", { class: "button", href: `#/capture/question?affects=${r.id}` }, "❓ Ask question"),
-          h("a", { class: "button", href: `#/capture/decision?satisfies=${r.id}` }, "＋ Record decision"),
+          (r.type === "requirement" || r.type === "constraint")
+            ? h("a", { class: "button", href: `#/capture/decision?satisfies=${r.id}` }, "＋ Record decision")
+            : null,
         ]
       : null;
 

@@ -200,15 +200,15 @@ class IngestTests(unittest.TestCase):
         alloc = self._allocator()
         exp_asm = alloc.next("ASM")
         issue = self._issue(
-            "### What do we assume is true?\n\nRedis pub/sub replication across 12 edge PoPs stays under 50ms p99.\n\n"
-            "### How can we validate it?\n\nRun a cross-region synthetic pub/sub latency benchmark for 24 hours.\n\n"
+            "### What do we assume is true?\n\nCross-region revocation stream replication across 12 edge PoPs stays under 50ms p99.\n\n"
+            "### How can we validate it?\n\nRun a cross-region synthetic stream latency benchmark for 24 hours.\n\n"
             "### What breaks if this is wrong? (optional)\n\nRevoked tokens could remain valid longer than the 30s window.\n\n"
             "### Requirements, constraints or decisions that rely on this (optional)\n\nREQ-0001\n\n"
             "### Risk if wrong (optional)\n\nhigh\n\n"
             "### Initial confidence (optional)\n\n75%\n\n"
             "### Domain (optional)\n\nauth\n"
         )
-        code, out = ingest(self.root, "--issue-body-file", issue, "--issue-title", "[capture:assumption] Redis pub/sub replication latency")
+        code, out = ingest(self.root, "--issue-body-file", issue, "--issue-title", "[capture:assumption] Cross-region stream replication latency")
         self.assertEqual(code, 0, out)
         self.assertEqual(out["kind"], "assumption")
         self.assertEqual(out["primary_id"], exp_asm)
@@ -227,7 +227,7 @@ class IngestTests(unittest.TestCase):
         exp_val = alloc.next("VAL")
         exp_fct = alloc.next("FCT")
         issue = self._issue(
-            "### What verified fact did we establish?\n\nRedis pub/sub denylist propagation completes within 45ms p99 across all gateway nodes.\n\n"
+            "### What verified fact did we establish?\n\nIn-memory denylist stream propagation completes within 45ms p99 across all gateway nodes.\n\n"
             "### Assumptions tested (optional)\n\nASM-0002\n\n"
             "### Validation outcome (optional)\n\nconfirmed\n\n"
             "### Validation method (optional)\n\nbenchmark\n\n"
@@ -271,14 +271,14 @@ class IngestTests(unittest.TestCase):
         exp_dec = alloc.next("DEC")
         exp_asm = alloc.next("ASM")
         issue = self._issue(
-            "### What did we decide?\n\nUse Redis Streams with consumer-group offsets instead of fire-and-forget pub/sub for revocation events.\n\n"
+            "### What did we decide?\n\nUse durable append-only event streams with consumer-group offsets instead of fire-and-forget broadcast for revocation events.\n\n"
             "### Which requirements or constraints does this satisfy?\n\nREQ-0002, CON-0001\n\n"
             "### Existing facts or assumptions that justify this option (optional)\n\nFCT-0001\n\n"
             "### New reasons or assumptions (optional)\n\nGateway nodes can replay missed stream entries on reconnect within 2 seconds.\n\n"
-            "### Alternatives considered (optional)\n\nKafka — rejected to avoid operating a separate JVM cluster.\n\n"
-            "### Consequences & trade-offs (optional)\n\nBounded stream memory on Redis (~10MB for 24h of revocations).\n"
+            "### Alternatives considered (optional)\n\nDedicated external message broker cluster — rejected to avoid operating a separate stateful tier.\n\n"
+            "### Consequences & trade-offs (optional)\n\nBounded stream memory on the edge cache (~10MB for 24h of revocations).\n"
         )
-        code, out = ingest(self.root, "--issue-body-file", issue, "--issue-title", "[capture:decision] Use Redis Streams for revocation")
+        code, out = ingest(self.root, "--issue-body-file", issue, "--issue-title", "[capture:decision] Use durable event streams for revocation")
         self.assertEqual(code, 0, out)
         self.assertEqual(out["kind"], "decision")
         self.assertEqual(out["decision"], exp_dec)

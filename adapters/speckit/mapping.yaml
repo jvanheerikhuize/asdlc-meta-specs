@@ -1,7 +1,7 @@
 # GitHub Spec Kit Projection Mapping Definition
 adapter: speckit
 version: "1.0.0"
-description: "Projects canonical CON, FCT, SPC, REQ, ACR, and DEC records into GitHub Spec Kit artifacts."
+description: "Projects canonical CON, FCT, ASM, QST, SPC, REQ, ACR, and DEC records into GitHub Spec Kit artifacts."
 
 output_root: "dist/speckit"
 

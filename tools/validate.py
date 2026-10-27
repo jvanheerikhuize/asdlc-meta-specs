@@ -185,8 +185,8 @@ def validate_epistemics(records, config) -> None:
             err(f"{rel}: active requirement has no acceptance criteria (verified_by)")
 
 
-STACK_AGNOSTIC_TYPES = {"question", "constraint", "requirement", "criterion", "spec", "change"}
-STACK_AGNOSTIC_SECTIONS = ("Question", "Statement", "Scenario", "Purpose", "What Changes")
+STACK_AGNOSTIC_TYPES = {"assumption", "fact", "question", "constraint", "requirement", "criterion", "decision", "spec", "change"}
+STACK_AGNOSTIC_SECTIONS = ("Question", "Statement", "Scenario", "Decision", "Purpose", "What Changes")
 
 
 def validate_tech_agnostic(records, config) -> None:

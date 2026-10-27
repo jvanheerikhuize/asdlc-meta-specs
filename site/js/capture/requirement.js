@@ -195,7 +195,8 @@ export const requirementCapture = {
   },
 
   hints: (v, data) => {
-    const out = requirementHints(v.statement || "");
+    const scenText = (v.criteria || []).map((c) => `${c.given || ""} ${c.when || ""} ${c.then || ""}`).join(" ");
+    const out = requirementHints(v.statement || "", `${v.title || ""} ${v.beliefs || ""} ${scenText}`);
     (v.criteria || []).forEach((c, i) => {
       if ((c.given || c.when) && !(c.then || "").trim()) out.push({ level: "warn", text: `Scenario ${i + 1} has no “Then” yet, so it will be skipped.` });
     });

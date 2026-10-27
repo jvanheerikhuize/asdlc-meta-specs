@@ -45,7 +45,7 @@ jobs:
         run: |
           : > /tmp/reserved.txt
           for b in $(git branch -r --format='%(refname:short)' | grep '^origin/capture/' | grep -vx "origin/${BRANCH}" || true); do
-            git ls-tree -r --name-only "$b" -- records | grep -oE '(ASM|VAL|FCT|QST|CON|REQ|ACR|DEC)-[0-9]{4}' >> /tmp/reserved.txt || true
+            git ls-tree -r --name-only "$b" -- records specs | grep -oE '(ASM|VAL|FCT|QST|CON|REQ|ACR|DEC|SPC|CHG)-[0-9]{4}' >> /tmp/reserved.txt || true
           done
           sort -u -o /tmp/reserved.txt /tmp/reserved.txt
           wc -l < /tmp/reserved.txt
@@ -60,13 +60,18 @@ jobs:
           echo "code=$?" >> "$GITHUB_OUTPUT"
           cat /tmp/result.json
 
-      - name: Validate record graph
+      - name: Validate record graph and compile projections
         id: validate
         if: steps.ingest.outputs.code == '0'
         run: |
           set +e
           python tools/validate.py --strict > /tmp/validate.txt 2>&1
-          echo "code=$?" >> "$GITHUB_OUTPUT"
+          VAL_CODE=$?
+          if [ "$VAL_CODE" = "0" ]; then
+            python tools/project.py >> /tmp/validate.txt 2>&1
+            VAL_CODE=$?
+          fi
+          echo "code=$VAL_CODE" >> "$GITHUB_OUTPUT"
           cat /tmp/validate.txt
 
       - name: Open or update pull request
@@ -77,7 +82,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B "$BRANCH"
-          git add records
+          git add records specs dist
           git commit -m "capture: $PRIMARY – $TITLE (#$ISSUE)"
           git push --force origin "$BRANCH"
           gh api "repos/$GITHUB_REPOSITORY/statuses/$(git rev-parse HEAD)" -f state=success \

@@ -32,7 +32,7 @@ Examples from this repository:
 - `records/normative/constraints/CON-0001-zero-trust-hot-path.md`
 - `records/normative/requirements/REQ-0001-stateless-token-verification.md`
 - `records/normative/criteria/ACR-0001-expired-token-rejection.md`
-- `records/normative/decisions/DEC-0001-eddsa-jwt-access-tokens.md`
+- `records/normative/decisions/DEC-0001-asymmetric-stateless-access-tokens.md`
 - `specs/capabilities/SPC-0001-authentication.md`
 - `specs/changes/CHG-0001-add-revocation-denylist.md`
 

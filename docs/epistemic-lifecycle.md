@@ -2,24 +2,30 @@
 
 A specification is only as strong as the truths that underpin it. In `asdlc-meta-specs`, specifications evolve through a disciplined epistemic feedback loop:
 
-1. **Capture Assumptions (`ASM`)** explicitly whenever uncertainty exists.
+1. **Capture Assumptions (`ASM`) & Open Questions (`QST`)** explicitly whenever uncertainty or ambiguity exists.
 2. **Draft Provisional Requirements (`REQ`)** underpinned by those assumptions and existing facts.
-3. **Execute Validations (`VAL`)** (benchmarks, spikes, user research, audits) to test assumptions.
+3. **Execute Validations (`VAL`)** (benchmarks, spikes, user research, audits) to test assumptions and resolve questions.
 4. **Promote to Facts (`FCT`)** (or invalidate) based on empirical outcomes.
-5. **Refine Requirements & Specs (`REQ` $\rightarrow$ `SPC`)** triggered by newly promoted facts or invalidated assumptions.
+5. **Refine Requirements & Specs (`REQ` $\rightarrow$ `SPC`)** triggered by newly promoted facts, answered questions, or invalidated assumptions.
 
 ---
 
 ## 1. Epistemic States & Promotion Mechanics
 
-### Step 1: Authoring an Assumption (`ASM`)
+### Step 1: Authoring an Assumption (`ASM`) or Open Question (`QST`)
 When designing a feature, any unverified premise is recorded in `records/epistemic/assumptions/ASM-xxxx-<slug>.md` (or captured via `#/capture/assumption`):
 - `status`: `unvalidated` (also supports `validating`, `promoted`, `invalidated`, `retired`)
 - `confidence`: `0.0` to `1.0` (how sure we are before testing)
 - `risk`: `low` | `medium` | `high` | `critical` (impact if the assumption is wrong)
 - `validation_plan`: concrete experiment or check required to verify it (minimum 10 characters)
 
-If an existing normative record (`REQ`, `CON`, or `DEC`) depends on a newly captured assumption, `tools/ingest_capture.py` appends `ASM-xxxx` to its `underpinned_by` list and transitions any `active`/`accepted` record to `provisional`.
+When a domain or behavioral ambiguity needs clarification before a requirement or specification is settled, record an Open Question in `records/epistemic/questions/QST-xxxx-<slug>.md` (or via `#/capture/question`):
+- `status`: `open` | `answered` | `deferred`
+- `blocking`: `true` | `false` (when `true`, affected records cannot be `active` or `accepted`)
+- `affects`: `[REQ-xxxx, CON-xxxx, ACR-xxxx, DEC-xxxx, SPC-xxxx, CHG-xxxx]`
+- `resolved_by`: `[FCT-xxxx | ASM-xxxx | DEC-xxxx | REQ-xxxx | CON-xxxx]` (required when `status: answered`)
+
+If an existing normative record (`REQ`, `CON`, or `DEC`) depends on a newly captured assumption or a blocking open question, `tools/ingest_capture.py` transitions any `active`/`accepted` record to `provisional`.
 
 ### Step 2: Running a Validation (`VAL`)
 To test one or more assumptions (or provide empirical evidence for a fact), create `records/epistemic/validations/VAL-xxxx-<slug>.md` (or use `#/capture/fact`):
@@ -62,12 +68,12 @@ When a validation refutes an assumption (`outcome: refuted`):
 
 ## 2. Cascading Updates to Normative Records
 
-Every `REQ`, `CON`, `ACR`, and `DEC` has an epistemic status governed by its `underpinned_by` links and checked by `tools/validate.py`:
+Every `REQ`, `CON`, `ACR`, and `DEC` has an epistemic status governed by its `underpinned_by` links and open `QST` links, checked by `tools/validate.py`:
 
-| Underpinning State | Allowed Normative Status | Validator & Ingestion Behavior |
+| Underpinning / Question State | Allowed Normative Status | Validator & Ingestion Behavior |
 | :--- | :--- | :--- |
-| All linked records are `FCT` (`status: active`) | **`active`** (`REQ`, `CON`, `ACR`) or **`accepted`** (`DEC`); starts as **`draft`** / **`proposed`** upon initial capture | Ready for implementation and release gates once reviewed (`active` `REQ`s must also have `verified_by: [ACR-xxxx]`). |
-| At least one linked record is an open `ASM` (`unvalidated` or `validating`) | **`provisional`** | Enforced as an **ERROR** by `validate.py` if marked `active` or `accepted`. Blocked from `release_ready` gates when `ASM.risk` is `high`/`critical`. |
+| All linked records are `FCT` (`status: active`) and no open blocking `QST` affects the record | **`active`** (`REQ`, `CON`, `ACR`) or **`accepted`** (`DEC`); starts as **`draft`** / **`proposed`** upon initial capture | Ready for implementation and release gates once reviewed (`active` `REQ`s must also have `verified_by: [ACR-xxxx]`). |
+| At least one linked record is an open `ASM` (`unvalidated` or `validating`) or an open blocking `QST` (`blocking: true`) affects it | **`provisional`** | Enforced as an **ERROR** by `validate.py` if marked `active` or `accepted`. Blocked from `release_ready` gates when `ASM.risk` is `high`/`critical` or `QST.blocking` is `true`. |
 | A linked `ASM` transitions to `promoted` (new `FCT` minted) | **`needs_review`** (or current non-broken status with warning) | `validate.py` emits a **WARN** (`still underpinned by promoted assumption(s)`); review the record against the newly minted `FCT-yyyy`, sharpen statements/thresholds, and replace `ASM-xxxx` with `FCT-yyyy` in `underpinned_by`. |
 | A linked `ASM` is `invalidated`/`retired` or a linked `FCT` is `deprecated`/`superseded` | **`broken`** (`REQ`) or **`needs_review`** (`CON`, `ACR`, `DEC`) | Enforced as an **ERROR** by `validate.py` unless the record is marked `broken`, `needs_review`, `deprecated`, `superseded`, or `rejected`. Automatically cascaded by `ingest_capture.py` on refutation. |
 

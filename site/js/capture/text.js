@@ -47,8 +47,14 @@ const TECH_STACK_TERMS = [
   "rsa-2048", "kubernetes", "docker", "terraform",
 ];
 
+function findTechStackTerms(...texts) {
+  const combined = texts.filter(Boolean).join(" ").toLowerCase();
+  if (!combined) return [];
+  return TECH_STACK_TERMS.filter((w) => new RegExp(`(^|[^\\w-])${w.replace(/[/-]/g, "\\$&")}([^\\w-]|$)`, "i").test(combined));
+}
+
 /** Non-blocking quality hints for a requirement statement. */
-export function requirementHints(statement) {
+export function requirementHints(statement, extraText = "") {
   const s = statement.trim();
   if (s.length < 10) return [];
   const hints = [];
@@ -57,9 +63,9 @@ export function requirementHints(statement) {
   if (vague.length) {
     hints.push({ level: "warn", text: `“${vague.slice(0, 3).join("”, “")}” is hard to test. Can you make it measurable? (e.g. “within 2 seconds”, “in 3 clicks”)` });
   }
-  const tech = TECH_STACK_TERMS.filter((w) => new RegExp(`(^|[^\\w-])${w.replace(/[/-]/g, "\\$&")}([^\\w-]|$)`, "i").test(lower));
+  const tech = findTechStackTerms(s, extraText);
   if (tech.length) {
-    hints.push({ level: "warn", text: `“${tech.slice(0, 3).join("”, “")}” is a tech-stack detail. Keep requirements tech-stack agnostic and record technical choices in a Decision (DEC) or external stack config.` });
+    hints.push({ level: "warn", text: `“${tech.slice(0, 3).join("”, “")}” is a tech-stack detail. Keep requirements, titles, and reasons tech-stack agnostic (bind concrete stacks in an external tech-stack profile).` });
   }
   const modals = lower.match(/\b(shall|must|should|may|will)\b/g) || [];
   if (!modals.length) {
@@ -84,6 +90,10 @@ export function assumptionHints(v) {
   const plan = (v.validation_plan || "").trim();
   if (s.length < 10 && plan.length < 10) return [];
   const hints = [];
+  const tech = findTechStackTerms(s, v.title);
+  if (tech.length) {
+    hints.push({ level: "warn", text: `“${tech.slice(0, 3).join("”, “")}” is a tech-stack detail. Keep domain assumptions tech-stack agnostic.` });
+  }
   if (s.length >= 10 && !/\d/.test(s)) {
     hints.push({ level: "tip", text: "Numbers make assumptions easier to test (e.g. “under 200ms”, “more than 1,000 req/s”, “at least 80% of users”)." });
   }
@@ -106,6 +116,10 @@ export function factHints(v) {
   const tests = v.tests || [];
   if (!stmt && !findings && !tests.length) return [];
   const hints = [];
+  const tech = findTechStackTerms(stmt, v.title);
+  if (tech.length) {
+    hints.push({ level: "warn", text: `“${tech.slice(0, 3).join("”, “")}” is a tech-stack detail. Keep verified domain facts (statement & title) tech-stack agnostic; specific benchmark rig tools belong in Validation findings.` });
+  }
   if (v.outcome === "refuted" && tests.length) {
     hints.push({ level: "warn", text: `Refuting ${tests.join(", ")} will mark the assumption invalidated and flag dependent requirements as broken for review.` });
   } else if (tests.length && stmt) {
@@ -125,6 +139,10 @@ export function decisionHints(v) {
   const s = (v.statement || "").trim();
   if (s.length < 10) return [];
   const hints = [];
+  const tech = findTechStackTerms(s, v.title, v.beliefs);
+  if (tech.length) {
+    hints.push({ level: "warn", text: `“${tech.slice(0, 3).join("”, “")}” is a concrete vendor/stack term. Keep canonical decisions at the architectural pattern level and bind concrete stacks in an external tech-stack profile.` });
+  }
   if (!(v.alternatives || "").trim()) {
     hints.push({ level: "tip", text: "Listing 1–2 rejected alternatives helps future readers understand why this option won." });
   }
@@ -142,8 +160,7 @@ export function questionHints(v) {
   const s = (v.statement || "").trim();
   if (s.length < 10) return [];
   const hints = [];
-  const lower = s.toLowerCase();
-  const tech = TECH_STACK_TERMS.filter((w) => new RegExp(`(^|[^\\w-])${w.replace(/[/-]/g, "\\$&")}([^\\w-]|$)`, "i").test(lower));
+  const tech = findTechStackTerms(s, v.title);
   if (tech.length) {
     hints.push({ level: "warn", text: `“${tech.slice(0, 3).join("”, “")}” is a tech-stack detail. Keep open questions focused on domain or behavioral ambiguity.` });
   }

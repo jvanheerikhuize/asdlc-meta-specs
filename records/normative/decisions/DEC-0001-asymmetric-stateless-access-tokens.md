@@ -23,7 +23,7 @@ updated_at: "2026-10-26"
 To satisfy `REQ-0001` and `CON-0001` under the empirical load established in `FCT-0001` (3,200 req/s bursts), Gateway nodes must verify access credentials locally without contacting the primary session store or internal auth service on every request.
 
 ## Decision
-We will issue short-lived (15-minute TTL) self-contained bearer tokens signed with an asymmetric private key by the Auth Service. Public verification keys will be cached in memory on all Gateway nodes with background key-rotation refresh. *(Concrete token encoding and signature curve—such as Ed25519 JWTs—are bound by the target repository's tech-stack configuration.)*
+We will issue short-lived (15-minute TTL) self-contained bearer tokens signed with an asymmetric private key by the Auth Service. Public verification keys will be cached in memory on all Gateway nodes with background key-rotation refresh. *(Concrete token encoding and elliptic-curve signature algorithms are bound by the target repository's tech-stack configuration.)*
 
 ## Alternatives Considered
 1. **Opaque Session Tokens + Synchronous Store Lookup**: Rejected due to connection pool saturation at 650 req/s (`FCT-0001`).

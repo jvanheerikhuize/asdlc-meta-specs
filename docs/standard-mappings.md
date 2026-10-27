@@ -2,7 +2,7 @@
 
 `asdlc-meta-specs` decouples the **capture and evolution of specification knowledge** from the **presentation format expected by specific AI coding frameworks**.
 
-Using the mapping rules and templates in `adapters/`, the canonical elemental records (`ASM`, `VAL`, `FCT`, `CON`, `REQ`, `ACR`, `DEC`, `SPC`, `CHG`) can be deterministically projected into external standards.
+Using the mapping rules and templates in `adapters/`, the canonical elemental records (`ASM`, `VAL`, `FCT`, `QST`, `CON`, `REQ`, `ACR`, `DEC`, `SPC`, `CHG`) can be deterministically projected into external standards.
 
 ---
 
@@ -18,6 +18,7 @@ Using the mapping rules and templates in `adapters/`, the canonical elemental re
 | **`CHG-xxxx`** | Scoped delta proposal | `changes/<file_slug>/specs/<domain>/spec.md` (`templates/delta-spec.md.hbs`) | Feature branch delta + `specs/NNN-<domain>/tasks.md` | Change Request (CR) / RFC |
 | **`FCT-xxxx`** | Verified domain truth | Provenance comments & rationale | Constitution fact base & `## 2. Epistemic Foundation` in `spec.md` | Domain Model Invariants |
 | **`ASM-xxxx`** | Unvalidated belief | `> [!WARNING]` callout on provisional requirements | `## 2. Epistemic Foundation` in `spec.md` + **Epistemic Gate Check** in `plan.md` | Risk Register / Open Issues |
+| **`QST-xxxx`** | Open question / clarification | Provisional status gating on affected requirements | `### Open Questions ([NEEDS CLARIFICATION])` under `## 2. Epistemic Foundation` in `spec.md` | `[NEEDS CLARIFICATION]` / Open Questions |
 
 > [!NOTE]
 > **Compiling Projections (`tools/project.py`)**: Run `python tools/project.py` to compile all canonical records through `adapters/*/mapping.yaml` and `adapters/*/templates/*.hbs` into `dist/`. Run `python tools/project.py --check` to verify that `dist/` is in sync with the canonical graph, or pass `--stack-profile <path.yaml>` to bind an external Tech-Stack Profile (PSM) into Spec Kit technical plans.
@@ -60,7 +61,7 @@ GitHub Spec Kit follows a phased artifact pipeline (`.specify/memory/constitutio
    - Compiled from all `active` `CON-xxxx` (Constraints) and verified `FCT-xxxx` (Facts), including their `source` and `promoted_from` lineage.
 2. **Feature Spec (`projections.feature_spec` $\rightarrow$ `templates/spec.md.hbs`)**:
    - Output target: `dist/speckit/specs/{{feature_number}}-{{domain}}/spec.md` (sample: `dist/speckit/specs/001-auth/spec.md`).
-   - Compiled from `SPC-xxxx`, rendering `## 1. Overview & Purpose`, `## 2. Epistemic Foundation (Facts & Assumptions)` (including confidence, risk, and validation plans for open assumptions), `## 3. Requirements`, and `## 4. Acceptance Scenarios`.
+   - Compiled from `SPC-xxxx`, rendering `## 1. Overview & Purpose`, `## 2. Epistemic Foundation (Facts & Assumptions)` (including confidence, risk, validation plans for open assumptions, and `### Open Questions ([NEEDS CLARIFICATION])` for open `QST-xxxx` records), `## 3. Requirements`, and `## 4. Acceptance Scenarios`.
 3. **Technical Plan (`projections.technical_plan` $\rightarrow$ `templates/plan.md.hbs`)**:
    - Output target: `dist/speckit/specs/{{feature_number}}-{{domain}}/plan.md` (sample: `dist/speckit/specs/001-auth/plan.md`).
    - Compiled from `SPC-xxxx` and its `composition.decisions` (`DEC-xxxx`), preceded by a **Constitution & Epistemic Gate Check** table that flags any high-risk unvalidated assumptions (`WARN (PROVISIONAL)`) before implementation tasks are executed.
