@@ -66,11 +66,47 @@ class IngestTests(unittest.TestCase):
         self.assertIn("- **AND** no database query is executed", (self.root / acr).read_text())
         self.assertValid()
 
-    def test_issue_from_app_prefers_payload(self):
-        code, out = ingest(self.root, "--issue-body-file", str(FIX / "issue-from-app.md"))
+    def test_issue_from_app_uses_all_visible_fields(self):
+        code, out = ingest(self.root, "--issue-body-file", str(FIX / "issue-from-app.md"),
+                           "--issue-title", "[capture] Export profile as JSON")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["title"], "Export profile as JSON")
+        self.assertEqual(len(out["criteria"]), 2)
+        req = (self.root / out["files"][0]).read_text()
+        for expected in ("domain: privacy", "priority: p1", "category: data", "FCT-0001",
+                         "ears_pattern: event_driven", "## Notes\nCoordinate with the DPO"):
+            self.assertIn(expected, req)
+        acr = (self.root / next(f for f in out["files"] if "ACR-0003" in f)).read_text()
+        self.assertIn("- **GIVEN** a logged-in user", acr)
+        self.assertIn("- **WHEN** they click Export", acr)
+        self.assertValid()
+
+    def test_default_issue_title_derives_title(self):
+        code, out = ingest(self.root, "--issue-body-file", str(FIX / "issue-handfilled.md"), "--issue-title", "[capture] ")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["title"], "Show the number of open assumptions per domain")
+
+    def test_legacy_payload_only_when_no_statement(self):
+        # Visible fields win over a legacy payload section...
+        code, out = ingest(self.root, "--issue-body-file", str(FIX / "issue-legacy-payload.md"))
+        self.assertEqual(code, 0, out)
+        self.assertIn("domain: general", (self.root / out["files"][0]).read_text())
+        body = (FIX / "issue-legacy-payload.md").read_text()
+        # ...and the payload is used when the statement field is empty.
+        legacy = self.root / "legacy.md"
+        legacy.write_text(body.replace("Users can export their profile data as a JSON file.\n\n### Why", "_No response_\n\n### Why", 1))
+        code, out = ingest(self.root, "--issue-body-file", str(legacy))
         self.assertEqual(code, 0, out)
         self.assertIn("domain: privacy", (self.root / out["files"][0]).read_text())
-        self.assertValid()
+
+    def test_rejects_unknown_priority_and_category(self):
+        body = (FIX / "issue-from-app.md").read_text()
+        for old, new, word in (("\np1\n", "\nurgent!!\n", "Priority"), ("\ndata\n", "\nmisc\n", "Category")):
+            bad = self.root / "bad.md"
+            bad.write_text(body.replace(old, new, 1))
+            code, out = ingest(self.root, "--issue-body-file", str(bad), "--dry-run")
+            self.assertEqual(code, 2)
+            self.assertIn(word, out["error"])
 
     def test_hand_filled_issue(self):
         code, out = ingest(self.root, "--issue-body-file", str(FIX / "issue-handfilled.md"))

@@ -76,7 +76,7 @@ asdlc-meta-specs/
 │   ├── recordlib.py                   # shared record parsing / writing
 │   ├── validate.py                    # schema, links, epistemic consistency, readiness
 │   ├── build_index.py                 # records → site/data/index.json (built in CI)
-│   └── ingest_capture.py              # capture payload / issue → new record files
+│   └── ingest_capture.py              # capture issue (or payload file) → new record files
 ├── tests/                             # unit tests + fixtures for ingestion & index
 ├── .github/
 │   ├── ISSUE_TEMPLATE/                # capture-requirement issue form (fallback capture path)
@@ -100,7 +100,7 @@ flowchart LR
 ```
 
 1. Open **Capture → Requirement**. Only one field is required: *what should the system do?* Everything else (why, underpinning facts/assumptions, acceptance criteria, domain, priority) is optional. Drafts autosave in the browser.
-2. **Submit** opens a pre-filled GitHub issue; click *Submit new issue*. (No app login or token needed — your GitHub session is used.)
+2. **Submit** opens the GitHub issue form with every field pre-filled (you can still edit them there); click *Create*. (No app login or token needed — your GitHub session is used.)
 3. The `ingest-capture` workflow allocates IDs, writes the records (status `provisional` when underpinned by new/open assumptions, otherwise `draft`), validates them, and opens a PR that closes the issue.
 4. **Approval = one approving review + merge.** A ruleset on `main` requires one approval from a collaborator with write access (the PR is opened by the bot, so any collaborator — including the capturer — can approve it). Approvals are dismissed if the capture is edited and the PR re-pushed. Repository admins can bypass.
 

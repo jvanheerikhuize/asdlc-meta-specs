@@ -1,6 +1,6 @@
 ### What should the system do?
 
-Users can export their profile data as a JSON file.
+When a user clicks Export, the system shall download the profile as a JSON file.
 
 ### Why? What do we know or believe?
 
@@ -8,27 +8,28 @@ GDPR data portability applies to our EU customers.
 
 ### Existing facts or assumptions (optional)
 
-_No response_
+FCT-0001
 
 ### How will we know it works? (optional)
 
-_No response_
+Given a logged-in user
+When they click Export
+Then a JSON file is downloaded
+
+Then the file contains only that user's data
 
 ### Domain (optional)
 
-_No response_
+privacy
 
-### Priority
+### Priority (optional)
 
-p2 – Normal
+p1
 
-### Payload (filled in automatically by the capture app)
+### Category (optional)
 
-```yaml
-{
-  "kind": "requirement",
-  "version": 1,
-  "requirement": { "statement": "Users can export their profile data as a JSON file.", "domain": "privacy" },
-  "new_assumptions": [{ "statement": "GDPR data portability applies to our EU customers." }]
-}
-```
+data
+
+### Notes (optional)
+
+Coordinate with the DPO before release.

@@ -19,6 +19,11 @@ const underpinningOptions = (data) => data.records
 
 const filledScenarios = (v) => (v.criteria || []).filter((c) => (c.then || "").trim());
 
+// "Given …\nWhen …\nThen …" per scenario, blank line between — mirrors parse_gwt() in tools/ingest_capture.py.
+const oneLine = (s) => (s || "").replace(/\s+/g, " ").trim().replace(/^(given|when|then)\b[:\s]*/i, "");
+const scenariosToText = (list) => list.map((c) => [["Given", c.given], ["When", c.when], ["Then", c.then]]
+  .filter(([, x]) => oneLine(x)).map(([k, x]) => `${k} ${oneLine(x)}`).join("\n")).join("\n\n");
+
 function statusFor(v, data) {
   const openPicked = (v.underpinned_by || []).some((id) => OPEN_ASSUMPTION.has(data.byId.get(id)?.status) && data.byId.get(id)?.type === "assumption");
   return splitLines(v.beliefs).length || openPicked ? "provisional" : "draft";
@@ -139,30 +144,21 @@ export const requirementCapture = {
     return problems;
   },
 
-  toPayload: (v) => {
-    const statement = v.statement.trim();
-    const req = {
-      statement,
-      title: (v.title || "").trim() || deriveTitle(statement),
-      priority: v.priority,
-      category: v.category,
-      normative: detectNormative(statement) || "SHALL",
-      ears_pattern: detectEars(statement),
-    };
-    if (v.domain.trim()) req.domain = v.domain.trim();
-    if (v.notes.trim()) req.notes = v.notes.trim();
-    const payload = { kind: "requirement", version: 1, requirement: req };
-    if (v.underpinned_by.length) payload.underpinned_by = v.underpinned_by;
-    const beliefs = splitLines(v.beliefs);
-    if (beliefs.length) payload.new_assumptions = beliefs.map((statement) => ({ statement }));
-    const criteria = filledScenarios(v).map((c) => Object.fromEntries(
-      Object.entries({ given: c.given, when: c.when, then: c.then }).map(([k, x]) => [k, (x || "").trim()]).filter(([, x]) => x)));
-    if (criteria.length) payload.criteria = criteria;
-    return payload;
-  },
+  // The issue title carries the requirement title; ingestion strips the "[capture]" prefix.
+  issueTitle: (v) => `[capture] ${(v.title || "").trim() || deriveTitle(v.statement || "")}`.slice(0, 150),
 
-  issueTitle: (v) => `[capture] ${(v.title || "").trim() || deriveTitle(v.statement || "")}`.slice(0, 120),
-  issueFields: (v) => ({ statement: v.statement.trim(), why: v.beliefs.trim(), refs: v.underpinned_by.join(", ") }),
+  // Ordered list of issue-form fields (ids match .github/ISSUE_TEMPLATE/capture-requirement.yml).
+  // Every value lands in a visible, editable field — the issue form is the capture contract.
+  issueFields: (v) => [
+    { id: "statement", label: "What should the system do?", value: v.statement.trim() },
+    { id: "why", label: "Why? What do we know or believe?", value: splitLines(v.beliefs).join("\n") },
+    { id: "refs", label: "Existing facts or assumptions", value: v.underpinned_by.join(", ") },
+    { id: "criteria", label: "How will we know it works?", value: scenariosToText(filledScenarios(v)) },
+    { id: "domain", label: "Domain", value: v.domain.trim() },
+    { id: "priority", label: "Priority", value: v.priority },
+    { id: "category", label: "Category", value: v.category },
+    { id: "notes", label: "Notes", value: v.notes.trim() },
+  ],
 
   preview: (v, data) => {
     const statement = (v.statement || "").trim();
