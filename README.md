@@ -6,9 +6,20 @@ Specs for agentic software development that are **honest about what they know**.
 
 Most specs mix verified truths with guesswork and never say which is which. Here, every requirement says *because* and names the **facts** or **assumptions** it rests on. A check makes sure that no requirement is more certain than its grounds.
 
-> **Better facts → better requirements → better specs.**
+> **Facts → requirements → specs.**
 
 This is the simplified version of [asdlc-meta-specs](https://github.com/jvanheerikhuize/asdlc-meta-specs). It keeps the same principles with 4 record types instead of 10 and one script instead of a toolchain.
+
+## The axiom
+
+**Facts → requirements → specs.** A requirement holds only if the facts it rests on hold, and a spec holds only if its requirements hold. A spec is therefore never more certain than the least certain thing underneath it. Everything else in this repo (the `because` links, the provisional/broken statuses, the impact trace) follows from this.
+
+It is an axiom, so it is stated here to be checked, not taken on faith:
+
+- **Facts → requirements (theory).** Zave & Jackson define a requirement as satisfied only when the specification *and* the domain knowledge about its environment both hold ("Four dark corners of requirements engineering", ACM TOSEM 6(1), 1997). A system can meet its spec and still fail if a fact about the world is wrong. van Lamsweerde separates domain properties from assumptions that are "too ideal" and must be analysed ([obstacles, TSE 2000](https://webperso.info.ucl.ac.be/%7Eavl/files/TSE-Obstacles.pdf)). These correspond to `FCT` and `ASM` here.
+- **Facts → requirements (incidents).** In NASA's Voyager and Galileo software, safety-related errors came mostly from misunderstood or missing requirements and mistaken assumptions about the environment ([Lutz 1993](https://ntrs.nasa.gov/citations/20060042270)). Ariane 5 flight 501 failed on an Ariane 4 assumption about horizontal velocity that was never re-checked against Ariane 5 trajectory data ([inquiry report summary](https://en.wikipedia.org/wiki/Ariane_flight_V88)).
+- **Requirements → specs and outcomes.** Across 228 companies, incomplete and underspecified requirements were among the most reported problems, and moving targets correlated most with failure ([NaPiRE](https://arxiv.org/abs/1611.10288)). For code-generating models, resolving ambiguous requirements first raised GPT-4's pass rate from 70.96% to 80.80% ([ClarifyGPT, FSE 2024](https://arxiv.org/abs/2310.10996)).
+- **Limits.** The evidence for the second arrow in agent-driven development is benchmark data, not field data, so treat it as an assumption still being tested. The often-quoted claim that late fixes cost 100× more is *not* part of the grounding: a study of 171 projects found no consistent delayed-issue effect ([Menzies et al. 2016](https://arxiv.org/abs/1609.04886)).
 
 ## The whole model
 
