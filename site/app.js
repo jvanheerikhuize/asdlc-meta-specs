@@ -275,7 +275,7 @@ function graph(params) {
   }
   wrap.append(svg, ...PREFIXES.map((p) => h("div", { class: "col" }, h("h3", {}, LABELS[p]),
     ofType(p).map((r) => (nodes[r.id] = h("button", { class: `node t-${p}`, title: r.title, onclick: () => select(r.id) },
-      h("span", { class: `rid t-${p}` }, r.id, " "), badge(r.status), h("div", {}, r.title)))))));
+      h("div", { class: "node-head" }, h("span", { class: `rid t-${p}` }, r.id), badge(r.status)), h("div", {}, r.title)))))));
 
   let selected = null;
   function lineage(id) {
