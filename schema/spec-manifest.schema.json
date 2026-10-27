@@ -10,7 +10,7 @@
     {
       "if": { "properties": { "type": { "const": "spec" } } },
       "then": {
-        "required": ["composition"],
+        "required": ["tier", "composition"],
         "properties": { "id": { "pattern": "^SPC-[0-9]{4}$" } }
       }
     },
@@ -54,6 +54,27 @@
         "merged",
         "archived"
       ]
+    },
+    "tier": {
+      "type": "string",
+      "enum": [
+        "skeleton",
+        "feature"
+      ],
+      "description": "For SPC records: 'skeleton' for mandatory core walking-skeleton capabilities; 'feature' for layered feature capabilities that add flesh to the skeleton."
+    },
+    "toggleable": {
+      "type": "boolean",
+      "description": "For SPC records: whether this capability specification can be independently toggled on/off during projection or rebuild (false for skeleton, true for feature)."
+    },
+    "depends_on": {
+      "type": "array",
+      "description": "For SPC records: upstream specifications (SPC-xxxx) that this specification builds upon.",
+      "items": {
+        "type": "string",
+        "pattern": "^SPC-[0-9]{4}$"
+      },
+      "uniqueItems": true
     },
     "composition": {
       "type": "object",

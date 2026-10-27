@@ -1,8 +1,13 @@
 # Feature Specification: {{title}}
 
-<!-- Generated from Canonical Spec {{id}} (domain: {{domain}}) -->
+<!-- Generated from Canonical Spec {{id}} (domain: {{domain}}, tier: {{tier}}) -->
 
 ## 1. Overview & Purpose
+
+- **Spec ID**: `{{id}}` | **Domain**: `{{domain}}` | **Tier**: `{{tier}}` ({{tier_label}}) | **Toggleable**: `{{toggleable}}`
+{{#if depends_on_specs}}
+- **Depends On**: {{#each depends_on_specs}}`{{this.id}}` ({{this.title}}){{#unless @last}}, {{/unless}}{{/each}}
+{{/if}}
 
 {{purpose}}
 

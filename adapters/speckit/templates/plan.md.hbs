@@ -1,11 +1,12 @@
 # Technical Plan: {{title}}
 
-<!-- Generated from Canonical Spec {{id}} & Architectural Decisions (DEC-xxxx) -->
+<!-- Generated from Canonical Spec {{id}} (tier: {{tier}}) & Architectural Decisions (DEC-xxxx) -->
 
 ## 1. Constitution & Epistemic Gate Check
 
 | Gate Check | Status | Details |
 | :--- | :--- | :--- |
+| **Architecture Tier & Rebuild Scope** | `{{tier}}` | {{tier_label}} (Toggleable: `{{toggleable}}`{{#if depends_on_specs}}; Depends on: {{#each depends_on_specs}}`{{this.id}}`{{#unless @last}}, {{/unless}}{{/each}}{{else}}; Root skeleton capability{{/if}}) |
 | **Governing Constraints Satisfied** | `{{constitution_gate_status}}` | {{#each constraints}}`{{this.id}}`{{#unless @last}}, {{/unless}}{{/each}} |
 | **High-Risk Unvalidated Assumptions** | `{{epistemic_gate_status}}` | {{unvalidated_high_risk_summary}} |
 

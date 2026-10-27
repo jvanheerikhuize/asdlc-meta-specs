@@ -7,7 +7,7 @@ status: open
 blocking: true
 affects:
   - REQ-0002
-  - SPC-0001
+  - SPC-0003
 owners:
   - jvanheerikhuize
 tags:

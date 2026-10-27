@@ -309,10 +309,11 @@ class IngestTests(unittest.TestCase):
         self.assertEqual(out["primary_id"], exp_qst)
         self.assertTrue(out["blocking"])
         self.assertEqual(out["affects"], ["REQ-0001", "SPC-0001"])
-        # REQ-0001 was active, so a blocking question cascades it to provisional
-        self.assertEqual(len(out["updated_files"]), 1)
-        req_text = (self.root / out["updated_files"][0]).read_text(encoding="utf-8")
-        self.assertIn("status: provisional", req_text)
+        # Both REQ-0001 and SPC-0001 were active, so a blocking question cascades both to provisional
+        self.assertEqual(len(out["updated_files"]), 2)
+        for upd in out["updated_files"]:
+            upd_text = (self.root / upd).read_text(encoding="utf-8")
+            self.assertIn("status: provisional", upd_text)
         qst_text = (self.root / out["files"][0]).read_text(encoding="utf-8")
         self.assertIn("blocking: true", qst_text)
         self.assertIn("## Context & Options", qst_text)
@@ -328,6 +329,17 @@ class IngestTests(unittest.TestCase):
         v = validate(self.root)
         self.assertEqual(v.returncode, 1)
         self.assertIn("tech-stack term(s)", v.stdout)
+
+    def test_spec_dag_and_tier_validation(self):
+        spc_file = self.root / "specs/capabilities/SPC-0001-epistemic-record-graph-and-validation.md"
+        text = spc_file.read_text(encoding="utf-8")
+        spc_file.write_text(
+            text.replace("tier: skeleton\n", "tier: skeleton\ndepends_on:\n  - SPC-0003\n"),
+            encoding="utf-8",
+        )
+        v = validate(self.root)
+        self.assertEqual(v.returncode, 1)
+        self.assertIn("walking skeleton specification (SPC-0001) cannot depend on feature specification (SPC-0003)", v.stdout)
 
 
 class TitleTests(unittest.TestCase):
@@ -350,12 +362,19 @@ class IndexTests(unittest.TestCase):
         p = subprocess.run([PY, str(REPO / "tools/build_index.py"), "--out", str(out)], capture_output=True, text=True)
         self.assertEqual(p.returncode, 0, p.stderr)
         idx = json.loads(out.read_text())
-        self.assertGreaterEqual(len(idx["records"]), 27)
+        self.assertGreaterEqual(len(idx["records"]), 35)
         self.assertTrue(idx["project"]["github"])
         req = next(r for r in idx["records"] if r["id"] == "REQ-0001")
         self.assertIn("Statement", req["sections"])
         val = next(r for r in idx["records"] if r["id"] == "VAL-0001")
         self.assertEqual(val["artifacts"], ["tests/test_ingest.py"])
+        spc1 = next(r for r in idx["records"] if r["id"] == "SPC-0001")
+        self.assertEqual(spc1["tier"], "skeleton")
+        self.assertFalse(spc1["toggleable"])
+        spc3 = next(r for r in idx["records"] if r["id"] == "SPC-0003")
+        self.assertEqual(spc3["tier"], "feature")
+        self.assertTrue(spc3["toggleable"])
+        self.assertEqual(spc3["links"]["depends_on"], ["SPC-0001", "SPC-0002"])
 
 
 class ProjectionTests(unittest.TestCase):
@@ -368,11 +387,23 @@ class ProjectionTests(unittest.TestCase):
             )
             self.assertEqual(p.returncode, 0, p.stderr)
             expected_files = [
-                out_root / "dist/openspec/specs/asdlc-core/spec.md",
-                out_root / "dist/openspec/changes/add-open-question-epistemic-gate/specs/asdlc-core/spec.md",
+                out_root / "dist/openspec/specs/epistemic-graph/spec.md",
+                out_root / "dist/openspec/specs/projection/spec.md",
+                out_root / "dist/openspec/specs/capture/spec.md",
+                out_root / "dist/openspec/specs/workspace/spec.md",
+                out_root / "dist/openspec/specs/onboarding/spec.md",
+                out_root / "dist/openspec/changes/add-open-question-epistemic-gate/specs/epistemic-graph/spec.md",
                 out_root / "dist/speckit/.specify/memory/constitution.md",
-                out_root / "dist/speckit/specs/001-asdlc-core/spec.md",
-                out_root / "dist/speckit/specs/001-asdlc-core/plan.md",
+                out_root / "dist/speckit/specs/001-epistemic-graph/spec.md",
+                out_root / "dist/speckit/specs/001-epistemic-graph/plan.md",
+                out_root / "dist/speckit/specs/002-projection/spec.md",
+                out_root / "dist/speckit/specs/002-projection/plan.md",
+                out_root / "dist/speckit/specs/003-capture/spec.md",
+                out_root / "dist/speckit/specs/003-capture/plan.md",
+                out_root / "dist/speckit/specs/004-workspace/spec.md",
+                out_root / "dist/speckit/specs/004-workspace/plan.md",
+                out_root / "dist/speckit/specs/005-onboarding/spec.md",
+                out_root / "dist/speckit/specs/005-onboarding/plan.md",
             ]
             for f in expected_files:
                 self.assertTrue(f.exists(), f"Missing projected file: {f}")
@@ -417,12 +448,74 @@ class ProjectionTests(unittest.TestCase):
                 capture_output=True, text=True,
             )
             self.assertEqual(p.returncode, 0, p.stderr)
-            plan_txt = (out_root / "dist/speckit/specs/001-asdlc-core/plan.md").read_text(encoding="utf-8")
+            plan_txt = (out_root / "dist/speckit/specs/001-epistemic-graph/plan.md").read_text(encoding="utf-8")
             self.assertIn("## 3. Target Tech-Stack Binding (PSM)", plan_txt)
             self.assertIn("`go-edge-production`", plan_txt)
             self.assertIn("**Token Format**: Ed25519 JWT", plan_txt)
         finally:
             shutil.rmtree(out_root, ignore_errors=True)
+
+    def test_tier_skeleton_and_feature_toggle_projection(self):
+        out_root = Path(tempfile.mkdtemp(prefix="metaspec-tier-"))
+        try:
+            # 1. --tier skeleton compiles only SPC-0001 and SPC-0002
+            p = subprocess.run(
+                [PY, str(REPO / "tools/project.py"), "--root", str(REPO), "--out-root", str(out_root), "--tier", "skeleton"],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(p.returncode, 0, p.stderr)
+            self.assertTrue((out_root / "dist/openspec/specs/epistemic-graph/spec.md").exists())
+            self.assertTrue((out_root / "dist/openspec/specs/projection/spec.md").exists())
+            self.assertFalse((out_root / "dist/openspec/specs/capture/spec.md").exists())
+            self.assertFalse((out_root / "dist/openspec/specs/workspace/spec.md").exists())
+
+            # 2. --exclude-specs SPC-0003 also excludes SPC-0004 (which depends_on SPC-0003)
+            out_toggle = Path(tempfile.mkdtemp(prefix="metaspec-toggle-"))
+            try:
+                p2 = subprocess.run(
+                    [PY, str(REPO / "tools/project.py"), "--root", str(REPO), "--out-root", str(out_toggle), "--exclude-specs", "SPC-0003"],
+                    capture_output=True, text=True,
+                )
+                self.assertEqual(p2.returncode, 0, p2.stderr)
+                self.assertTrue((out_toggle / "dist/openspec/specs/epistemic-graph/spec.md").exists())
+                self.assertTrue((out_toggle / "dist/openspec/specs/onboarding/spec.md").exists())
+                self.assertFalse((out_toggle / "dist/openspec/specs/capture/spec.md").exists())
+                self.assertFalse((out_toggle / "dist/openspec/specs/workspace/spec.md").exists())
+            finally:
+                shutil.rmtree(out_toggle, ignore_errors=True)
+
+            # 3. Attempting to exclude a mandatory skeleton spec fails with exit code 2
+            p_err = subprocess.run(
+                [PY, str(REPO / "tools/project.py"), "--root", str(REPO), "--out-root", str(out_root), "--exclude-specs", "SPC-0001"],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(p_err.returncode, 2)
+            self.assertIn("Cannot exclude mandatory walking-skeleton specification SPC-0001", p_err.stderr)
+        finally:
+            shutil.rmtree(out_root, ignore_errors=True)
+
+    def test_impacted_by_rebuild_plan(self):
+        # When ASM-0002 changes, SPC-0003 is directly impacted and SPC-0004 is impacted via depends_on
+        p = subprocess.run(
+            [PY, str(REPO / "tools/project.py"), "--root", str(REPO), "--impacted-by", "ASM-0002", "--rebuild-plan", "--json"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(p.returncode, 0, p.stderr)
+        plan = json.loads(p.stdout)
+        self.assertEqual(plan["rebuild_order"], ["SPC-0003", "SPC-0004"])
+        by_id = {s["id"]: s for s in plan["specs"]}
+        self.assertEqual(by_id["SPC-0003"]["impact_type"], "direct")
+        self.assertEqual(by_id["SPC-0004"]["impact_type"], "downstream_dependency")
+
+        # When FCT-0001 changes, SPC-0001 (skeleton) is directly impacted and all downstream specs follow in topological order
+        p_all = subprocess.run(
+            [PY, str(REPO / "tools/project.py"), "--root", str(REPO), "--impacted-by", "FCT-0001", "--rebuild-plan", "--json"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(p_all.returncode, 0, p_all.stderr)
+        plan_all = json.loads(p_all.stdout)
+        self.assertEqual(plan_all["rebuild_order"][:2], ["SPC-0001", "SPC-0002"])
+        self.assertEqual(len(plan_all["rebuild_order"]), 5)
 
 
 if __name__ == "__main__":

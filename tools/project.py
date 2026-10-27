@@ -376,8 +376,25 @@ def build_spec_context(
         epistemic_gate_status = "PASS"
         unvalidated_high_risk_summary = "None (all assumptions validated)"
 
+    tier = spc.get("tier", "feature")
+    tier_label = "Walking Skeleton (Core MVP)" if tier == "skeleton" else "Feature Specification (Flesh)"
+    toggleable = bool(spc.get("toggleable", tier != "skeleton"))
+    depends_on_specs = [
+        {
+            "id": dep_id,
+            "title": records[dep_id].get("title", dep_id),
+            "tier": records[dep_id].get("tier", "feature"),
+        }
+        for dep_id in (spc.get("depends_on") or [])
+        if dep_id in records
+    ]
+
     return {
         **spc,
+        "tier": tier,
+        "tier_label": tier_label,
+        "toggleable": "true" if toggleable else "false",
+        "depends_on_specs": depends_on_specs,
         "purpose": spc["_sections"].get("Purpose", ""),
         "epistemic_readiness": epistemic_readiness,
         "constraints": constraints,
@@ -438,6 +455,224 @@ def build_constitution_context(records: dict[str, dict[str, Any]]) -> dict[str, 
 
 
 # ---------------------------------------------------------------------------
+# Topological Spec Ordering, Feature Toggle Filtering & Impact Rebuild Planner
+# ---------------------------------------------------------------------------
+
+def compute_spec_depths(specs_by_id: dict[str, dict[str, Any]]) -> dict[str, int]:
+    """Compute 1-indexed topological build stage depth for each SPC record."""
+    depths: dict[str, int] = {}
+    visiting: set[str] = set()
+
+    def depth(sid: str) -> int:
+        if sid in depths:
+            return depths[sid]
+        if sid in visiting or sid not in specs_by_id:
+            return 1
+        visiting.add(sid)
+        deps = [d for d in (specs_by_id[sid].get("depends_on") or []) if d in specs_by_id and d != sid]
+        d = 1 if not deps else (max(depth(dep) for dep in deps) + 1)
+        visiting.remove(sid)
+        depths[sid] = d
+        return d
+
+    for sid in sorted(specs_by_id):
+        depth(sid)
+    return depths
+
+
+def order_specs_topologically(specs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    by_id = {s["id"]: s for s in specs}
+    depths = compute_spec_depths(by_id)
+    return sorted(
+        specs,
+        key=lambda s: (
+            0 if s.get("tier", "feature") == "skeleton" else 1,
+            depths.get(s["id"], 1),
+            s["id"],
+        ),
+    )
+
+
+def compute_impacted_specs(records: dict[str, dict[str, Any]], seed_ids: list[str]) -> dict[str, Any]:
+    """
+    Trace forward from changed Facts, Assumptions, Questions, or Normative records
+    to determine which Walking Skeleton and Feature Specifications must be rebuilt,
+    ordered topologically by dependency stage.
+    """
+    unknown = [sid for sid in seed_ids if sid not in records]
+    if unknown:
+        raise ValueError(f"Unknown record ID(s) in --impacted-by: {', '.join(unknown)}")
+
+    # Forward adjacency across elemental records (excluding SPC composition/depends_on, handled next)
+    forward: dict[str, set[str]] = {rid: set() for rid in records}
+    for rid, rec in records.items():
+        for v in rec.get("validated_by") or []:
+            if v in forward:
+                forward[rid].add(v)
+        for t in rec.get("tests") or []:
+            if t in forward:
+                forward[t].add(rid)
+        for f in rec.get("establishes") or []:
+            if f in forward:
+                forward[rid].add(f)
+        for e in rec.get("evidence") or []:
+            if e in forward:
+                forward[e].add(rid)
+        for p in rec.get("promoted_to") or []:
+            if p in forward:
+                forward[rid].add(p)
+        if rec.get("promoted_from") and rec["promoted_from"] in forward:
+            forward[rec["promoted_from"]].add(rid)
+        for u in rec.get("underpinned_by") or []:
+            if u in forward:
+                forward[u].add(rid)
+        for g in rec.get("governed_by") or []:
+            if g in forward:
+                forward[g].add(rid)
+        for v in rec.get("verified_by") or []:
+            if v in forward:
+                forward[rid].add(v)
+        for v in rec.get("verifies") or []:
+            if v in forward:
+                forward[v].add(rid)
+        for s in rec.get("satisfies") or []:
+            if s in forward:
+                forward[s].add(rid)
+        for a in rec.get("affects") or []:
+            if a in forward:
+                forward[rid].add(a)
+        for sup in rec.get("supersedes") or []:
+            if sup in forward:
+                forward[sup].add(rid)
+        if rec.get("parent") and rec["parent"] in forward:
+            forward[rec["parent"]].add(rid)
+
+    # BFS from seed_ids through elemental records
+    impacted_records: set[str] = set(seed_ids)
+    queue = list(seed_ids)
+    while queue:
+        cur = queue.pop(0)
+        for nxt in sorted(forward.get(cur, ())):
+            if nxt not in impacted_records and records[nxt].get("type") not in ("spec", "change"):
+                impacted_records.add(nxt)
+                queue.append(nxt)
+
+    specs_by_id = {rid: r for rid, r in records.items() if r.get("type") == "spec"}
+    direct_reasons: dict[str, list[str]] = {}
+    for sid, spc in sorted(specs_by_id.items()):
+        comp = spc.get("composition") or {}
+        members = {
+            *(comp.get("constraints") or []),
+            *(comp.get("requirements") or []),
+            *(comp.get("criteria") or []),
+            *(comp.get("decisions") or []),
+        }
+        hits = sorted(members & impacted_records)
+        if sid in impacted_records:
+            hits = [sid, *hits]
+        if hits:
+            direct_reasons[sid] = hits
+
+    # Propagate downstream along SPC.depends_on
+    all_impacted_specs: set[str] = set(direct_reasons)
+    transitive_reasons: dict[str, list[str]] = {}
+    changed = True
+    while changed:
+        changed = False
+        for sid, spc in sorted(specs_by_id.items()):
+            if sid in all_impacted_specs:
+                continue
+            upstream_hits = [d for d in (spc.get("depends_on") or []) if d in all_impacted_specs]
+            if upstream_hits:
+                all_impacted_specs.add(sid)
+                transitive_reasons[sid] = upstream_hits
+                changed = True
+
+    ordered = order_specs_topologically([specs_by_id[sid] for sid in all_impacted_specs])
+    depths = compute_spec_depths(specs_by_id)
+    plan_entries = []
+    for spc in ordered:
+        sid = spc["id"]
+        reqs = (spc.get("composition") or {}).get("requirements") or []
+        active_reqs = sum(1 for r in reqs if r in records and records[r].get("status") in ("active", "accepted"))
+        readiness = f"{round(100 * active_reqs / len(reqs))}%" if reqs else "100%"
+        plan_entries.append({
+            "id": sid,
+            "title": spc.get("title", ""),
+            "domain": spc.get("domain", ""),
+            "tier": spc.get("tier", "feature"),
+            "toggleable": bool(spc.get("toggleable", spc.get("tier") != "skeleton")),
+            "stage": depths.get(sid, 1),
+            "depends_on": spc.get("depends_on") or [],
+            "epistemic_readiness": readiness,
+            "impact_type": "direct" if sid in direct_reasons else "downstream_dependency",
+            "triggered_by": direct_reasons.get(sid) or transitive_reasons.get(sid) or [],
+        })
+
+    return {
+        "seeds": seed_ids,
+        "impacted_records": sorted(impacted_records),
+        "rebuild_order": [e["id"] for e in plan_entries],
+        "specs": plan_entries,
+    }
+
+
+def filter_specs(
+    records: dict[str, dict[str, Any]],
+    tier_filter: str = "all",
+    spec_ids: list[str] | None = None,
+    exclude_spec_ids: list[str] | None = None,
+    impacted_by: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    all_specs = {rid: r for rid, r in records.items() if r.get("type") == "spec"}
+
+    if exclude_spec_ids:
+        for ex_id in exclude_spec_ids:
+            if ex_id not in all_specs:
+                raise ValueError(f"Unknown specification ID in --exclude-specs: {ex_id}")
+            if not all_specs[ex_id].get("toggleable", all_specs[ex_id].get("tier") != "skeleton"):
+                raise ValueError(f"Cannot exclude mandatory walking-skeleton specification {ex_id} (toggleable: false)")
+
+    selected_ids = set(all_specs)
+
+    if tier_filter in ("skeleton", "feature"):
+        selected_ids &= {sid for sid, spc in all_specs.items() if spc.get("tier", "feature") == tier_filter}
+
+    if spec_ids:
+        unknown = [sid for sid in spec_ids if sid not in all_specs]
+        if unknown:
+            raise ValueError(f"Unknown specification ID(s) in --specs: {', '.join(unknown)}")
+        # Include requested specs plus any mandatory upstream skeleton dependencies they rely on
+        needed = set(spec_ids)
+        queue = list(spec_ids)
+        while queue:
+            cur = queue.pop(0)
+            for dep in all_specs[cur].get("depends_on") or []:
+                if dep in all_specs and dep not in needed and all_specs[dep].get("tier") == "skeleton":
+                    needed.add(dep)
+                    queue.append(dep)
+        selected_ids &= needed
+
+    if impacted_by:
+        impact = compute_impacted_specs(records, impacted_by)
+        selected_ids &= set(impact["rebuild_order"])
+
+    if exclude_spec_ids:
+        excluded = set(exclude_spec_ids)
+        # Also exclude any feature spec that transitively depends on an excluded spec
+        changed = True
+        while changed:
+            changed = False
+            for sid, spc in all_specs.items():
+                if sid not in excluded and any(d in excluded for d in (spc.get("depends_on") or [])):
+                    excluded.add(sid)
+                    changed = True
+        selected_ids -= excluded
+
+    return order_specs_topologically([all_specs[sid] for sid in selected_ids])
+
+
+# ---------------------------------------------------------------------------
 # Projection Compiler Execution
 # ---------------------------------------------------------------------------
 
@@ -446,9 +681,13 @@ def compile_projections(
     out_root: Path | None = None,
     adapter_filter: str | None = None,
     stack_profile_path: Path | None = None,
+    tier_filter: str = "all",
+    spec_ids: list[str] | None = None,
+    exclude_spec_ids: list[str] | None = None,
+    impacted_by: list[str] | None = None,
 ) -> dict[Path, str]:
     """
-    Compile all enabled adapters and return a mapping of {target_file_path: rendered_content}.
+    Compile enabled adapters and return a mapping of {target_file_path: rendered_content}.
     Does not write to disk directly so callers can either write or run --check diffs.
     """
     config = load_config(root)
@@ -456,8 +695,18 @@ def compile_projections(
     stack_profile = _load_stack_profile(stack_profile_path)
     base_out = out_root if out_root is not None else root
 
-    specs = [r for _, r in sorted(records.items()) if r.get("type") == "spec"]
-    changes = [r for _, r in sorted(records.items()) if r.get("type") == "change"]
+    specs = filter_specs(
+        records,
+        tier_filter=tier_filter,
+        spec_ids=spec_ids,
+        exclude_spec_ids=exclude_spec_ids,
+        impacted_by=impacted_by,
+    )
+    selected_spec_ids = {s["id"] for s in specs}
+    changes = [
+        r for _, r in sorted(records.items())
+        if r.get("type") == "change" and r.get("target_spec") in selected_spec_ids
+    ]
 
     outputs: dict[Path, str] = {}
 
@@ -497,23 +746,105 @@ def compile_projections(
     return outputs
 
 
+def _format_rebuild_plan(plan: dict[str, Any]) -> str:
+    lines = []
+    if plan.get("seeds"):
+        lines.append(f"Impact-Driven Rebuild Plan (triggered by: {', '.join(plan['seeds'])})")
+        lines.append(f"Impacted Elemental Records ({len(plan['impacted_records'])}): {', '.join(plan['impacted_records'])}")
+    else:
+        lines.append("Topological Specification Build Plan (Walking Skeleton -> Feature Flesh)")
+    lines.append("")
+    for idx, spc in enumerate(plan["specs"], start=1):
+        tier_tag = "SKELETON" if spc["tier"] == "skeleton" else "FEATURE "
+        toggle_tag = "toggleable" if spc["toggleable"] else "mandatory"
+        deps = f" | depends_on: {', '.join(spc['depends_on'])}" if spc["depends_on"] else " | root"
+        trig = f" | triggered_by: {', '.join(spc['triggered_by'])} ({spc['impact_type']})" if spc.get("triggered_by") else ""
+        lines.append(
+            f"  {idx}. [Stage {spc['stage']} · {tier_tag}] {spc['id']} ({spc['title']}) "
+            f"— readiness: {spc['epistemic_readiness']}, {toggle_tag}{deps}{trig}"
+        )
+    return "\n".join(lines)
+
+
 def main() -> int:
+    import json as _json
+
     ap = argparse.ArgumentParser(description="Compile canonical records into target standard projections (dist/).")
     ap.add_argument("--root", type=Path, default=ROOT, help="Repository root directory")
     ap.add_argument("--out-root", type=Path, default=None, help="Override base directory for output_dir paths")
     ap.add_argument("--adapter", choices=["openspec", "speckit"], default=None, help="Compile only a single adapter")
     ap.add_argument("--stack-profile", type=Path, default=None, help="Optional YAML tech-stack profile (PSM)")
+    ap.add_argument("--tier", choices=["all", "skeleton", "feature"], default="all", help="Filter specifications by tier (skeleton vs. feature)")
+    ap.add_argument("--specs", type=str, default=None, help="Comma-separated list of SPC IDs to compile (automatically includes required skeleton dependencies)")
+    ap.add_argument("--exclude-specs", type=str, default=None, help="Comma-separated list of toggleable feature SPC IDs to exclude")
+    ap.add_argument("--impacted-by", type=str, default=None, help="Comma-separated list of record IDs (e.g. FCT-0001,ASM-0002) to filter or plan rebuilds for impacted specs")
+    ap.add_argument("--rebuild-plan", action="store_true", help="Print the topological build/rebuild order (Walking Skeleton -> Feature Flesh) without writing files")
+    ap.add_argument("--json", action="store_true", help="Output --rebuild-plan as JSON")
     ap.add_argument("--check", action="store_true", help="Verify that files on disk match compiled output without writing")
     args = ap.parse_args()
 
     root = args.root.resolve()
     out_root = args.out_root.resolve() if args.out_root else root
-    outputs = compile_projections(
-        root=root,
-        out_root=out_root,
-        adapter_filter=args.adapter,
-        stack_profile_path=args.stack_profile,
-    )
+    spec_ids = [s.strip() for s in args.specs.split(",") if s.strip()] if args.specs else None
+    exclude_spec_ids = [s.strip() for s in args.exclude_specs.split(",") if s.strip()] if args.exclude_specs else None
+    impacted_by = [s.strip() for s in args.impacted_by.split(",") if s.strip()] if args.impacted_by else None
+
+    try:
+        if args.rebuild_plan:
+            config = load_config(root)
+            records = load_canonical_graph(root, config)
+            if impacted_by:
+                plan = compute_impacted_specs(records, impacted_by)
+            else:
+                specs = filter_specs(
+                    records,
+                    tier_filter=args.tier,
+                    spec_ids=spec_ids,
+                    exclude_spec_ids=exclude_spec_ids,
+                )
+                all_specs = {rid: r for rid, r in records.items() if r.get("type") == "spec"}
+                depths = compute_spec_depths(all_specs)
+                entries = []
+                for spc in specs:
+                    sid = spc["id"]
+                    reqs = (spc.get("composition") or {}).get("requirements") or []
+                    active_reqs = sum(1 for r in reqs if r in records and records[r].get("status") in ("active", "accepted"))
+                    readiness = f"{round(100 * active_reqs / len(reqs))}%" if reqs else "100%"
+                    entries.append({
+                        "id": sid,
+                        "title": spc.get("title", ""),
+                        "domain": spc.get("domain", ""),
+                        "tier": spc.get("tier", "feature"),
+                        "toggleable": bool(spc.get("toggleable", spc.get("tier") != "skeleton")),
+                        "stage": depths.get(sid, 1),
+                        "depends_on": spc.get("depends_on") or [],
+                        "epistemic_readiness": readiness,
+                    })
+                plan = {
+                    "seeds": [],
+                    "impacted_records": [],
+                    "rebuild_order": [e["id"] for e in entries],
+                    "specs": entries,
+                }
+            if args.json:
+                print(_json.dumps(plan, indent=2))
+            else:
+                print(_format_rebuild_plan(plan))
+            return 0
+
+        outputs = compile_projections(
+            root=root,
+            out_root=out_root,
+            adapter_filter=args.adapter,
+            stack_profile_path=args.stack_profile,
+            tier_filter=args.tier,
+            spec_ids=spec_ids,
+            exclude_spec_ids=exclude_spec_ids,
+            impacted_by=impacted_by,
+        )
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
 
     if args.check:
         stale: list[str] = []

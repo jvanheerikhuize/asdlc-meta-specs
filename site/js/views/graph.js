@@ -72,10 +72,11 @@ export function extractCanonicalEdges(records, byId) {
     for (const supId of [].concat(L.supersedes || [])) add(supId, r.id, "lineage", "superseded by");
     if (L.parent) add(L.parent, r.id, "lineage", "parent of");
 
-    // 5. Composition (CON/REQ/ACR/DEC -> SPC, SPC/records -> CHG)
+    // 5. Composition & Spec DAG (CON/REQ/ACR/DEC -> SPC, SPC -> SPC depends_on, SPC/records -> CHG)
     for (const members of Object.values(r.composition || {})) {
       for (const mId of members || []) add(mId, r.id, "composes", "composed in");
     }
+    for (const depId of [].concat(L.depends_on || [])) add(depId, r.id, "composes", "builds on spec");
     if (L.target_spec) add(L.target_spec, r.id, "delta", "target of change");
     for (const [group, items] of Object.entries(r.deltas || {})) {
       for (const dId of items || []) add(dId, r.id, "delta", `delta (${group})`);

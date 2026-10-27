@@ -106,7 +106,7 @@ All frontmatter is validated against Draft 2020-12 JSON Schemas in `schema/`. Ev
 | **`REQ`** | `requirement` | `requirement.schema.json` | `draft`, `provisional`, `active`, `needs_review`, `broken`, `deprecated` | `category`, `normative` (`MUST`\|`SHALL`\|`SHOULD`\|`MAY`), `ears_pattern`, `priority` (`p0`–`p3`), `underpinned_by`, `governed_by`, `verified_by`, `parent` |
 | **`ACR`** | `criterion` | `criterion.schema.json` | `draft`, `provisional`, `active`, `needs_review`, `deprecated` | `format` (`gherkin`\|`invariant`\|`metric_threshold`\|`checklist`), `verifies`, `underpinned_by` |
 | **`DEC`** | `decision` | `decision.schema.json` | `proposed`, `provisional`, `accepted`, `needs_review`, `superseded`, `rejected` | `satisfies` (`REQ`/`CON`), `underpinned_by`, `supersedes` |
-| **`SPC`** | `spec` | `spec-manifest.schema.json` | `draft`, `provisional`, `active`, `needs_review`, `merged`, `archived` | `composition.{constraints,requirements,criteria,decisions}` |
+| **`SPC`** | `spec` | `spec-manifest.schema.json` | `draft`, `provisional`, `active`, `needs_review`, `merged`, `archived` | `tier` (`skeleton`\|`feature`), `toggleable` (`boolean`), `depends_on` (`SPC-xxxx`), `composition.{constraints,requirements,criteria,decisions}` |
 | **`CHG`** | `change` | `spec-manifest.schema.json` | `draft`, `provisional`, `active`, `needs_review`, `merged`, `archived` | `target_spec` (`SPC-xxxx`), `deltas.{added,modified,removed}` |
 
 ---
@@ -115,8 +115,8 @@ All frontmatter is validated against Draft 2020-12 JSON Schemas in `schema/`. Ev
 
 ### Python Tooling (`tools/`)
 - **`tools/recordlib.py`**: Shared library that loads `meta-spec.config.yaml`, iterates canonical record files, splits YAML frontmatter and `## <Heading>` Markdown sections, and serializes records back to disk with ISO date strings preserved.
-- **`tools/validate.py`**: Validates every record against `schema/*.schema.json`, checks file placement and ID uniqueness, verifies that all link targets exist, enforces the 4 reciprocal link rules, checks epistemic consistency between normative statuses and their underpinnings (including blocking `QST` records), enforces tech-stack agnosticism on specifications and normative records, and reports per-`SPC` Epistemic Readiness scores.
-- **`tools/project.py`**: Compiles canonical records (`SPC`, `CHG`, `CON`, `REQ`, `ACR`, `DEC`, `FCT`, `ASM`, `QST`) through `adapters/*/mapping.yaml` and `.hbs` templates into `dist/openspec/` and `dist/speckit/`, with `--check` mode for CI and `--stack-profile <yaml>` for binding external PSM tech-stack profiles.
+- **`tools/validate.py`**: Validates every record against `schema/*.schema.json`, checks file placement and ID uniqueness, verifies that all link targets exist, enforces the 4 reciprocal link rules, checks epistemic consistency between normative statuses and their underpinnings (including blocking `QST` records), enforces the `SPC.depends_on` DAG and `skeleton` vs. `feature` tier invariants, enforces tech-stack agnosticism, and reports per-`SPC` Epistemic Readiness grouped by tier.
+- **`tools/project.py`**: Compiles canonical records (`SPC`, `CHG`, `CON`, `REQ`, `ACR`, `DEC`, `FCT`, `ASM`, `QST`) through `adapters/*/mapping.yaml` and `.hbs` templates into `dist/openspec/` and `dist/speckit/`, with `--tier {skeleton,feature,all}`, `--specs` / `--exclude-specs` feature toggling, `--impacted-by <ID> --rebuild-plan` topological rebuild planning, `--check` mode for CI, and `--stack-profile <yaml>` for binding external PSM tech-stack profiles.
 - **`tools/build_index.py`**: Compiles the canonical record graph into `site/data/index.json` (respecting `site.publish: "full" | "metadata"` in `meta-spec.config.yaml`).
 - **`tools/ingest_capture.py`**: Parses untrusted capture submissions from GitHub Issue Forms (`.github/ISSUE_TEMPLATE/capture-*.yml`) or JSON/YAML payload files, validates them against `schema/captures/<kind>.capture.schema.json`, allocates collision-free IDs (accounting for open `capture/*` branches), writes new records, and cascades updates to existing records.
 
@@ -138,6 +138,21 @@ Canonical specifications in this repository represent a **Platform-Independent M
 | **`ASM`, `FCT`, `QST`** | **Domain & operational invariants.** Expresses traffic rates, latency bounds, domain ambiguities, and user/system behavior in stack-neutral terms. |
 | **`VAL`** | **Empirical evidence.** May reference concrete benchmark rigs or measurement harnesses as historical test context without making those tools normative requirements. |
 
-See [Roadmap & Planned Evolution](roadmap.md) for how planned record types (`TRM-xxxx`, `CTR-xxxx`) and the projection compiler extend this separation.
+---
+
+## 7. Walking Skeleton (`tier: skeleton`) vs. Feature Flesh (`tier: feature`) & Impact-Driven Rebuilds
+
+To enable incremental agentic builds, feature toggling, and targeted rebuilds when domain facts evolve, capability specifications (`SPC-xxxx`) are decomposed into two tiers connected by a Directed Acyclic Graph (`depends_on: [SPC-xxxx]`):
+
+1. **Walking Skeleton (`tier: skeleton`, `toggleable: false`)**:
+   - Captures the minimal, mandatory end-to-end structural foundation of the application (`SPC-0001` Core Epistemic Record Graph & Validation Engine and `SPC-0002` Multi-Standard Projection Compiler).
+   - Cannot depend on `tier: feature` specifications and cannot be excluded during projection.
+2. **Feature Flesh (`tier: feature`, `toggleable: true`, `depends_on: [SPC-xxxx]`)**:
+   - Captures cohesive, modular capabilities (`SPC-0003` Capture Ingestion, `SPC-0004` Browser Workspace, `SPC-0005` Blueprint Onboarding) that layer on top of the walking skeleton.
+   - Can be selectively compiled or toggled (`--specs`, `--exclude-specs`, `--tier skeleton`).
+3. **Fact-Change Impact & Topological Rebuild (`--impacted-by <ID> --rebuild-plan`)**:
+   - When a Fact (`FCT`) or Assumption (`ASM`) changes, `tools/project.py --impacted-by <ID> --rebuild-plan` traces forward through `underpinned_by` $\rightarrow$ `CON`/`REQ`/`ACR`/`DEC` $\rightarrow$ `SPC.composition` $\rightarrow$ downstream `SPC.depends_on` to emit the exact topological sequence of skeleton and feature specifications that require rebuilding.
+
+See [Roadmap & Planned Evolution](roadmap.md) for how planned record types (`TRM-xxxx`, `CTR-xxxx`) and the projection compiler extend this architecture.
 
 

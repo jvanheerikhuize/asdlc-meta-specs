@@ -9,6 +9,10 @@
 ## Epistemic Readiness Summary
 
 - **Spec ID**: `{{id}}`
+- **Architecture Tier**: `{{tier}}` ({{tier_label}} | Toggleable: `{{toggleable}}`)
+{{#if depends_on_specs}}
+- **Depends On**: {{#each depends_on_specs}}`{{this.id}}` ({{this.title}}){{#unless @last}}, {{/unless}}{{/each}}
+{{/if}}
 - **Status**: `{{status}}`{{#if epistemic_readiness}} (Epistemic Readiness: `{{epistemic_readiness}}`){{/if}}
 - **Governing Constraints**: {{#each constraints}}`{{this.id}}` ({{this.title}}){{#unless @last}}, {{/unless}}{{/each}}
 

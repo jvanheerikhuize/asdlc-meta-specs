@@ -2,7 +2,7 @@
 id: CHG-0001
 type: change
 title: Add First-Class Open Question (QST) Capture and Blocking Readiness Gate
-domain: asdlc-core
+domain: epistemic-graph
 status: active
 target_spec: SPC-0001
 owners:

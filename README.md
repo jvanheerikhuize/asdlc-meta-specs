@@ -35,7 +35,10 @@ flowchart LR
    External SDD formats — **OpenSpec**, **GitHub Spec Kit**, EARS, Gherkin, ADRs — are treated as **target projections** (`adapters/` → `dist/`) of the canonical record graph.
 
 4. **Tech-Stack Agnostic Specifications (PIM vs. PSM)**
-   Canonical specifications (`SPC`, `CHG`), requirements (`REQ`), acceptance criteria (`ACR`), constraints (`CON`), decisions (`DEC`), and domain assumptions/facts (`ASM`, `FCT`) are **strictly tech-stack agnostic**. They express domain behavior, architectural topology, and invariants without locking in specific databases, frameworks, wire protocols, or cipher suites (which are defined externally and bound during projection). `tools/validate.py` and the capture workspace actively warn against tech-stack leakage.
+   Canonical specifications (`SPC`, `CHG`), requirements (`REQ`), acceptance criteria (`ACR`), constraints (`CON`), decisions (`DEC`), and domain assumptions/facts/questions (`ASM`, `FCT`, `QST`) are **strictly tech-stack agnostic**. They express domain behavior, architectural topology, and invariants without locking in specific databases, frameworks, wire protocols, or cipher suites (which are defined externally and bound during projection). `tools/validate.py` and the capture workspace actively warn against tech-stack leakage.
+
+5. **Walking Skeleton (`tier: skeleton`) vs. Feature Flesh (`tier: feature`)**
+   Instead of one monolithic specification per application, capabilities are decomposed into small **Walking Skeleton** specs (`tier: skeleton`, `toggleable: false`) that define the minimal end-to-end core, and **Feature Flesh** specs (`tier: feature`, `toggleable: true`, `depends_on: [SPC-xxxx]`) that layer onto the skeleton. When facts (`FCT`) or assumptions (`ASM`) change over time, `tools/project.py --impacted-by <ID> --rebuild-plan` traces the dependency DAG forward to trigger topological rebuilds of the skeleton and affected features.
 
 ---
 
@@ -43,12 +46,15 @@ flowchart LR
 
 ```bash
 pip install -r tools/requirements.txt
-python tools/validate.py                        # schema, links, reciprocity, epistemic consistency, readiness
-python tools/validate.py --strict               # also fail on warnings
-python tools/project.py                         # compile canonical records into dist/openspec and dist/speckit
-python tools/project.py --check                 # verify dist/ projections are in sync with canonical records
-python -m unittest discover -s tests -v         # run capture ingestion, projection & index unit tests
-python tools/build_index.py                     # compile records into site/data/index.json
+python tools/validate.py                                      # schema, links, reciprocity, DAG tiers, readiness
+python tools/validate.py --strict                             # also fail on warnings
+python tools/project.py                                       # compile all specs into dist/openspec and dist/speckit
+python tools/project.py --tier skeleton                       # compile ONLY the core Walking Skeleton specs
+python tools/project.py --exclude-specs SPC-0004,SPC-0005     # feature-toggle specific feature specs off
+python tools/project.py --impacted-by FCT-0001 --rebuild-plan # topological rebuild plan when a fact changes
+python tools/project.py --check                               # verify dist/ projections are in sync with canonical records
+python -m unittest discover -s tests -v                       # run capture ingestion, projection & index unit tests
+python tools/build_index.py                                   # compile records into site/data/index.json
 ```
 
 **Adding a record manually:** copy an existing record of the same type, take the next free ID (e.g. `REQ-0004`), name the file `<ID>-<kebab-slug>.md`, fill in the frontmatter, and run `python tools/validate.py`. Dates must be quoted strings (`created_at: "2026-10-27"`).
@@ -166,9 +172,9 @@ Local preview: `python tools/build_index.py && python -m http.server -d site 800
 | Area | Status |
 | :--- | :--- |
 | Record model, schemas, folder architecture | ✅ In place (`10` record schemas + `5` capture schemas) |
-| Self-hosting blueprint corpus (`asdlc-core`, `epistemic-graph`, `capture`, `projection`, `workspace`, `onboarding`, `global`) | ✅ In place (`31` canonical records across all `10` elemental types) |
-| Validator, unit tests + CI | ✅ In place (`validate.py` incl. tech-stack agnosticism checks + `23` unit tests in `tests/test_ingest.py`) |
-| Projection compiler (`adapters/` → `dist/`) | ✅ In place (`tools/project.py` with `--check` and `--stack-profile` support) |
+| Self-hosting blueprint corpus (`2` Walking Skeleton specs + `3` Feature specs) | ✅ In place (`35` canonical records across all `10` elemental types) |
+| Validator, unit tests + CI | ✅ In place (`validate.py` incl. DAG/tier & tech-stack checks + unit tests in `tests/test_ingest.py`) |
+| Projection compiler & rebuild planner (`adapters/` → `dist/`) | ✅ In place (`tools/project.py` with `--tier`, `--specs`, `--exclude-specs`, `--impacted-by`, `--rebuild-plan`) |
 | Pages workspace shell (dashboard, records, prose, pending) | ✅ In place — deploy gated behind `PAGES_ENABLED` |
 | Interactive Record Graph (`#/graph`) & per-record mini-graph | ✅ In place |
 | Requirement, Assumption, Fact & validation, Decision, and Open Question capture (app → issue → PR) | ✅ In place |

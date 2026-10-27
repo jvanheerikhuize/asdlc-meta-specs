@@ -95,7 +95,7 @@ def validate_schemas(records, schemas, registry, config) -> None:
 LIST_LINKS = [
     "validated_by", "promoted_to", "tests", "establishes", "evidence", "supersedes",
     "underpinned_by", "governed_by", "verified_by", "verifies", "satisfies",
-    "affects", "resolved_by",
+    "affects", "resolved_by", "depends_on",
 ]
 
 
@@ -185,6 +185,46 @@ def validate_epistemics(records, config) -> None:
             err(f"{rel}: active requirement has no acceptance criteria (verified_by)")
 
 
+def validate_spec_dag_and_tiers(records) -> None:
+    specs = {rid: (rel, meta) for rid, (rel, meta, _) in records.items() if meta.get("type") == "spec"}
+    for rid, (rel, meta) in specs.items():
+        tier = meta.get("tier")
+        if tier == "skeleton" and meta.get("toggleable") is True:
+            err(f"{rel}: walking skeleton specification cannot be toggleable (set toggleable: false)")
+        for dep in meta.get("depends_on") or []:
+            if dep == rid:
+                err(f"{rel}: specification cannot depend on itself ({dep})")
+                continue
+            if dep not in records:
+                continue
+            dep_meta = records[dep][1]
+            if dep_meta.get("type") != "spec":
+                err(f"{rel}: depends_on -> {dep} is not a specification")
+            elif tier == "skeleton" and dep_meta.get("tier") == "feature":
+                err(f"{rel}: walking skeleton specification ({rid}) cannot depend on feature specification ({dep})")
+
+    # Detect cycles in depends_on graph
+    state: dict[str, int] = {}  # 0=unvisited, 1=visiting, 2=visited
+
+    def dfs(node: str, stack: list[str]) -> None:
+        state[node] = 1
+        rel, meta = specs[node]
+        for dep in meta.get("depends_on") or []:
+            if dep not in specs or dep == node:
+                continue
+            dep_state = state.get(dep, 0)
+            if dep_state == 1:
+                cycle = " -> ".join([*stack[stack.index(dep):], dep])
+                err(f"{rel}: dependency cycle detected in depends_on: {cycle}")
+            elif dep_state == 0:
+                dfs(dep, [*stack, dep])
+        state[node] = 2
+
+    for rid in sorted(specs):
+        if state.get(rid, 0) == 0:
+            dfs(rid, [rid])
+
+
 STACK_AGNOSTIC_TYPES = {"assumption", "fact", "question", "constraint", "requirement", "criterion", "decision", "spec", "change"}
 STACK_AGNOSTIC_SECTIONS = ("Question", "Statement", "Scenario", "Decision", "Purpose", "What Changes")
 
@@ -213,13 +253,23 @@ def validate_tech_agnostic(records, config) -> None:
 
 def readiness_report(records) -> list[str]:
     lines = []
-    for rid, (rel, meta, _) in sorted(records.items()):
-        if meta.get("type") != "spec":
+    specs = [(rid, meta) for rid, (_, meta, _) in sorted(records.items()) if meta.get("type") == "spec"]
+    for tier_key, tier_label in (("skeleton", "Walking Skeleton (tier: skeleton)"), ("feature", "Feature Flesh (tier: feature)")):
+        tier_specs = [(rid, meta) for rid, meta in specs if meta.get("tier", "feature") == tier_key]
+        if not tier_specs:
             continue
-        reqs = (meta.get("composition") or {}).get("requirements") or []
-        active = [r for r in reqs if r in records and records[r][1].get("status") in ACTIVE_STATES]
-        score = (len(active) / len(reqs) * 100) if reqs else 0.0
-        lines.append(f"  {rid} ({meta.get('title')}): {score:.0f}% epistemic readiness ({len(active)}/{len(reqs)} requirements active)")
+        lines.append(f"  [{tier_label}]")
+        for rid, meta in tier_specs:
+            reqs = (meta.get("composition") or {}).get("requirements") or []
+            active = [r for r in reqs if r in records and records[r][1].get("status") in ACTIVE_STATES]
+            score = (len(active) / len(reqs) * 100) if reqs else 0.0
+            deps = meta.get("depends_on") or []
+            dep_str = f", depends_on: {','.join(deps)}" if deps else ""
+            toggle_str = ", toggleable" if meta.get("toggleable") else ""
+            lines.append(
+                f"    {rid} ({meta.get('title')}): {score:.0f}% epistemic readiness "
+                f"({len(active)}/{len(reqs)} requirements active{toggle_str}{dep_str})"
+            )
     return lines
 
 
@@ -235,6 +285,7 @@ def main() -> int:
     validate_references(records)
     validate_reciprocity(records)
     validate_epistemics(records, config)
+    validate_spec_dag_and_tiers(records)
     validate_tech_agnostic(records, config)
 
     print(f"Checked {len(records)} records against {len(schemas)} schemas.")
