@@ -4,11 +4,15 @@
     python tools/spec.py check [--strict]          validate links, epistemic gates, spec DAG
     python tools/spec.py impact <ID>               what must be revisited when <ID> changes
     python tools/spec.py render [--tier T] [--format markdown|gherkin] [--out DIR]
+    python tools/spec.py index [--out FILE]        write the JSON the Pages site reads
 """
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -229,6 +233,48 @@ def render_gherkin(spec: Record, records: dict[str, Record]) -> str:
 RENDERERS = {"markdown": (render_markdown, ".md"), "gherkin": (render_gherkin, ".feature")}
 
 
+def github_repo() -> str:
+    """owner/name for links from the Pages site; CI sets GITHUB_REPOSITORY."""
+    if os.environ.get("GITHUB_REPOSITORY"):
+        return os.environ["GITHUB_REPOSITORY"]
+    try:
+        url = subprocess.run(["git", "remote", "get-url", "origin"], cwd=ROOT,
+                             capture_output=True, text=True, check=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return ""
+    m = re.search(r"github\.com[:/](.+?)(?:\.git)?$", url)
+    return m.group(1) if m else ""
+
+
+def to_index(records: dict[str, Record]) -> dict:
+    """Everything the Pages site needs, in one JSON document."""
+    errors, warnings = check(records)
+    issues: dict[str, list[str]] = {}
+    for level, items in (("error", errors), ("warning", warnings)):
+        for item in items:
+            name, _, msg = item.partition(": ")
+            issues.setdefault(name[:8], []).append(f"{level}: {msg}")
+    specs = [r for r in records.values() if r.prefix == "SPC"]
+    rows = []
+    for r in records.values():
+        try:
+            touched, hit = impact(r.id, records)
+        except ValueError:  # spec cycle, already reported by check()
+            touched, hit = [], []
+        row = {k: v for k, v in r.meta.items() if k not in ("created_at", "updated_at")}
+        row.update(type=TYPES[r.prefix], path=f"records/{r.path.name}", body=r.body.strip(),
+                   downstream=touched + [s.id for s in hit], issues=issues.get(r.id, []))
+        if r.prefix == "SPC":
+            row["readiness"] = readiness(r, records)
+        rows.append(row)
+    return {
+        "repo": github_repo(),
+        "summary": {"records": len(records), "errors": len(errors), "warnings": len(warnings)},
+        "spec_order": [s.id for s in topo(specs, records)] if not errors else sorted(s.id for s in specs),
+        "records": rows,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -240,6 +286,8 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--tier", choices=["skeleton", "feature"])
     r.add_argument("--format", choices=sorted(RENDERERS), default="markdown")
     r.add_argument("--out", default="dist")
+    x = sub.add_parser("index")
+    x.add_argument("--out", default="site/data/index.json")
     args = ap.parse_args(argv)
 
     records = load()
@@ -262,6 +310,13 @@ def main(argv: list[str] | None = None) -> int:
         touched, specs = impact(args.id, records)
         print(f"Changing {args.id} affects: {', '.join(touched) or 'nothing'}")
         print("Rebuild specs in order: " + (" -> ".join(s.id for s in specs) or "none"))
+        return 0
+
+    if args.cmd == "index":
+        out = ROOT / args.out
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(to_index(records), indent=1, ensure_ascii=False), encoding="utf-8")
+        print(f"wrote {args.out}")
         return 0
 
     render, ext = RENDERERS[args.format]
