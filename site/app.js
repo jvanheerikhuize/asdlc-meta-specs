@@ -226,7 +226,7 @@ function records(params) {
     h("div", { class: "toolbar" },
       ["", ...PREFIXES].map((p) => h("a", { class: "chip", href: p ? `#/records?type=${p}` : "#/records", "aria-pressed": String(p === type) },
         p ? `${LABELS[p]} (${ofType(p).length})` : `All (${data.records.length})`)),
-      status ? h("a", { class: "chip", "aria-pressed": "true", href: type ? `#/records?type=${type}` : "#/records", title: "Clear status filter" }, `${status} ×`) : "",
+      status ? h("a", { class: "chip filter", href: type ? `#/records?type=${type}` : "#/records", title: "Clear status filter" }, `status: ${status} ×`) : "",
       search),
     list);
   fill();
@@ -465,12 +465,10 @@ function capture(kind, params) {
     if (missing.length) {
       submit.removeAttribute("href");
       submit.setAttribute("aria-disabled", "true");
-      submit.style.opacity = 0.5;
       status.textContent = `Still needed: ${missing.join(", ")}.`;
     } else {
       submit.href = gh(`new/main?filename=${encodeURIComponent(path)}&value=${encodeURIComponent(text)}`);
       submit.removeAttribute("aria-disabled");
-      submit.style.opacity = 1;
       status.textContent = `Will be created as ${built.status}. GitHub opens with the file filled in; choose “create a new branch and start a pull request”. CI checks it.`;
     }
     followUp.replaceChildren(built.followUp || "");
