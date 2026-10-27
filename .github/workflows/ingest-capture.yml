@@ -9,6 +9,7 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
+  statuses: write
 
 concurrency:
   group: ingest-capture        # serialise ID allocation
@@ -27,6 +28,7 @@ jobs:
       ISSUE: ${{ github.event.issue.number }}
       AUTHOR: ${{ github.event.issue.user.login }}
       BODY: ${{ github.event.issue.body }}           # untrusted: only ever used via env, never interpolated into scripts
+      ISSUE_TITLE: ${{ github.event.issue.title }}   # untrusted: same
       BRANCH: capture/issue-${{ github.event.issue.number }}
     steps:
       - uses: actions/checkout@v4
@@ -53,7 +55,7 @@ jobs:
         run: |
           printf '%s' "$BODY" > /tmp/body.md
           set +e
-          python tools/ingest_capture.py --issue-body-file /tmp/body.md --issue "$ISSUE" \
+          python tools/ingest_capture.py --issue-body-file /tmp/body.md --issue-title "$ISSUE_TITLE" --issue "$ISSUE" \
             --author "$AUTHOR" --reserved-ids-file /tmp/reserved.txt > /tmp/result.json
           echo "code=$?" >> "$GITHUB_OUTPUT"
           cat /tmp/result.json
@@ -78,6 +80,9 @@ jobs:
           git add records
           git commit -m "capture: $REQ – $TITLE (#$ISSUE)"
           git push --force origin "$BRANCH"
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$(git rev-parse HEAD)" -f state=success \
+            -f context="validate-meta-specs (capture)" -f description="Record graph validated by ingest-capture" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" > /dev/null
 
           {
             echo "Captured from #$ISSUE by @$AUTHOR."

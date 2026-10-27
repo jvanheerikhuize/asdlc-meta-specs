@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         **Tip:** the guided capture app on GitHub Pages fills this in for you (with hints and a live preview).
-        Filling it in here by hand works too — only the first two questions are needed.
+        Filling it in here by hand works too — only the first two questions are needed. The issue title becomes the requirement's title (leave it as `[capture]` to derive one).
 
   - type: textarea
     id: statement
@@ -15,15 +15,13 @@ body:
       label: "What should the system do?"
       description: "One sentence in plain language. E.g. *Users can export their profile data as a JSON file.*"
     validations:
-      required: false
+      required: true
 
   - type: textarea
     id: why
     attributes:
       label: "Why? What do we know or believe?"
-      description: "One reason per line. Each line is recorded as an assumption until someone validates it."
-    validations:
-      required: false
+      description: "One reason per line. Each line is recorded as an assumption until someone validates it. (Optional if you list existing facts/assumptions below.)"
 
   - type: input
     id: refs
@@ -35,7 +33,7 @@ body:
     id: criteria
     attributes:
       label: "How will we know it works? (optional)"
-      description: "Given / When / Then lines. Leave a blank line between scenarios."
+      description: "Given / When / Then lines. Leave a blank line between scenarios. Only *Then* is required."
       placeholder: |
         Given a logged-in user
         When they click "Export"
@@ -47,20 +45,23 @@ body:
       label: "Domain (optional)"
       description: "Area of the product, e.g. auth, billing. Defaults to 'general'."
 
-  - type: dropdown
+  # Plain inputs (not dropdowns) so the capture app can pre-fill them via the URL.
+  - type: input
     id: priority
     attributes:
-      label: "Priority"
-      options:
-        - "p2 – Normal"
-        - "p1 – High"
-        - "p0 – Critical"
-        - "p3 – Low"
-      default: 0
+      label: "Priority (optional)"
+      description: "p0 critical · p1 high · p2 normal (default) · p3 low"
+      placeholder: "p2"
+
+  - type: input
+    id: category
+    attributes:
+      label: "Category (optional)"
+      description: "functional (default) · non_functional · security · data · interface"
+      placeholder: "functional"
 
   - type: textarea
-    id: payload
+    id: notes
     attributes:
-      label: "Payload (filled in automatically by the capture app)"
-      description: "Leave empty when filling in by hand. If present, it takes precedence over the fields above."
-      render: yaml
+      label: "Notes (optional)"
+      description: "Anything else reviewers should know."

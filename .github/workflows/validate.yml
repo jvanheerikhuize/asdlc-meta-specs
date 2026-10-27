@@ -7,6 +7,9 @@ on:
 
 jobs:
   validate:
+    # Note: capture PRs are pushed by GITHUB_TOKEN, so GitHub holds this workflow for them and lists an
+    # expired, job-less run in the Actions tab. That is expected — ingest-capture validates those PRs and
+    # posts the "validate-meta-specs (capture)" status instead.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -2,17 +2,17 @@
 """
 Turn a capture (GitHub issue body or raw payload) into canonical record files.
 
-Input  : an issue body produced by .github/ISSUE_TEMPLATE/capture-requirement.yml
-         (structured `Payload` field from the Pages app, OR the plain fields filled in by hand),
-         or a raw JSON/YAML payload file (--payload-file).
+Input  : an issue body produced by .github/ISSUE_TEMPLATE/capture-requirement.yml (the visible form
+         fields — pre-filled by the Pages app or typed by hand; the issue title becomes the
+         requirement title), or a raw JSON/YAML payload file (--payload-file).
 Output : new REQ / ASM / ACR markdown files in the record store + a JSON summary on stdout.
 
 The input is UNTRUSTED. It is parsed with yaml.safe_load, validated against
 schema/captures/requirement.capture.schema.json, and only ever written as data.
 
 Usage:
-  python tools/ingest_capture.py --issue-body-file body.md [--issue 12] [--author octocat]
-                                 [--reserved-ids-file ids.txt] [--root PATH] [--dry-run]
+  python tools/ingest_capture.py --issue-body-file body.md [--issue-title "[capture] …"] [--issue 12]
+                                 [--author octocat] [--reserved-ids-file ids.txt] [--root PATH] [--dry-run]
   python tools/ingest_capture.py --payload-file capture.yml [...]
 """
 from __future__ import annotations
@@ -91,10 +91,50 @@ def parse_gwt(text: str) -> list[dict]:
     return scenarios
 
 
-def payload_from_issue(body: str) -> dict:
+PRIORITY_WORDS = {"critical": "p0", "high": "p1", "normal": "p2", "medium": "p2", "low": "p3"}
+CATEGORIES = ("functional", "non_functional", "interface", "data", "security")
+CATEGORY_ALIASES = {"nonfunctional": "non_functional", "quality": "non_functional", "nfr": "non_functional",
+                    "performance": "non_functional", "usability": "non_functional"}
+
+
+def parse_priority(text: str) -> str | None:
+    t = text.strip().lower()
+    if not t:
+        return None
+    m = re.match(r"p\s*([0-3])\b", t)
+    if m:
+        return f"p{m.group(1)}"
+    for word, value in PRIORITY_WORDS.items():
+        if t.startswith(word):
+            return value
+    raise CaptureError(f"Priority `{text.strip()}` is not recognised — use p0, p1, p2 or p3.")
+
+
+def parse_category(text: str) -> str | None:
+    t = re.sub(r"[\s-]+", "_", text.strip().lower()).split("(")[0].strip("_")
+    if not t:
+        return None
+    t = CATEGORY_ALIASES.get(t.replace("_", ""), t)
+    if t in CATEGORIES:
+        return t
+    raise CaptureError(f"Category `{text.strip()}` is not recognised — use one of: {', '.join(CATEGORIES)}.")
+
+
+def title_from_issue(issue_title: str | None) -> str:
+    t = re.sub(r"^\s*\[capture\]\s*", "", issue_title or "", flags=re.I).strip()
+    return t[:140]
+
+
+def payload_from_issue(body: str, issue_title: str | None = None) -> dict:
+    """Build a capture payload from an Issue Form body.
+
+    The visible form fields are the source of truth (the capture app pre-fills them, and people may
+    edit them on GitHub). A legacy ``Payload`` section is only honoured when no statement is given.
+    """
     secs = issue_sections(body)
+    statement = find(secs, "What should the system do")
     raw = strip_fence(find(secs, "Payload"))
-    if raw.strip():
+    if not statement and raw.strip():
         try:
             payload = yaml.safe_load(raw)
         except yaml.YAMLError as exc:
@@ -103,20 +143,24 @@ def payload_from_issue(body: str) -> dict:
             raise CaptureError("The payload must be an object.")
         return payload
 
-    # Hand-filled issue form: build the payload from plain fields.
-    statement = find(secs, "What should the system do")
-    why = find(secs, "Why")
+    req: dict = {"statement": statement}
+    title = title_from_issue(issue_title)
+    if title:
+        req["title"] = title
+    if domain := find(secs, "Domain"):
+        req["domain"] = domain
+    if prio := parse_priority(find(secs, "Priority")):
+        req["priority"] = prio
+    if cat := parse_category(find(secs, "Category")):
+        req["category"] = cat
+    if notes := find(secs, "Notes"):
+        req["notes"] = notes
+
+    payload: dict = {"kind": "requirement", "version": 1, "requirement": req}
     refs = re.findall(r"\b(?:FCT|ASM)-\d{4}\b", find(secs, "Existing facts"))
-    payload: dict = {"kind": "requirement", "version": 1, "requirement": {"statement": statement}}
-    domain = find(secs, "Domain")
-    if domain:
-        payload["requirement"]["domain"] = domain
-    prio = find(secs, "Priority")
-    m = re.match(r"(p[0-3])", prio.lower())
-    if m:
-        payload["requirement"]["priority"] = m.group(1)
     if refs:
         payload["underpinned_by"] = sorted(set(refs))
+    why = find(secs, "Why")
     beliefs = [ln.strip(" -*\t") for ln in why.splitlines() if ln.strip(" -*\t")]
     if beliefs:
         payload["new_assumptions"] = [{"statement": b} for b in beliefs]
@@ -309,6 +353,7 @@ def main() -> int:
     src.add_argument("--issue-body-file", type=Path)
     src.add_argument("--payload-file", type=Path)
     ap.add_argument("--issue", type=int)
+    ap.add_argument("--issue-title", help="Issue title; '[capture] <title>' sets the requirement title")
     ap.add_argument("--author")
     ap.add_argument("--reserved-ids-file", type=Path, help="IDs already used on open capture branches (one per line)")
     ap.add_argument("--root", type=Path, default=ROOT)
@@ -322,7 +367,7 @@ def main() -> int:
 
     try:
         if args.issue_body_file:
-            payload = payload_from_issue(args.issue_body_file.read_text())
+            payload = payload_from_issue(args.issue_body_file.read_text(), args.issue_title)
         else:
             payload = yaml.safe_load(args.payload_file.read_text())
             if not isinstance(payload, dict):

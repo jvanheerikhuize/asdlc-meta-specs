@@ -5,7 +5,7 @@
 // Definition shape (see capture/requirement.js):
 //   id, title, intro, issueTemplate,
 //   defaults(data) -> values, isEmpty(values), sections(data) -> [{title, help, optional, collapsed, fields:[…]}],
-//   validate(values) -> [{name, message}], toPayload(values, data), issueTitle(values), issueFields(values),
+//   validate(values) -> [{name, message}], issueTitle(values), issueFields(values) -> [{id, label, value}],
 //   preview(values, data) -> Node, hints(values, data) -> [{level, text}]
 // Field types: textarea | text | datalist | radio | records | scenarios | custom
 import { h, append, clear, nextId, debounce } from "../dom.js";
@@ -222,28 +222,28 @@ export function mountCapture(main, def, data) {
       first?.scrollIntoView?.({ block: "center" });
       return;
     }
-    const payload = def.toPayload(values, data);
-    const { url, tooLong, json } = buildIssueUrl(data, def, values, payload);
+    const { url, omitted } = buildIssueUrl(data, def, values);
     window.open(url, "_blank", "noopener");
-    showDialog(url, tooLong, json);
+    showDialog(url, omitted);
   }
 
-  function showDialog(url, tooLong, json) {
-    const copy = async (btn) => {
-      try { await navigator.clipboard.writeText(json); btn.textContent = "Copied ✓"; } catch { btn.textContent = "Copy failed — select it in the GitHub form"; }
+  function showDialog(url, omitted) {
+    const copy = async (btn, text) => {
+      try { await navigator.clipboard.writeText(text); btn.textContent = "Copied ✓"; } catch { btn.textContent = "Copy failed — select the text instead"; }
     };
     clear(dialog).append(
       h("h2", { id: "dlg-title" }, "Almost there!"),
       h("ol", {},
         h("li", {}, "GitHub opened in a new tab with your capture filled in. ",
           h("a", { href: url, target: "_blank", rel: "noopener" }, "Didn't open? Click here.")),
-        tooLong ? h("li", {}, "Your capture is large: copy the data below and paste it into the ", h("strong", {}, "Payload"), " field.") : null,
-        h("li", {}, "Click ", h("strong", {}, "Create"), " at the bottom of the GitHub form."),
-        h("li", {}, "Within a minute a pull request appears. Approving & merging it approves the record.")),
+        omitted.length ? h("li", {}, "Your capture is too long to pre-fill completely. Copy these into the matching GitHub fields:",
+          h("ul", { class: "list" }, omitted.map((f) => h("li", {}, h("strong", {}, f.label), " ",
+            h("button", { type: "button", class: "link", onclick: (ev) => copy(ev.target, f.value) }, "Copy"))))) : null,
+        h("li", {}, "Check the fields, then click ", h("strong", {}, "Create"), " at the bottom of the GitHub form."),
+        h("li", {}, "Within a minute a pull request appears. One approval + merge approves the record.")),
       h("div", { class: "form-actions" },
         h("button", { type: "button", class: "primary", onclick: () => { dialog.close(); reset(false); } }, "I've submitted it — clear my draft"),
-        h("button", { type: "button", onclick: () => dialog.close() }, "Keep editing"),
-        h("button", { type: "button", class: "link", onclick: (ev) => copy(ev.target) }, "Copy capture data")));
+        h("button", { type: "button", onclick: () => dialog.close() }, "Keep editing")));
     dialog.showModal();
   }
 
@@ -251,17 +251,16 @@ export function mountCapture(main, def, data) {
   saveStatus.textContent = saved && !def.isEmpty(values) ? "Draft restored" : "";
 }
 
-export function buildIssueUrl(data, def, values, payload) {
+// Pre-fills every issue-form field via the URL. If the URL would get too long, fields are added in
+// order while they fit; the rest are returned as `omitted` so the user can paste them by hand.
+export function buildIssueUrl(data, def, values) {
   const base = githubUrl(data, "/issues/new");
-  const json = JSON.stringify(payload, null, 2);
-  const build = (withFields, withPayload) => {
-    const p = new URLSearchParams({ template: def.issueTemplate, title: def.issueTitle(values) });
-    if (withFields) for (const [k, v] of Object.entries(def.issueFields(values))) if (v) p.set(k, v);
-    if (withPayload) p.set("payload", json);
-    return `${base}?${p}`;
-  };
-  let url = build(true, true);
-  if (url.length > MAX_URL) url = build(false, true);
-  if (url.length > MAX_URL) return { url: build(true, false), tooLong: true, json };
-  return { url, tooLong: false, json };
+  const p = new URLSearchParams({ template: def.issueTemplate, title: def.issueTitle(values) });
+  const omitted = [];
+  for (const f of def.issueFields(values)) {
+    if (!f.value) continue;
+    p.set(f.id, f.value);
+    if (`${base}?${p}`.length > MAX_URL) { p.delete(f.id); omitted.push(f); }
+  }
+  return { url: `${base}?${p}`, omitted };
 }
