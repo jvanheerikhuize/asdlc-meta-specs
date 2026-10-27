@@ -7,6 +7,8 @@ on:
 
 jobs:
   validate:
+    # Capture PRs are opened by the bot and validated inside ingest-capture (which posts a commit status).
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
