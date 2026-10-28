@@ -1,6 +1,6 @@
 # Roadmap: from lite to target state
 
-This repository is the **starting point**. The **target state** is the full engine originally built as `asdlc-meta-specs`, preserved in the [`target_state`](https://github.com/jvanheerikhuize/asdlc-meta-specs-lite/tree/target_state) branch (full history, tag `target_state-v1.0.0`).
+This repository is the **starting point**. The **target state** is the full engine this repository originally held, preserved in the [`target_state`](https://github.com/jvanheerikhuize/asdlc-meta-specs/tree/target_state) branch (full history, tag `target_state-v1.0.0`).
 
 The two are far apart:
 
@@ -74,6 +74,6 @@ Add each of these only when its trigger is observed:
 
 Some of these may never be needed. That is a valid outcome. The target state is a hypothesis about where this goes, and this roadmap is how it gets tested.
 
-## Retiring the old repository
+## Where the original repository went
 
-Everything in `asdlc-meta-specs` is in `target_state`, including history and the `v1.0.0` tag (as `target_state-v1.0.0`). What a branch cannot carry over: its GitHub issues (six closed capture issues), pull request discussions and its Pages deployment. Archive the repository instead of deleting it if those should stay readable.
+This repository was developed as `asdlc-meta-specs-lite` and then took over the name `asdlc-meta-specs`. The original repository no longer exists separately: its full history and the `v1.0.0` tag (as `target_state-v1.0.0`) live on in the `target_state` branch. What a branch could not carry over: its GitHub issues (six closed capture issues), pull request discussions and its Pages deployment.
