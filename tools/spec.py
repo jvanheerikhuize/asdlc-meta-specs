@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """One tool for the whole record graph.
 
-    python tools/spec.py check [--strict]          validate links, epistemic gates, spec DAG
+    python tools/spec.py check [--strict]          validate links, epistemic gates, open questions, spec DAG
     python tools/spec.py impact <ID>               what must be revisited when <ID> changes
     python tools/spec.py render [--tier T] [--format markdown|gherkin] [--out DIR]
     python tools/spec.py index [--out FILE]        write the JSON the Pages site reads
@@ -21,14 +21,15 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 RECORDS = ROOT / "records"
 
-TYPES = {"ASM": "assumption", "FCT": "fact", "REQ": "requirement", "SPC": "spec"}
+TYPES = {"ASM": "assumption", "FCT": "fact", "QST": "question", "REQ": "requirement", "SPC": "spec"}
 STATUSES = {
     "ASM": {"open", "validated", "invalidated"},
     "FCT": {"active", "deprecated"},
+    "QST": {"open", "answered"},
     "REQ": {"provisional", "active", "broken"},
     "SPC": {"draft", "active"},
 }
-ID_RE = re.compile(r"^(ASM|FCT|REQ|SPC)-\d{4}$")
+ID_RE = re.compile(r"^(ASM|FCT|QST|REQ|SPC)-\d{4}$")
 
 # Specs describe *what*, never *with what*. Concrete stacks are bound at render time.
 STACK_TERMS = [
@@ -50,9 +51,9 @@ class Record:
 
     def links(self) -> list[str]:
         out = []
-        for key in ("because", "requirements", "depends_on"):
+        for key in ("because", "requirements", "depends_on", "blocks"):
             out += self.meta.get(key) or []
-        for key in ("promoted_to", "promoted_from"):
+        for key in ("promoted_to", "promoted_from", "answered_by"):
             if self.meta.get(key):
                 out.append(self.meta[key])
         return out
@@ -112,7 +113,27 @@ def check(records: dict[str, Record]) -> tuple[list[str], list[str]]:
             if source in records and records[source].status != "validated":
                 err(r, f"promoted from {source}, which is not validated")
 
-        # 3. Epistemic gate: a requirement is only as solid as what it rests on
+        # 3. Open questions: a gap we know about, with no candidate answer yet
+        if r.prefix == "QST":
+            blocked = r.meta.get("blocks") or []
+            answer = r.meta.get("answered_by")
+            if not blocked:
+                err(r, "a question must say which requirements or specs it 'blocks'")
+            for b in blocked:
+                if b in records and records[b].prefix not in ("REQ", "SPC"):
+                    err(r, f"'blocks' may only list requirements or specs, not {b}")
+            if r.status == "answered" and not answer:
+                err(r, "answered question must name the fact or assumption it was answered_by")
+            if r.status == "open" and answer:
+                err(r, "open question cannot be answered_by anything yet -> status 'answered'")
+            if answer in records:
+                if records[answer].prefix not in ("FCT", "ASM"):
+                    err(r, f"'answered_by' must be a fact or assumption, not {answer}")
+                for b in blocked:
+                    if b in records and records[b].prefix == "REQ" and answer not in (records[b].meta.get("because") or []):
+                        warn(r, f"answered by {answer}, but {b} does not cite it in 'because'")
+
+        # 4. Epistemic gate: a requirement is only as solid as what it rests on
         if r.prefix == "REQ":
             grounds = [records[g] for g in r.meta.get("because") or [] if g in records]
             if not r.meta.get("because"):
@@ -129,10 +150,13 @@ def check(records: dict[str, Record]) -> tuple[list[str], list[str]]:
                 err(r, f"rests on open assumption(s) {shaky} -> status must be 'provisional'")
             for g in stale:
                 warn(r, f"cites {g.id}, which was promoted -> cite {g.meta.get('promoted_to')} instead")
+            asked = open_questions(r, records)
+            if asked and r.status == "active":
+                err(r, f"blocked by open question(s) {asked} -> status must be 'provisional'")
             if r.status == "active" and not r.scenarios():
                 err(r, "active requirement needs at least one Given/When/Then under '## Acceptance'")
 
-        # 4. Specs: skeleton first, features layer on top, no cycles
+        # 5. Specs: skeleton first, features layer on top, no cycles
         if r.prefix == "SPC":
             tier = r.meta.get("tier")
             if tier not in ("skeleton", "feature"):
@@ -145,8 +169,10 @@ def check(records: dict[str, Record]) -> tuple[list[str], list[str]]:
                     err(r, f"skeleton spec cannot depend on feature {dep}")
             if r.status == "active" and readiness(r, records) < 100:
                 err(r, "spec can only be active when all its requirements are active")
+            if r.status == "active" and open_questions(r, records):
+                err(r, f"spec blocked by open question(s) {open_questions(r, records)} cannot be active")
 
-        # 5. Tech-stack agnostic
+        # 6. Tech-stack agnostic
         hits = sorted({m.group(1).lower() for m in STACK_RE.finditer(r.title + "\n" + r.body)})
         if hits:
             warn(r, f"tech-stack term(s) {hits}; keep stack choices out of specs")
@@ -157,6 +183,12 @@ def check(records: dict[str, Record]) -> tuple[list[str], list[str]]:
     except ValueError as e:
         errors.append(str(e))
     return errors, warnings
+
+
+def open_questions(r: Record, records: dict[str, Record]) -> list[str]:
+    """Open questions that block this requirement or spec."""
+    return sorted(q.id for q in records.values()
+                  if q.prefix == "QST" and q.status == "open" and r.id in (q.meta.get("blocks") or []))
 
 
 def readiness(spec: Record, records: dict[str, Record]) -> int:
@@ -191,8 +223,10 @@ def impact(changed: str, records: dict[str, Record]) -> tuple[list[str], list[Re
     downstream: dict[str, set[str]] = {rid: set() for rid in records}
     for r in records.values():
         for link in r.links():
+            if link in (r.meta.get("blocks") or []):
+                downstream[r.id].add(link)  # a question flows into what it blocks
             # promoted_to points downstream already; its mirror promoted_from carries the edge
-            if link in downstream and link != r.meta.get("promoted_to"):
+            elif link in downstream and link != r.meta.get("promoted_to"):
                 downstream[link].add(r.id)
 
     seen, todo = set(), [changed]
@@ -210,21 +244,33 @@ def render_markdown(spec: Record, records: dict[str, Record]) -> str:
            f"Tier: **{spec.meta['tier']}** · Readiness: **{readiness(spec, records)}%**", ""]
     if spec.meta.get("depends_on"):
         out += ["Builds on: " + ", ".join(spec.meta["depends_on"]), ""]
-    out += [spec.section("Purpose"), "", "## Requirements", ""]
+    out += [spec.section("Purpose"), ""]
+    out += _asked(spec, records, "##")
+    out += ["## Requirements", ""]
     for rid in spec.meta.get("requirements") or []:
         req = records[rid]
         out += [f"### {rid} · {req.title} ({req.status})", "", req.section("Statement"), ""]
         for sc in req.scenarios():
             out += ["```gherkin", *sc, "```", ""]
         out += ["Because:"] + [f"- {g} ({records[g].status}): {records[g].title}" for g in req.meta["because"]] + [""]
+        out += _asked(req, records, "####")
     return "\n".join(out).rstrip() + "\n"
+
+
+def _asked(r: Record, records: dict[str, Record], level: str) -> list[str]:
+    qs = open_questions(r, records)
+    if not qs:
+        return []
+    return ([f"{level} Open questions (do not guess, ask)", ""]
+            + [f"- {q}: {records[q].title}" for q in qs] + [""])
 
 
 def render_gherkin(spec: Record, records: dict[str, Record]) -> str:
     out = [f"Feature: {spec.title}", ""]
     for rid in spec.meta.get("requirements") or []:
         req = records[rid]
-        tag = "" if req.status == "active" else f"  @{req.status}\n"
+        tags = ([] if req.status == "active" else [f"@{req.status}"]) + [f"@{q}" for q in open_questions(req, records)]
+        tag = f"  {' '.join(tags)}\n" if tags else ""
         for i, sc in enumerate(req.scenarios(), 1):
             out += [f"{tag}  Scenario: {rid} {req.title} #{i}"] + [f"    {ln}" for ln in sc] + [""]
     return "\n".join(out).rstrip() + "\n"
@@ -266,6 +312,8 @@ def to_index(records: dict[str, Record]) -> dict:
                    downstream=touched + [s.id for s in hit], issues=issues.get(r.id, []))
         if r.prefix == "SPC":
             row["readiness"] = readiness(r, records)
+        if r.prefix in ("REQ", "SPC"):
+            row["open_questions"] = open_questions(r, records)
         rows.append(row)
     return {
         "repo": github_repo(),

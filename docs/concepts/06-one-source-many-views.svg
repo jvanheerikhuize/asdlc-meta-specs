@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" width="1000" height="600" role="img" aria-labelledby="t d">
-  <title id="t">Concept 5: one source, many views</title>
+  <title id="t">Concept 6: one source, many views</title>
   <desc id="d">The records are written once and say what the system must do and why. A renderer turns them into views for each tool, such as OpenSpec, Spec Kit and Gherkin. Technology choices, the tech stack such as SQL, Vue, REST APIs, Azure, Azure DevOps and GitHub Copilot, are added at render time, never written into the records.</desc>
   <defs>
     <marker id="a-ink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b6b66"/></marker>

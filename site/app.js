@@ -1,10 +1,10 @@
 // Meta-Specs Lite workspace: one module, no build step.
 // Reads data/index.json (written by `python tools/spec.py index`) and renders five views.
 
-const PREFIXES = ["ASM", "FCT", "REQ", "SPC"];
-const LABELS = { ASM: "Assumptions", FCT: "Facts", REQ: "Requirements", SPC: "Specs" };
+const PREFIXES = ["ASM", "FCT", "QST", "REQ", "SPC"];
+const LABELS = { ASM: "Assumptions", FCT: "Facts", QST: "Questions", REQ: "Requirements", SPC: "Specs" };
 const main = document.getElementById("main");
-let data, byId, usedBy, redraw = null;
+let data, byId, usedBy, askedBy, redraw = null;
 
 // ---------- helpers ----------
 function h(tag, attrs = {}, ...kids) {
@@ -30,9 +30,10 @@ const store = {
   del(k) { try { localStorage.removeItem(k); } catch { /* storage unavailable */ } },
 };
 
-/** Links a record points to, i.e. what it rests on or is built from. */
+/** Links a record points to, i.e. what it rests on or is built from. Questions point the other way, so they are looked up. */
 function upstream(r) {
-  return [...(r.because || []), ...(r.requirements || []), ...(r.depends_on || []), ...(r.promoted_from ? [r.promoted_from] : [])];
+  return [...(r.because || []), ...(r.requirements || []), ...(r.depends_on || []), ...(r.promoted_from ? [r.promoted_from] : []),
+    ...(r.answered_by ? [r.answered_by] : []), ...(askedBy[r.id] || [])];
 }
 
 function inline(text) {
@@ -41,7 +42,7 @@ function inline(text) {
     return esc(part)
       .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
       .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2">$1</a>')
-      .replace(/\b(ASM|FCT|REQ|SPC)-\d{4}\b/g, (m) => (byId[m] ? `<a class="rid t-${m.slice(0, 3)}" href="#/record/${m}">${m}</a>` : m));
+      .replace(/\b(ASM|FCT|QST|REQ|SPC)-\d{4}\b/g, (m) => (byId[m] ? `<a class="rid t-${m.slice(0, 3)}" href="#/record/${m}">${m}</a>` : m));
   }).join("");
 }
 
@@ -71,14 +72,16 @@ function markdown(src) {
 const TONES = {
   FCT: { active: ["done", "known"], deprecated: ["off", "retired"] },
   ASM: { validated: ["done", "proven"], open: ["wait", "need testing"], invalidated: ["off", "refuted"] },
-  REQ: { active: ["done", "active"], ready: ["wait", "ready to activate"], provisional: ["wait", "waiting on assumptions"], broken: ["bad", "broken"] },
+  QST: { answered: ["done", "answered"], open: ["wait", "need an answer"] },
+  REQ: { active: ["done", "active"], ready: ["wait", "ready to activate"], asked: ["wait", "waiting on a question"], provisional: ["wait", "waiting on assumptions"], broken: ["bad", "broken"] },
   SPC: { active: ["done", "ready"], draft: ["wait", "in progress"] },
 };
-/** The status a record really has: a requirement resting on something refuted is broken, and one resting only on facts is ready, whatever its file says. */
+/** The status a record really has: a requirement resting on something refuted is broken, one with an open question is waiting on it, and one resting only on facts is ready, whatever its file says. */
 function effective(r) {
   if (prefix(r.id) !== "REQ" || r.status === "active") return r.status;
   const grounds = (r.because || []).map((g) => byId[g]).filter(Boolean);
   if (grounds.some((g) => tone(g) === "off")) return "broken";
+  if (r.open_questions?.length) return "asked";
   return grounds.length && grounds.every((g) => prefix(g.id) === "FCT") ? "ready" : r.status;
 }
 function tone(r) { return (TONES[prefix(r.id)][r.status] || ["off", r.status])[0]; }
@@ -92,7 +95,10 @@ function blocker(req) {
   const dead = grounds.filter((g) => tone(g) === "off");
   const open = grounds.filter((g) => g.status === "open");
   if (req.status === "broken" || dead.length) return ["bad", ["rests on ", ...idList(dead.map((g) => g.id)), dead.length > 1 ? ", which are" : ", which is", " no longer true. Rework it."]];
-  if (open.length) return ["wait", ["waiting on ", ...idList(open.map((g) => g.id)), " to be tested."]];
+  const asked = req.open_questions || [];
+  if (open.length || asked.length) return ["wait", ["waiting on ",
+    ...(asked.length ? [...idList(asked), " to be answered"] : []), asked.length && open.length ? " and " : "",
+    ...(open.length ? [...idList(open.map((g) => g.id)), " to be tested"] : []), "."]];
   return ["ready", ["all its grounds are facts. Set ", h("code", {}, "status: active"), "."]];
 }
 
@@ -109,13 +115,18 @@ function tasks() {
     if (!data.records.some((s) => (s.requirements || []).includes(r.id)))
       add("tidy", r, ["Put ", rid(r.id), " in a spec"], ["It is not part of any spec yet, so nothing will build it."], [h("a", { class: "btn ghost", href: "#/capture/spec" }, "New spec"), editLink(r, "Or edit an existing spec")]);
   }
+  for (const q of ofType("QST").filter((q) => q.status === "open").sort((x, y) => y.downstream.length - x.downstream.length)) {
+    add("answer", q, ["Answer ", rid(q.id)], [section(q.body, "Question") || "Nobody has proposed an answer yet."],
+      [h("a", { class: "btn", href: `#/capture/fact?answers=${q.id}` }, "We know → record the fact"),
+       h("a", { class: "btn ghost", href: `#/capture/assumption?answers=${q.id}` }, "We have a guess → record the assumption")], q.downstream);
+  }
   for (const a of ofType("ASM").filter((a) => a.status === "open").sort((x, y) => y.downstream.length - x.downstream.length)) {
     const plan = section(a.body, "How we validate it");
     add("test", a, ["Test ", rid(a.id)], [plan ? [h("strong", {}, "How: "), plan] : "No validation plan yet. Add one."],
       [h("a", { class: "btn", href: `#/capture/fact?promote=${a.id}` }, "It held → record the fact"),
        editLink(a, "It failed → set status: invalidated")], a.downstream);
   }
-  for (const sp of ofType("SPC").filter((s) => s.status !== "active" && s.readiness === 100))
+  for (const sp of ofType("SPC").filter((s) => s.status !== "active" && s.readiness === 100 && !s.open_questions.length))
     add("quick", sp, ["Activate ", rid(sp.id)], ["Every requirement in it is active. Set ", h("code", {}, "status: active"), "."], [editLink(sp)]);
   for (const r of data.records) for (const issue of r.issues) {
     const [lvl, msg] = issue.split(": ", 2);
@@ -128,6 +139,7 @@ function tasks() {
 }
 const LEVELS = {
   fix: ["Fix now", "Something is wrong or no longer true. CI fails until these are done."],
+  answer: ["Answer questions", "Nobody has an answer yet, so what they block stays provisional and an agent will ask instead of guess. An answer can be a fact, or an assumption to test."],
   test: ["Test assumptions", "Each test turns guesswork into a fact, or tells you early that a requirement is wrong."],
   quick: ["Quick wins", "Already earned. Just flip the status."],
   tidy: ["Tidy up", "Not blocking, but worth doing."],
@@ -137,7 +149,9 @@ const LEVELS = {
 function dashboard() {
   const todo = tasks();
   const per = (lvl) => todo.filter((t) => t.level === lvl).length;
-  const open = ofType("ASM").filter((r) => r.status === "open").sort((a, b) => b.downstream.length - a.downstream.length);
+  // Questions first: they do not even have a candidate answer yet.
+  const byReach = (a, b) => b.downstream.length - a.downstream.length;
+  const open = ["QST", "ASM"].flatMap((p) => ofType(p).filter((r) => r.status === "open").sort(byReach));
   const attention = data.spec_order.map((id) => byId[id]).filter((sp) => sp.status !== "active" || sp.issues.length);
   const fine = data.spec_order.filter((id) => !attention.includes(byId[id]));
 
@@ -160,11 +174,11 @@ function dashboard() {
 
     h("h2", {}, "What's holding things back"),
     open.length
-      ? h("ul", { class: "list" }, open.map((a) => h("li", {}, rid(a.id),
+      ? h("ul", { class: "list" }, open.map((a) => { const q = prefix(a.id) === "QST"; return h("li", {}, rid(a.id),
           h("div", { class: "grow" }, a.title, h("div", { class: "muted" },
-            `confidence ${a.confidence ?? "?"} · holds back `, a.downstream.length ? idList(a.downstream) : "nothing")),
-          h("a", { href: `#/capture/fact?promote=${a.id}` }, "Record result"))))
-      : h("p", { class: "muted" }, "No open assumptions. Everything rests on facts."));
+            q ? "no answer yet" : `confidence ${a.confidence ?? "?"}`, " · holds back ", a.downstream.length ? idList(a.downstream) : "nothing")),
+          h("a", { href: q ? `#/capture/fact?answers=${a.id}` : `#/capture/fact?promote=${a.id}` }, q ? "Answer" : "Record result")); }))
+      : h("p", { class: "muted" }, "No open questions or assumptions. Everything rests on facts."));
 }
 
 function stateRow(p) {
@@ -187,8 +201,9 @@ function specCard(sp) {
     h("div", { class: "muted" }, `${reqs.length - pending.length} of ${reqs.length} requirements active`),
     h("ul", { class: "blockers" },
       sp.issues.map((i) => h("li", { class: "bad" }, i)),
+      sp.open_questions.length ? h("li", { class: "wait" }, "Spec waiting on ", idList(sp.open_questions), " to be answered.") : "",
       pending.length ? pending.map((r) => { const [t, why] = blocker(r); return h("li", { class: t }, rid(r.id), " ", why); })
-        : sp.status !== "active" ? h("li", { class: "ready" }, "All requirements active. Set ", h("code", {}, "status: active"), ".") : ""));
+        : sp.status !== "active" && !sp.open_questions.length ? h("li", { class: "ready" }, "All requirements active. Set ", h("code", {}, "status: active"), ".") : ""));
 }
 
 function tasksView() {
@@ -252,6 +267,9 @@ function record(id) {
           field("Readiness", r.readiness != null ? `${r.readiness}%` : null),
           field("Promoted from", r.promoted_from && rid(r.promoted_from)),
           field("Promoted to", r.promoted_to && rid(r.promoted_to)),
+          field("Answered by", r.answered_by && rid(r.answered_by)),
+          field("Blocks", links(r.blocks)),
+          field("Open questions", links(r.open_questions)),
           field("Because", links(r.because)),
           field("Builds on", links(r.depends_on)),
           field("Requirements", links(r.requirements)),
@@ -269,7 +287,9 @@ function graph(params) {
   const edges = [];
   for (const r of data.records) {
     for (const from of upstream(r)) if (byId[from]) {
-      const weak = prefix(from) === "ASM" ? byId[from].status !== "validated" : byId[from].status !== "active" && prefix(r.id) === "SPC";
+      const weak = prefix(from) === "ASM" ? byId[from].status !== "validated"
+        : prefix(from) === "QST" ? byId[from].status === "open"
+        : byId[from].status !== "active" && prefix(r.id) === "SPC";
       edges.push({ from, to: r.id, weak });
     }
   }
@@ -328,7 +348,7 @@ function graph(params) {
   main.append(h("h1", {}, "Graph"),
     h("div", { class: "legend" },
       h("span", {}, h("i"), "rests on a fact / active requirement"),
-      h("span", {}, h("i", { class: "weak" }), "rests on an open assumption / unfinished requirement")),
+      h("span", {}, h("i", { class: "weak" }), "rests on an open assumption or question / unfinished requirement")),
     info, h("div", { class: "graph-wrap" }, wrap));
   redraw = () => draw(selected ? lineage(selected) : null);
   const focus = params.get("focus");
@@ -369,10 +389,11 @@ const CAPTURES = {
       { key: "statement", label: "Statement", type: "textarea", placeholder: "We believe that …" },
       { key: "validate", label: "How we validate it", type: "textarea" },
       { key: "confidence", label: "Confidence (0–1)", type: "number", initial: "0.5" },
+      { key: "answers", label: "Answers question", type: "select", options: [{ value: "", label: "— none —" }, ...optionsOf("QST", (r) => r.status === "open")] },
     ],
     required: ["title", "statement", "validate"],
-    build: (v) => ({ status: "open", meta: { confidence: v.confidence || "0.5" },
-      sections: { Statement: v.statement, "How we validate it": v.validate } }),
+    build: (v, id) => ({ status: "open", meta: { confidence: v.confidence || "0.5" },
+      sections: { Statement: v.statement, "How we validate it": v.validate }, followUp: byId[v.answers] && answerNote(byId[v.answers], id) }),
   },
   fact: {
     prefix: "FCT", label: "Fact",
@@ -382,6 +403,7 @@ const CAPTURES = {
       { key: "statement", label: "Statement", type: "textarea" },
       { key: "evidence", label: "Evidence", type: "textarea", hint: "Measurement, test, source or decision record." },
       { key: "promoted_from", label: "Promotes assumption", type: "select", options: [{ value: "", label: "— none, a new fact —" }, ...optionsOf("ASM", (r) => r.status === "open")] },
+      { key: "answers", label: "Answers question", type: "select", options: [{ value: "", label: "— none —" }, ...optionsOf("QST", (r) => r.status === "open")] },
     ],
     required: ["title", "statement", "evidence"],
     build(v, id) {
@@ -390,8 +412,20 @@ const CAPTURES = {
       meta.evidence = yamlStr(v.evidence.replace(/\s+/g, " ").trim());
       const asm = byId[v.promoted_from];
       return { status: "active", meta, sections: { Statement: v.statement },
-        followUp: asm && promotionNote(asm, id) };
+        followUp: [asm && promotionNote(asm, id), byId[v.answers] && answerNote(byId[v.answers], id)] };
     },
+  },
+  question: {
+    prefix: "QST", label: "Question",
+    intro: "A gap nobody can answer yet. Unlike an assumption there is no candidate answer to test. What it blocks stays provisional until it is answered.",
+    fields: () => [
+      { key: "title", label: "Title", type: "text", hint: "Phrase it as a question." },
+      { key: "question", label: "Question", type: "textarea", placeholder: "We don't know whether … because …" },
+      { key: "blocks", label: "Blocks", type: "checks", options: [...optionsOf("REQ"), ...optionsOf("SPC")], hint: "The requirements or specs that cannot be settled without an answer." },
+    ],
+    required: ["title", "question", "blocks"],
+    build: (v) => ({ status: "open", meta: { blocks: `[${(v.blocks || []).join(", ")}]` }, sections: { Question: v.question },
+      followUp: blockNote(v.blocks || []) }),
   },
   spec: {
     prefix: "SPC", label: "Spec",
@@ -422,6 +456,27 @@ function promotionNote(asm, factId) {
         r.status === "provisional" ? ". If it now rests only on facts, it can become active." : ""))));
 }
 
+/** Answering a question also edits the question and what it blocked. */
+function answerNote(q, answerId) {
+  const edit = (r) => h("a", { href: gh(`edit/main/${r.path}`), target: "_blank", rel: "noopener" }, r.id);
+  const reqs = (q.blocks || []).map((x) => byId[x]).filter((r) => r && prefix(r.id) === "REQ");
+  return h("div", { class: "note" },
+    h("p", {}, "In the same pull request, also edit:"),
+    h("ul", {},
+      h("li", {}, edit(q), ": set ", h("code", {}, "status: answered"), " and add ", h("code", {}, `answered_by: ${answerId}`)),
+      reqs.map((r) => h("li", {}, edit(r), ": add ", h("code", {}, answerId), " to ", h("code", {}, "because"), " and update the statement to match the answer."))));
+}
+
+/** A new question makes active requirements it blocks provisional again; say so before CI does. */
+function blockNote(ids) {
+  const active = ids.map((x) => byId[x]).filter((r) => r && r.status === "active");
+  if (!active.length) return null;
+  const edit = (r) => h("a", { href: gh(`edit/main/${r.path}`), target: "_blank", rel: "noopener" }, r.id);
+  return h("div", { class: "note" },
+    h("p", {}, "These are active now. In the same pull request, also edit:"),
+    h("ul", {}, active.map((r) => h("li", {}, edit(r), ": set ", h("code", {}, prefix(r.id) === "REQ" ? "status: provisional" : "status: draft"), "."))));
+}
+
 function capture(kind, params) {
   const def = CAPTURES[kind];
   if (!def) return notFound();
@@ -429,6 +484,7 @@ function capture(kind, params) {
   const fields = def.fields();
   const values = Object.assign(Object.fromEntries(fields.map((f) => [f.key, f.type === "checks" ? [] : f.initial ?? ""])), store.get(key) || {});
   if (kind === "fact" && byId[params.get("promote")]) values.promoted_from = params.get("promote");
+  if (byId[params.get("answers")] && fields.some((f) => f.key === "answers")) values.answers = params.get("answers");
   const id = nextId(def.prefix);
   const preview = h("pre", { class: "preview" });
   const submit = h("a", { class: "btn", target: "_blank", rel: "noopener" }, "Propose on GitHub");
@@ -471,7 +527,7 @@ function capture(kind, params) {
       submit.removeAttribute("aria-disabled");
       status.textContent = `Will be created as ${built.status}. GitHub opens with the file filled in; choose “create a new branch and start a pull request”. CI checks it.`;
     }
-    followUp.replaceChildren(built.followUp || "");
+    followUp.replaceChildren(...[built.followUp].flat().filter(Boolean));
   }
 
   main.append(
@@ -526,6 +582,8 @@ async function start() {
     return;
   }
   byId = Object.fromEntries(data.records.map((r) => [r.id, r]));
+  askedBy = {};
+  for (const q of data.records) for (const b of q.blocks || []) (askedBy[b] ||= []).push(q.id);
   usedBy = {};
   for (const r of data.records) for (const up of upstream(r)) (usedBy[up] ||= []).push(r.id);
   document.getElementById("repo-link").href = gh("");
