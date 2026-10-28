@@ -298,6 +298,7 @@ function graph(params) {
       h("div", { class: "node-head" }, h("span", { class: `rid t-${p}` }, r.id), badge(r.status)), h("div", {}, r.title)))))));
 
   let selected = null;
+  const builtOn = (e) => prefix(e.from) === "SPC" && prefix(e.to) === "SPC";
   function lineage(id) {
     const seen = new Set([id]);
     const walk = (start, dir) => {
@@ -306,7 +307,10 @@ function graph(params) {
         const cur = todo.pop();
         for (const e of edges) {
           const next = dir === "up" ? (e.to === cur && e.from) : (e.from === cur && e.to);
-          if (next && !seen.has(next)) { seen.add(next); todo.push(next); }
+          if (!next || seen.has(next)) continue;
+          seen.add(next);
+          // A spec built on another spec shows that spec, not its whole ground; otherwise every feature lights up everything.
+          if (!(dir === "up" && builtOn(e))) todo.push(next);
         }
       }
     };
@@ -321,7 +325,9 @@ function graph(params) {
       el.classList.toggle("sel", nid === selected);
     }
     info.replaceChildren(selected
-      ? h("span", {}, "Lineage of ", rid(selected), ": what it rests on and what it affects. ", h("a", { href: `#/record/${selected}` }, "Open record →"))
+      ? h("span", {}, "Lineage of ", rid(selected), ": what it rests on and what it affects. ",
+          byId[selected].depends_on?.length ? ["It builds on ", idList(byId[selected].depends_on), "; click that to see its ground. "] : "",
+          h("a", { href: `#/record/${selected}` }, "Open record →"))
       : "Click a record to trace its lineage.");
     draw(keep);
   }
