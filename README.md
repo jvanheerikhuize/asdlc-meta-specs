@@ -8,6 +8,8 @@ Most specs mix verified truths with guesswork and never say which is which. Here
 
 > **Facts → requirements → specs.**
 
+![Read it like a building: facts and assumptions are the foundation, requirements are the pillars, specs are the floors they carry. A pillar on a fact stands firm, on an untested assumption it is provisional, on a refuted one it is broken. The records render to OpenSpec, Spec Kit and Gherkin, and technology plugs in only at render time.](docs/principles.svg)
+
 This is the simplified version of [asdlc-meta-specs](https://github.com/jvanheerikhuize/asdlc-meta-specs). It keeps the same principles with 4 record types instead of 10 and one script instead of a toolchain.
 
 ## The axiom
@@ -40,6 +42,8 @@ flowchart LR
 | `SPC` Spec | A group of requirements, either the walking `skeleton` or a `feature` on top of it | `draft`, `active` |
 
 ## Five principles
+
+The numbers match the drawing at the top.
 
 1. **Facts vs. assumptions.** A requirement resting on an open assumption is `provisional`. If that assumption is refuted, the requirement is `broken`. Only requirements resting on facts can be `active`.
 2. **Atomic records.** One file per record in `records/`, with a stable ID and links in YAML front matter. This gives clean diffs, no merge conflicts, and files agents can read easily.
