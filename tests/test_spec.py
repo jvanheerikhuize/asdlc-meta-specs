@@ -26,6 +26,10 @@ def asm(status, rid="ASM-0001", extra=""):
     return f"---\nid: {rid}\ntitle: An assumption\nstatus: {status}\n{extra}---\n"
 
 
+def qst(status="open", blocks="[REQ-0001]", extra="", rid="QST-0001"):
+    return f"---\nid: {rid}\ntitle: A question?\nstatus: {status}\nblocks: {blocks}\n{extra}---\n"
+
+
 def spc(rid, tier, reqs, deps="[]", status="draft"):
     return f"---\nid: {rid}\ntitle: {rid}\nstatus: {status}\ntier: {tier}\ndepends_on: {deps}\nrequirements: {reqs}\n---\n"
 
@@ -98,6 +102,50 @@ class CheckTest(unittest.TestCase):
         self.assertTrue(any("cycle" in e for e in g.check()[0]))
 
 
+class QuestionTest(unittest.TestCase):
+    def test_open_question_keeps_requirement_provisional(self):  # REQ-0007
+        errors, _ = Graph(FCT_0001=FACT, REQ_0001=req(), QST_0001=qst()).check()
+        self.assertTrue(any("open question" in e and "provisional" in e for e in errors))
+        errors, _ = Graph(FCT_0001=FACT, REQ_0001=req("provisional"), QST_0001=qst()).check()
+        self.assertEqual(errors, [])
+
+    def test_open_question_keeps_spec_from_active(self):  # REQ-0007
+        errors, _ = Graph(FCT_0001=FACT, REQ_0001=req(), QST_0001=qst(blocks="[SPC-0001]"),
+                          SPC_0001=spc("SPC-0001", "skeleton", "[REQ-0001]", status="active")).check()
+        self.assertTrue(any("SPC-0001" in e and "open question" in e for e in errors))
+
+    def test_answered_question_names_its_answer(self):  # REQ-0007
+        errors, _ = Graph(FCT_0001=FACT, REQ_0001=req(), QST_0001=qst("answered")).check()
+        self.assertTrue(any("answered_by" in e for e in errors))
+        errors, warnings = Graph(FCT_0001=FACT, REQ_0001=req(),
+                                 QST_0001=qst("answered", extra="answered_by: FCT-0001\n")).check()
+        self.assertEqual(errors + warnings, [])
+
+    def test_answer_not_cited_by_blocked_requirement_warns(self):
+        fact2 = FACT.replace("FCT-0001", "FCT-0002")
+        _, warnings = Graph(FCT_0001=FACT, FCT_0002=fact2, REQ_0001=req(),
+                            QST_0001=qst("answered", extra="answered_by: FCT-0002\n")).check()
+        self.assertTrue(any("does not cite" in w for w in warnings))
+
+    def test_question_must_block_something(self):
+        errors, _ = Graph(QST_0001=qst(blocks="[]")).check()
+        self.assertTrue(any("blocks" in e for e in errors))
+
+    def test_open_question_is_rendered_where_it_blocks(self):  # REQ-0007
+        g = Graph(FCT_0001=FACT, REQ_0001=req("provisional"), QST_0001=qst(),
+                  SPC_0001=spc("SPC-0001", "skeleton", "[REQ-0001]"))
+        s = g.records["SPC-0001"]
+        self.assertIn("QST-0001: A question?", spec.render_markdown(s, g.records))
+        self.assertIn("@QST-0001", spec.render_gherkin(s, g.records))
+
+    def test_question_impact_flows_to_what_it_blocks(self):
+        g = Graph(FCT_0001=FACT, REQ_0001=req("provisional"), QST_0001=qst(),
+                  SPC_0001=spc("SPC-0001", "skeleton", "[REQ-0001]"))
+        touched, specs = spec.impact("QST-0001", g.records)
+        self.assertEqual(touched, ["REQ-0001"])
+        self.assertEqual([s.id for s in specs], ["SPC-0001"])
+
+
 class ImpactTest(unittest.TestCase):
     def test_skeleton_rebuilt_before_features(self):  # REQ-0003
         g = Graph(FCT_0001=FACT, REQ_0001=req(),
@@ -135,6 +183,8 @@ class IndexTest(unittest.TestCase):
         self.assertEqual(rows["SPC-0001"]["readiness"], 100)
         self.assertIn("SPC-0002", rows["ASM-0002"]["downstream"])
         self.assertTrue(rows["REQ-0001"]["path"].startswith("records/REQ-0001-"))
+        self.assertEqual(rows["REQ-0005"]["open_questions"], ["QST-0002"])
+        self.assertEqual(rows["QST-0002"]["type"], "question")
 
     def test_issues_are_attached_to_their_record(self):
         index = spec.to_index(Graph(ASM_0001=asm("open"), REQ_0001=req(because="[ASM-0001]")).records)
