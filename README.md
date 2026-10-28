@@ -1,4 +1,4 @@
-# ASDLC Meta-Specs Lite
+# ASDLC Meta-Specs
 
 [![check](https://github.com/jvanheerikhuize/asdlc-meta-specs-lite/actions/workflows/check.yml/badge.svg)](https://github.com/jvanheerikhuize/asdlc-meta-specs-lite/actions/workflows/check.yml)
 
