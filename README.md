@@ -10,7 +10,7 @@ Most specs mix verified truths with guesswork and never say which is which. Here
 
 ![Read it like a building: facts and assumptions are the foundation, requirements are the pillars, specs are the floors they carry. A pillar on a fact stands firm, on an untested assumption it is provisional, on a refuted one it is broken. The records render to OpenSpec, Spec Kit and Gherkin, and technology plugs in only at render time.](docs/principles.svg)
 
-This is the simplified version of [asdlc-meta-specs](https://github.com/jvanheerikhuize/asdlc-meta-specs). It keeps the same principles with 4 record types instead of 10 and one script instead of a toolchain.
+This is the simplified version of the original engine, which is kept in the [`target_state`](https://github.com/jvanheerikhuize/asdlc-meta-specs-lite/tree/target_state) branch. It keeps the same principles with 4 record types instead of 10 and one script instead of a toolchain.
 
 ## The axiom
 
