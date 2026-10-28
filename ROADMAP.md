@@ -11,7 +11,7 @@ The two are far apart:
 | Tooling | one script, ~350 lines | five tools, ~2,300 lines |
 | Projection | Markdown and Gherkin renderers | OpenSpec and Spec Kit adapters with templates, committed `dist/`, drift check |
 | Capture | form → GitHub editor → PR | form → issue → bot ingestion → PR, with status cascades |
-| Tech stack | warning when records name a technology | tech stack (e.g. PostgreSQL, React, AWS) defined outside the records and added at render time |
+| Tech stack | warning when records name a technology | tech stack (e.g. SQL, Vue, REST APIs, Azure, Azure DevOps, GitHub Copilot) defined outside the records and added at render time |
 
 ## The reasoning
 
@@ -55,7 +55,7 @@ Small, cheap additions that make the chain more truthful:
 
 - **Projection to OpenSpec and Spec Kit** as more renderer functions in `tools/spec.py`, not a template engine. Trigger: `ASM-0003` validated and a real consumer tool in use. Reference: `adapters/`, `tools/project.py`.
 - **Acceptance criteria with their own IDs and code traceability.** Today scenarios live inside requirements. Once tests in an implementing repo can say `@verifies("REQ-0001#1")`, a checker can report which requirements are unproven in code. That closes the loop facts → requirements → specs → code. Reference: planned `tools/verify_coverage.py`.
-- **A separate tech-stack file.** Records stay technology-free; a small file per implementation names the concrete choices (PostgreSQL, React, a REST API, AWS) and is added when rendering. Trigger: the first implementation repo consumes these specs and needs concrete technology choices bound outside the records.
+- **A separate tech-stack file.** Records stay technology-free; a small file per implementation names the concrete choices (SQL, Vue, REST APIs, Azure, Azure DevOps, GitHub Copilot) and is added when rendering. Trigger: the first implementation repo consumes these specs and needs concrete technology choices bound outside the records.
 
 ### Phase 3: Scale on evidence
 
