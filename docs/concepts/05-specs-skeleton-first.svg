@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 620" width="1000" height="620" role="img" aria-labelledby="t d">
-  <title id="t">Concept 4: specs, skeleton first</title>
+  <title id="t">Concept 5: specs, skeleton first</title>
   <desc id="d">A spec groups requirements. The walking skeleton is the smallest version that works end to end and is built first; feature specs build on it. A spec is ready when every requirement in it is active.</desc>
   <defs>
     <marker id="a-ink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b6b66"/></marker>

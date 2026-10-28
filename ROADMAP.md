@@ -6,9 +6,9 @@ The two are far apart:
 
 | | Lite (`main`) | Target state (`target_state`) |
 | :--- | :--- | :--- |
-| Record types | 4 (`ASM`, `FCT`, `REQ`, `SPC`) | 10 (+ `VAL`, `QST`, `CON`, `ACR`, `DEC`, `CHG`), 2 more planned (`TRM`, `CTR`) |
+| Record types | 5 (`ASM`, `FCT`, `QST`, `REQ`, `SPC`) | 10 (+ `VAL`, `CON`, `ACR`, `DEC`, `CHG`), 2 more planned (`TRM`, `CTR`) |
 | Schemas | rules inside the checker | 15 JSON Schemas + config |
-| Tooling | one script, ~350 lines | five tools, ~2,300 lines |
+| Tooling | one script, ~400 lines | five tools, ~2,300 lines |
 | Projection | Markdown and Gherkin renderers | OpenSpec and Spec Kit adapters with templates, committed `dist/`, drift check |
 | Capture | form → GitHub editor → PR | form → issue → bot ingestion → PR, with status cascades |
 | Tech stack | warning when records name a technology | tech stack (e.g. SQL, Vue, REST APIs, Azure, Azure DevOps, GitHub Copilot) defined outside the records and added at render time |
@@ -41,13 +41,13 @@ flowchart LR
 
 ### Phase 0: Use it (now)
 
-Run a real project on the lite repo and record friction as assumptions (`ASM`) in `records/`. This turns the gap list below from opinions into evidence. Close out the repo's own open assumptions (`ASM-0002` to `ASM-0004`). They hold back `SPC-0002`, and testing them is the first real exercise of the workflow.
+Run a real project on the lite repo and record friction as assumptions (`ASM`) in `records/`. This turns the gap list below from opinions into evidence. Close out the repo's own open assumptions (`ASM-0002` to `ASM-0004`) and its open question (`QST-0002`). They hold back `SPC-0002`, and settling them is the first real exercise of the workflow.
 
 ### Phase 1: Sharpen the axiom
 
 Small, cheap additions that make the chain more truthful:
 
-- **Open questions (`QST`).** An assumption is a belief with a candidate answer. A question has none yet ("ascending or descending?"). Agents guess silently when nobody records the question; resolving ambiguity first measurably improves generated code (ClarifyGPT, see README). This is the most likely first new record type. Target state reference: `schema/question.schema.json`, `blocking` cascade in `tools/validate.py`.
+- ~~**Open questions (`QST`).**~~ Done: moved into the lite version itself (`REQ-0007`, part of the skeleton). An assumption is a belief with a candidate answer; a question has none yet ("ascending or descending?"). Without a question record the only way to write down a gap is to invent an assumption, which is the hidden guessing the axiom is meant to prevent. Resolving ambiguity first measurably improves generated code (`FCT-0003`, ClarifyGPT).
 - **Fact freshness (`review_after` on `FCT`).** Facts about the world decay: traffic, latency, regulations. A fact past its date should turn amber on the dashboard and become a task. This applies the axiom over time.
 - **Non-goals on `SPC`.** One optional field that tells agents what *not* to build. It costs almost nothing and blocks a common failure mode.
 
