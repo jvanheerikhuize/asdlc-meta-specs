@@ -114,5 +114,10 @@ The records in [`records/`](records/) are the spec for this repository. The skel
 records/          all records, one file each (ASM, FCT, REQ, SPC)
 tools/spec.py     check · impact · render · index
 site/             the Pages workspace (index.html, app.js, styles.css)
+ROADMAP.md        from this starting point to the target state
 tests/            one test per acceptance scenario
 ```
+
+## Roadmap
+
+This repository is the starting point. The full original engine is kept in the [`target_state`](https://github.com/jvanheerikhuize/asdlc-meta-specs-lite/tree/target_state) branch, and [ROADMAP.md](ROADMAP.md) explains how to grow towards it: one evidence-backed step at a time.
