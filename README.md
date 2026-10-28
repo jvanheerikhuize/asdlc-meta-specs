@@ -8,7 +8,21 @@ Most specs mix verified truths with guesswork and never say which is which. Here
 
 > **Facts → requirements → specs.**
 
-This is the simplified version of [asdlc-meta-specs](https://github.com/jvanheerikhuize/asdlc-meta-specs). It keeps the same principles with 4 record types instead of 10 and one script instead of a toolchain.
+This is the simplified version of the original engine, which is kept in the [`target_state`](https://github.com/jvanheerikhuize/asdlc-meta-specs-lite/tree/target_state) branch. It keeps the same principles with 4 record types instead of 10 and one script instead of a toolchain.
+
+## How it works, in five pictures
+
+Each picture adds one idea to the one before.
+
+![Two kinds of ground. Everything a spec rests on is either a fact, something we know and can show, which comes with evidence; or an assumption, something we believe but have not shown yet, which comes with a test plan.](docs/concepts/01-facts-and-assumptions.svg)
+
+![A requirement stands on its ground. It says "because" and points at what it rests on. Resting on a fact it is active and ready to build; resting on an assumption it is provisional and on hold. A requirement is never more certain than what it rests on.](docs/concepts/02-requirements-stand-on-ground.svg)
+
+![Testing an assumption. Following the test plan settles it. If it held, it becomes a fact and the requirement becomes active. If it failed, the assumption is refuted and the requirement on it is broken.](docs/concepts/03-testing-an-assumption.svg)
+
+![Specs: skeleton first. A spec groups requirements. The walking skeleton, the smallest version that works end to end, is built first and is ready when all its requirements are active; feature specs build on it.](docs/concepts/04-specs-skeleton-first.svg)
+
+![One source, many views. The records say what the system must do and why. A renderer turns them into OpenSpec, Spec Kit and Gherkin. The tech stack, such as SQL, Vue, REST APIs, Azure, Azure DevOps and GitHub Copilot, plugs in at render time, never in the records.](docs/concepts/05-one-source-many-views.svg)
 
 ## The axiom
 
@@ -114,6 +128,7 @@ The records in [`records/`](records/) are the spec for this repository. The skel
 records/          all records, one file each (ASM, FCT, REQ, SPC)
 tools/spec.py     check · impact · render · index
 site/             the Pages workspace (index.html, app.js, styles.css)
+docs/concepts/    the five pictures above
 ROADMAP.md        from this starting point to the target state
 tests/            one test per acceptance scenario
 ```

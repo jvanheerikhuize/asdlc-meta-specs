@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 620" width="1000" height="620" role="img" aria-labelledby="t d">
+  <title id="t">Concept 3: testing an assumption</title>
+  <desc id="d">An untested assumption keeps the requirement on it provisional. Following the test plan settles it. If it held, it becomes a fact and the requirement becomes active. If it failed, the assumption is refuted and the requirement on it is broken and has to change.</desc>
+  <defs>
+    <marker id="a-ink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b6b66"/></marker>
+    <marker id="a-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1b8a5a"/></marker>
+    <marker id="a-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c62828"/></marker>
+    <marker id="a-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7b3fbf"/></marker>
+  </defs>
+  <style>
+    text { font-family: Consolas, "Cascadia Mono", "DejaVu Sans Mono", Menlo, monospace; }
+    text:not([fill]) { fill: #1d1d1b; }
+    .h1 { font-size: 26px; font-weight: 700; }
+    .sub { font-size: 16px; }
+    .name { font-size: 24px; font-weight: 700; }
+    .tag { font-size: 15px; }
+    .cap { font-size: 12px; font-weight: 700; letter-spacing: 1px; }
+    .body { font-size: 15px; }
+    .hint { font-size: 13px; }
+    .foot { font-size: 16px; }
+    .lbl { font-size: 15px; font-weight: 700; }
+    .pill { font-size: 13px; font-weight: 700; }
+    .sub:not([fill]), .hint:not([fill]) { fill: #6b6b66; }
+    .tag:not([fill]) { fill: #4a4a45; }
+    .cap:not([fill]) { fill: #9c9b95; }
+  </style>
+  <rect x="1" y="1" width="998" height="618" rx="24" fill="#fbfaf7" stroke="#e3e2dd" stroke-width="2"/>
+  <text x="60" y="66" class="h1">Testing an assumption</text>
+  <text x="60" y="96" class="sub">Following the plan settles it, one way or the other.</text>
+  <!-- before -->
+  <text x="180" y="210" text-anchor="middle" class="cap">BEFORE</text>
+  <rect x="70" y="236" width="220" height="52" rx="12" fill="#fff" stroke="#c27c0e" stroke-width="2" stroke-dasharray="7 5"/><text x="86" y="267" class="lbl" fill="#3d5afe">REQ-0004</text><rect x="164" y="249" width="112" height="26" rx="13.0" fill="#fbf0dc"/><text x="220.0" y="266.5" text-anchor="middle" class="pill" fill="#a2660a">provisional</text>
+  <line x1="180" y1="288" x2="180" y2="340" stroke="#c27c0e" stroke-width="3" stroke-dasharray="6 5"/><text x="192" y="319.0" class="hint">because</text>
+  <rect x="132" y="340" width="96" height="64" rx="10" fill="#fbf0dc" stroke="#c27c0e" stroke-width="2.5" stroke-dasharray="7 5"/><text x="180.0" y="384.0" text-anchor="middle" font-size="34" font-weight="700" fill="#c27c0e">?</text>
+  <text x="180" y="428" text-anchor="middle" class="hint">untested</text>
+
+  <!-- the test -->
+  <line x1="304" y1="372" x2="362" y2="372" stroke="#6b6b66" stroke-width="2" marker-end="url(#a-ink)"/>
+  <rect x="368" y="350" width="104" height="44" rx="22" fill="#1d1d1b"/>
+  <text x="420" y="377" text-anchor="middle" class="lbl" fill="#fff">test it</text>
+  <text x="420" y="336" text-anchor="middle" class="hint">follow the plan</text>
+  <path d="M472,364 C520,364 520,226 566,226" fill="none" stroke="#1b8a5a" stroke-width="2.5" marker-end="url(#a-green)"/>
+  <path d="M472,380 C520,380 520,466 566,466" fill="none" stroke="#c62828" stroke-width="2.5" marker-end="url(#a-red)"/>
+
+  <!-- it held -->
+  <text x="574" y="220" class="lbl" fill="#1b8a5a">It held</text>
+  <text x="574" y="242" class="hint">becomes a fact</text>
+  <rect x="690" y="146" width="240" height="52" rx="12" fill="#fff" stroke="#1b8a5a" stroke-width="2"/><text x="706" y="177" class="lbl" fill="#3d5afe">REQ-0004</text><rect x="844" y="159" width="72" height="26" rx="13.0" fill="#e3f3ea"/><text x="880.0" y="176.5" text-anchor="middle" class="pill" fill="#1b8a5a">active</text>
+  <line x1="810" y1="198" x2="810" y2="248" stroke="#1b8a5a" stroke-width="3"/><text x="822" y="228.0" class="hint">because</text>
+  <rect x="762" y="248" width="96" height="56" rx="10" fill="#1b8a5a"/><path d="M792.0,277.0 l12,12 l24,-26" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- it failed -->
+  <text x="574" y="460" class="lbl" fill="#c62828">It failed</text>
+  <text x="574" y="482" class="hint">refuted</text>
+  <rect x="690" y="384" width="240" height="52" rx="12" fill="#fff" stroke="#c62828" stroke-width="2"/><text x="706" y="415" class="lbl" fill="#3d5afe">REQ-0004</text><rect x="844" y="397" width="72" height="26" rx="13.0" fill="#fbe4e4"/><text x="880.0" y="414.5" text-anchor="middle" class="pill" fill="#c62828">broken</text>
+  <line x1="810" y1="436" x2="810" y2="486" stroke="#c62828" stroke-width="3" stroke-dasharray="6 5"/><text x="822" y="466.0" class="hint">because</text>
+  <rect x="762" y="486" width="96" height="56" rx="10" fill="#c62828"/><polyline points="800.4,486 811.92,505.6 802.32,519.6 815.76,542" fill="none" stroke="#fbe4e4" stroke-width="3" stroke-linejoin="round"/><path d="M816.0,502.0 l18,18 m0,-18 l-18,18" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+  <text x="500" y="576" text-anchor="middle" class="foot">Either way you learn early: a fact to build on, or what has to change.</text>
+</svg>
