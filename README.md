@@ -1,6 +1,6 @@
 # ASDLC Meta-Specs
 
-[![check](https://github.com/jvanheerikhuize/asdlc-meta-specs-lite/actions/workflows/check.yml/badge.svg)](https://github.com/jvanheerikhuize/asdlc-meta-specs-lite/actions/workflows/check.yml)
+[![check](https://github.com/jvanheerikhuize/asdlc-meta-specs/actions/workflows/check.yml/badge.svg)](https://github.com/jvanheerikhuize/asdlc-meta-specs/actions/workflows/check.yml)
 
 Specs for agentic software development that are **honest about what they know**.
 
@@ -8,7 +8,7 @@ Most specs mix verified truths with guesswork and never say which is which. Here
 
 > **Facts → requirements → specs.**
 
-This is the simplified version of the original engine, which is kept in the [`target_state`](https://github.com/jvanheerikhuize/asdlc-meta-specs-lite/tree/target_state) branch. It keeps the same principles with 4 record types instead of 10 and one script instead of a toolchain.
+This is the simplified version of the original engine, which is kept in the [`target_state`](https://github.com/jvanheerikhuize/asdlc-meta-specs/tree/target_state) branch. It keeps the same principles with 4 record types instead of 10 and one script instead of a toolchain.
 
 ## How it works, in five pictures
 
@@ -83,7 +83,7 @@ Example output:
 
 ## Workspace (GitHub Pages)
 
-**https://jvanheerikhuize.github.io/asdlc-meta-specs-lite/** is a small static site in `site/` (one HTML page, one script, no build step). It is rebuilt and deployed on every push to `main`.
+**https://jvanheerikhuize.github.io/asdlc-meta-specs/** is a small static site in `site/` (one HTML page, one script, no build step). It is rebuilt and deployed on every push to `main`.
 
 - **Dashboard:** the state of the spec at a glance. Each record type gets a bar coloured green (done), amber (needs attention) or red (broken), and every segment links to those records. Below it: the specs that need attention and exactly what blocks them, and the open assumptions that hold things back.
 - **Tasks:** what a human must do next, worked out from the records: *fix now* (broken requirements, check errors), *test assumptions* (ranked by what they unlock, with "it held → record the fact" and "it failed → mark invalidated" buttons), *quick wins* (requirements or specs that can be activated) and *tidy up*.
@@ -135,4 +135,4 @@ tests/            one test per acceptance scenario
 
 ## Roadmap
 
-This repository is the starting point. The full original engine is kept in the [`target_state`](https://github.com/jvanheerikhuize/asdlc-meta-specs-lite/tree/target_state) branch, and [ROADMAP.md](ROADMAP.md) explains how to grow towards it: one evidence-backed step at a time.
+This repository is the starting point. The full original engine is kept in the [`target_state`](https://github.com/jvanheerikhuize/asdlc-meta-specs/tree/target_state) branch, and [ROADMAP.md](ROADMAP.md) explains how to grow towards it: one evidence-backed step at a time.
