@@ -1,66 +1,55 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 560" width="1000" height="560" role="img" aria-labelledby="t d">
   <title id="t">Concept 1: two kinds of ground</title>
   <desc id="d">Everything a spec rests on is either a fact or an assumption. A fact is something we know and comes with evidence. An assumption is something we believe but have not shown yet, and comes with a plan to test it.</desc>
+  <defs>
+    <marker id="a-ink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b6b66"/></marker>
+    <marker id="a-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1b8a5a"/></marker>
+    <marker id="a-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c62828"/></marker>
+    <marker id="a-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7b3fbf"/></marker>
+  </defs>
   <style>
-    text { font-family: "Inter", "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif; }
+    text { font-family: Consolas, "Cascadia Mono", "DejaVu Sans Mono", Menlo, monospace; }
     text:not([fill]) { fill: #1d1d1b; }
-    .h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.3px; }
-    .sub { font-size: 17px; }
-    .sub:not([fill]), .hint:not([fill]) { fill: #6b6b66; }
-    .name { font-size: 26px; font-weight: 700; }
-    .tag { font-size: 16px; }
-    .tag:not([fill]) { fill: #4a4a45; }
+    .h1 { font-size: 26px; font-weight: 700; }
+    .sub { font-size: 16px; }
+    .name { font-size: 24px; font-weight: 700; }
+    .tag { font-size: 15px; }
     .cap { font-size: 12px; font-weight: 700; letter-spacing: 1px; }
+    .body { font-size: 15px; }
+    .hint { font-size: 13px; }
+    .foot { font-size: 16px; }
+    .lbl { font-size: 15px; font-weight: 700; }
+    .pill { font-size: 13px; font-weight: 700; }
+    .sub:not([fill]), .hint:not([fill]) { fill: #6b6b66; }
+    .tag:not([fill]) { fill: #4a4a45; }
     .cap:not([fill]) { fill: #9c9b95; }
-    .body { font-size: 16px; }
-    .hint { font-size: 14px; }
-    .foot { font-size: 17px; }
   </style>
-
   <rect x="1" y="1" width="998" height="558" rx="24" fill="#fbfaf7" stroke="#e3e2dd" stroke-width="2"/>
-
   <text x="60" y="66" class="h1">Two kinds of ground</text>
-  <text x="60" y="98" class="sub">Everything a spec rests on is one of these two.</text>
-
-  <!-- FACT -->
-  <g transform="translate(60,132)">
-    <rect width="420" height="330" rx="16" fill="#ffffff" stroke="#1b8a5a" stroke-width="2"/>
-    <rect x="28" y="28" width="96" height="64" rx="10" fill="#1b8a5a"/>
-    <path d="M58,61 l12,12 l24,-26" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-    <text x="148" y="56" class="name" fill="#1b8a5a">Fact</text>
-    <text x="148" y="84" class="tag">Something we know,</text>
-    <text x="148" y="106" class="tag">and can show.</text>
-    <line x1="28" y1="128" x2="392" y2="128" stroke="#e3e2dd" stroke-width="2"/>
-
-    <text x="28" y="160" class="cap">EXAMPLE</text>
-    <text x="28" y="186" class="body">“Checking the whole spec takes</text>
-    <text x="28" y="208" class="body">under 150 ms.”</text>
-
-    <text x="28" y="250" class="cap">COMES WITH</text>
-    <rect x="28" y="262" width="96" height="28" rx="14" fill="#e3f3ea"/>
-    <text x="76" y="281" text-anchor="middle" font-size="14" font-weight="700" fill="#1b8a5a">evidence</text>
-    <text x="28" y="314" class="hint">Measured many times on a real spec.</text>
+  <text x="60" y="96" class="sub">Everything a spec rests on is one of these two.</text>
+  <g transform="translate(60,128)">
+  <rect x="0" y="0" width="420" height="336" rx="16" fill="#fff" stroke="#1b8a5a" stroke-width="2"/>
+  <rect x="28" y="28" width="96" height="64" rx="10" fill="#1b8a5a"/><path d="M58.0,61.0 l12,12 l24,-26" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="148" y="56" class="name" fill="#1b8a5a">Fact</text>
+  <text x="148" y="84" class="tag">Something we know,</text><text x="148" y="106" class="tag">and can show.</text>
+  <line x1="28" y1="128" x2="392" y2="128" stroke="#e3e2dd" stroke-width="2"/>
+  <text x="28" y="160" class="cap">EXAMPLE</text>
+  <text x="28" y="186" class="body">“Checking the whole spec</text><text x="28" y="208" class="body">takes under 150 ms.”</text>
+  <text x="28" y="252" class="cap">COMES WITH</text>
+  <rect x="28" y="264" width="88" height="28" rx="14.0" fill="#e3f3ea"/><text x="72.0" y="282.5" text-anchor="middle" class="pill" fill="#1b8a5a">evidence</text>
+  <text x="28" y="320" class="hint">Measured many times on a real spec.</text>
   </g>
-
-  <!-- ASSUMPTION -->
-  <g transform="translate(520,132)">
-    <rect width="420" height="330" rx="16" fill="#ffffff" stroke="#c27c0e" stroke-width="2" stroke-dasharray="8 6"/>
-    <rect x="28" y="28" width="96" height="64" rx="10" fill="#fbf0dc" stroke="#c27c0e" stroke-width="2.5" stroke-dasharray="7 5"/>
-    <text x="76" y="73" text-anchor="middle" font-size="34" font-weight="700" fill="#c27c0e">?</text>
-    <text x="148" y="56" class="name" fill="#a2660a">Assumption</text>
-    <text x="148" y="84" class="tag">Something we believe,</text>
-    <text x="148" y="106" class="tag">but have not shown yet.</text>
-    <line x1="28" y1="128" x2="392" y2="128" stroke="#e3e2dd" stroke-width="2"/>
-
-    <text x="28" y="160" class="cap">EXAMPLE</text>
-    <text x="28" y="186" class="body">“One example per requirement is</text>
-    <text x="28" y="208" class="body">enough for an AI agent to build it.”</text>
-
-    <text x="28" y="250" class="cap">COMES WITH</text>
-    <rect x="28" y="262" width="110" height="28" rx="14" fill="#fbf0dc"/>
-    <text x="83" y="281" text-anchor="middle" font-size="14" font-weight="700" fill="#a2660a">a test plan</text>
-    <text x="28" y="314" class="hint">Give an agent five; count its questions.</text>
+  <g transform="translate(520,128)">
+  <rect x="0" y="0" width="420" height="336" rx="16" fill="#fff" stroke="#c27c0e" stroke-width="2" stroke-dasharray="8 6"/>
+  <rect x="28" y="28" width="96" height="64" rx="10" fill="#fbf0dc" stroke="#c27c0e" stroke-width="2.5" stroke-dasharray="7 5"/><text x="76.0" y="72.0" text-anchor="middle" font-size="34" font-weight="700" fill="#c27c0e">?</text>
+  <text x="148" y="56" class="name" fill="#a2660a">Assumption</text>
+  <text x="148" y="84" class="tag">Something we believe,</text><text x="148" y="106" class="tag">but have not shown yet.</text>
+  <line x1="28" y1="128" x2="392" y2="128" stroke="#e3e2dd" stroke-width="2"/>
+  <text x="28" y="160" class="cap">EXAMPLE</text>
+  <text x="28" y="186" class="body">“One example per requirement is</text><text x="28" y="208" class="body">enough for an agent to build it.”</text>
+  <text x="28" y="252" class="cap">COMES WITH</text>
+  <rect x="28" y="264" width="112" height="28" rx="14.0" fill="#fbf0dc"/><text x="84.0" y="282.5" text-anchor="middle" class="pill" fill="#a2660a">a test plan</text>
+  <text x="28" y="320" class="hint">Give an agent five; count questions.</text>
   </g>
-
-  <text x="500" y="512" text-anchor="middle" class="foot">The difference is what you can attach: <tspan font-weight="700" fill="#1b8a5a">evidence</tspan>, or <tspan font-weight="700" fill="#a2660a">a plan to get it</tspan>.</text>
+  <text x="500" y="516" text-anchor="middle" class="foot">The difference is what you can attach: <tspan font-weight="700" fill="#1b8a5a">evidence</tspan>, or <tspan font-weight="700" fill="#a2660a">a plan to get it</tspan>.</text>
 </svg>

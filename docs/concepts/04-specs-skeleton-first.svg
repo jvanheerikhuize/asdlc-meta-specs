@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 620" width="1000" height="620" role="img" aria-labelledby="t d">
+  <title id="t">Concept 4: specs, skeleton first</title>
+  <desc id="d">A spec groups requirements. The walking skeleton is the smallest version that works end to end and is built first; feature specs build on it. A spec is ready when every requirement in it is active.</desc>
+  <defs>
+    <marker id="a-ink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b6b66"/></marker>
+    <marker id="a-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1b8a5a"/></marker>
+    <marker id="a-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c62828"/></marker>
+    <marker id="a-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7b3fbf"/></marker>
+  </defs>
+  <style>
+    text { font-family: Consolas, "Cascadia Mono", "DejaVu Sans Mono", Menlo, monospace; }
+    text:not([fill]) { fill: #1d1d1b; }
+    .h1 { font-size: 26px; font-weight: 700; }
+    .sub { font-size: 16px; }
+    .name { font-size: 24px; font-weight: 700; }
+    .tag { font-size: 15px; }
+    .cap { font-size: 12px; font-weight: 700; letter-spacing: 1px; }
+    .body { font-size: 15px; }
+    .hint { font-size: 13px; }
+    .foot { font-size: 16px; }
+    .lbl { font-size: 15px; font-weight: 700; }
+    .pill { font-size: 13px; font-weight: 700; }
+    .sub:not([fill]), .hint:not([fill]) { fill: #6b6b66; }
+    .tag:not([fill]) { fill: #4a4a45; }
+    .cap:not([fill]) { fill: #9c9b95; }
+  </style>
+  <rect x="1" y="1" width="998" height="618" rx="24" fill="#fbfaf7" stroke="#e3e2dd" stroke-width="2"/>
+  <text x="60" y="66" class="h1">Specs: skeleton first</text>
+  <text x="60" y="96" class="sub">A spec groups requirements. Some specs build on others.</text>
+  <rect x="200" y="122" width="640" height="176" rx="16" fill="#f4edfb" stroke="#7b3fbf" stroke-width="2" stroke-dasharray="8 6"/>
+  <text x="226" y="158" class="name" fill="#7b3fbf">Feature</text>
+  <text x="226" y="182" class="hint">added on top, one at a time</text>
+  <rect x="226" y="200" width="190" height="40" rx="10" fill="#fff" stroke="#c27c0e" stroke-width="2" stroke-dasharray="6 4"/><text x="238" y="225" class="lbl" fill="#3d5afe">REQ-0004</text><text x="404" y="225" text-anchor="end" font-size="12" font-weight="700" fill="#a2660a">provisional</text>
+  <rect x="425" y="200" width="190" height="40" rx="10" fill="#fff" stroke="#c27c0e" stroke-width="2" stroke-dasharray="6 4"/><text x="437" y="225" class="lbl" fill="#3d5afe">REQ-0005</text><text x="603" y="225" text-anchor="end" font-size="12" font-weight="700" fill="#a2660a">provisional</text>
+  <rect x="624" y="200" width="190" height="40" rx="10" fill="#fff" stroke="#c27c0e" stroke-width="2" stroke-dasharray="6 4"/><text x="636" y="225" class="lbl" fill="#3d5afe">REQ-0006</text><text x="802" y="225" text-anchor="end" font-size="12" font-weight="700" fill="#a2660a">provisional</text>
+  <rect x="226" y="256" width="588" height="8" rx="4" fill="#e7dcf3"/><rect x="226" y="256" width="0" height="8" rx="4" fill="#1b8a5a"/><text x="226" y="286" class="hint">0 of 3 requirements active · waiting on assumptions</text>
+  <line x1="520" y1="352" x2="520" y2="304" stroke="#7b3fbf" stroke-width="2.5" marker-end="url(#a-purple)"/>
+  <text x="534" y="334" class="hint">builds on</text>
+  <rect x="200" y="356" width="640" height="176" rx="16" fill="#f4edfb" stroke="#7b3fbf" stroke-width="2"/>
+  <text x="226" y="392" class="name" fill="#7b3fbf">Walking skeleton</text>
+  <text x="226" y="416" class="hint">the smallest version that works end to end</text>
+  <rect x="226" y="434" width="190" height="40" rx="10" fill="#fff" stroke="#1b8a5a" stroke-width="2"/><text x="238" y="459" class="lbl" fill="#3d5afe">REQ-0001</text><text x="404" y="459" text-anchor="end" font-size="12" font-weight="700" fill="#1b8a5a">active</text>
+  <rect x="425" y="434" width="190" height="40" rx="10" fill="#fff" stroke="#1b8a5a" stroke-width="2"/><text x="437" y="459" class="lbl" fill="#3d5afe">REQ-0002</text><text x="603" y="459" text-anchor="end" font-size="12" font-weight="700" fill="#1b8a5a">active</text>
+  <rect x="624" y="434" width="190" height="40" rx="10" fill="#fff" stroke="#1b8a5a" stroke-width="2"/><text x="636" y="459" class="lbl" fill="#3d5afe">REQ-0003</text><text x="802" y="459" text-anchor="end" font-size="12" font-weight="700" fill="#1b8a5a">active</text>
+  <rect x="226" y="490" width="588" height="8" rx="4" fill="#e7dcf3"/><rect x="226" y="490" width="588" height="8" rx="4" fill="#1b8a5a"/><text x="226" y="520" class="hint">3 of 3 requirements active · ready</text>
+
+  <!-- build order -->
+  <circle cx="132" cy="444" r="22" fill="#1d1d1b"/><text x="132" y="450" text-anchor="middle" class="lbl" fill="#fff">1</text>
+  <circle cx="132" cy="210" r="22" fill="#1d1d1b"/><text x="132" y="216" text-anchor="middle" class="lbl" fill="#fff">2</text>
+  <line x1="132" y1="418" x2="132" y2="240" stroke="#6b6b66" stroke-width="2" stroke-dasharray="2 6" stroke-linecap="round" marker-end="url(#a-ink)"/>
+  <text transform="translate(110,330) rotate(-90)" text-anchor="middle" class="hint">build order</text>
+  <text x="500" y="576" text-anchor="middle" class="foot">A spec is ready when every requirement in it is active.</text>
+</svg>
