@@ -285,20 +285,20 @@ function graph(params) {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   const nodes = {};
   const edges = [];
+  const builtOn = (e) => prefix(e.from) === "SPC" && prefix(e.to) === "SPC";
   for (const r of data.records) {
     for (const from of upstream(r)) if (byId[from]) {
-      const weak = prefix(from) === "ASM" ? byId[from].status !== "validated"
+      const dep = prefix(from) === "SPC" && prefix(r.id) === "SPC";
+      const weak = !dep && (prefix(from) === "ASM" ? byId[from].status !== "validated"
         : prefix(from) === "QST" ? byId[from].status === "open"
-        : byId[from].status !== "active" && prefix(r.id) === "SPC";
-      edges.push({ from, to: r.id, weak });
+        : byId[from].status !== "active" && prefix(r.id) === "SPC");
+      edges.push({ from, to: r.id, weak, dep });
     }
   }
-  wrap.append(svg, ...PREFIXES.map((p) => h("div", { class: "col" }, h("h3", {}, LABELS[p]),
-    ofType(p).map((r) => (nodes[r.id] = h("button", { class: `node t-${p}`, title: r.title, onclick: () => select(r.id) },
-      h("div", { class: "node-head" }, h("span", { class: `rid t-${p}` }, r.id), badge(r.status)), h("div", {}, r.title)))))));
 
   let selected = null;
-  const builtOn = (e) => prefix(e.from) === "SPC" && prefix(e.to) === "SPC";
+  let hovered = null;
+
   function lineage(id) {
     const seen = new Set([id]);
     const walk = (start, dir) => {
@@ -317,48 +317,139 @@ function graph(params) {
     walk(id, "up"); walk(id, "down");
     return seen;
   }
-  function select(id) {
-    selected = selected === id ? null : id;
-    const keep = selected ? lineage(selected) : null;
+
+  const activeId = () => selected || hovered;
+
+  function renderStatus() {
+    const id = activeId();
+    if (!id || !byId[id]) {
+      info.className = "graph-bar muted";
+      info.replaceChildren("Click a record to lock its lineage · Hover to preview.");
+      return;
+    }
+    const r = byId[id];
+    const upCount = upstream(r).filter((x) => byId[x]).length;
+    const downCount = (usedBy[id] || []).length;
+    info.className = "graph-bar active";
+    info.replaceChildren(
+      h("div", { class: "graph-bar-main" },
+        h("span", { class: `rid t-${prefix(id)}` }, id),
+        badge(r.status),
+        h("strong", {}, r.title),
+        h("span", { class: "muted" }, `${upCount} upstream · ${downCount} downstream`),
+        !selected ? h("span", { class: "muted" }, "(preview)") : null),
+      h("div", { class: "graph-bar-actions" },
+        r.depends_on?.length
+          ? h("span", { class: "muted" }, "Builds on ", r.depends_on.map((depId, i) => [
+              i ? ", " : "",
+              h("button", { type: "button", class: "chip-inline", onclick: () => select(depId) }, depId),
+            ]))
+          : null,
+        selected ? h("a", { class: "btn ghost", href: `#/record/${id}` }, "Open record →") : null,
+        selected ? h("button", { type: "button", class: "btn ghost", onclick: () => select(null) }, "Clear (Esc)") : null));
+  }
+
+  function applyHighlight() {
+    const id = activeId();
+    const keep = id ? lineage(id) : null;
     for (const [nid, el] of Object.entries(nodes)) {
       el.classList.toggle("dim", !!keep && !keep.has(nid));
       el.classList.toggle("sel", nid === selected);
+      el.classList.toggle("hov", nid === hovered && nid !== selected);
+      el.setAttribute("aria-pressed", String(nid === selected));
     }
-    info.replaceChildren(selected
-      ? h("span", {}, "Lineage of ", rid(selected), ": what it rests on and what it affects. ",
-          byId[selected].depends_on?.length ? ["It builds on ", idList(byId[selected].depends_on), "; click that to see its ground. "] : "",
-          h("a", { href: `#/record/${selected}` }, "Open record →"))
-      : "Click a record to trace its lineage.");
+    renderStatus();
     draw(keep);
   }
+
+  function select(id) {
+    selected = !id || selected === id ? null : id;
+    if (selected) hovered = null;
+    applyHighlight();
+  }
+
+  function preview(id) {
+    if (selected || hovered === id) return;
+    hovered = id;
+    applyHighlight();
+  }
+
+  wrap.append(svg, ...PREFIXES.map((p) => {
+    const items = ofType(p);
+    return h("div", { class: "col" },
+      h("h3", {}, LABELS[p], " ", h("span", { class: "muted" }, `(${items.length})`)),
+      items.map((r) => (nodes[r.id] = h("button", {
+        type: "button",
+        class: `node t-${p}`,
+        title: `${r.id}: ${r.title}`,
+        "aria-pressed": "false",
+        onclick: () => select(r.id),
+        onmouseenter: () => preview(r.id),
+        onmouseleave: () => preview(null),
+      },
+      h("div", { class: "node-head" }, h("span", { class: `rid t-${p}` }, r.id), badge(r.status)),
+      h("div", {}, r.title)))));
+  }));
+
+  function svgEl(tag, attrs = {}) {
+    const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
+    return el;
+  }
+
+  function buildDefs() {
+    const defs = svgEl("defs");
+    for (const [id, color] of [["fact", "var(--fact)"], ["weak", "var(--assume)"], ["dep", "var(--spec)"]]) {
+      const m = svgEl("marker", { id: `arrow-${id}`, viewBox: "0 0 10 10", refX: 8, refY: 5, markerWidth: 6, markerHeight: 6, orient: "auto-start-reverse" });
+      m.append(svgEl("path", { d: "M 0 1.5 L 8 5 L 0 8.5 z", fill: color }));
+      defs.append(m);
+    }
+    return defs;
+  }
+
   function draw(keep) {
     const box = wrap.getBoundingClientRect();
-    svg.replaceChildren(...edges.map((e) => {
+    if (!box.width) return;
+    const paths = edges.map((e) => {
       const a = nodes[e.from].getBoundingClientRect(), b = nodes[e.to].getBoundingClientRect();
       const y1 = a.top + a.height / 2 - box.top, y2 = b.top + b.height / 2 - box.top;
       let d;
-      if (prefix(e.from) === prefix(e.to)) { // spec builds on spec: loop out to the right
+      if (e.dep) { // spec builds on spec: curve cleanly inside padded right gutter
         const x = a.right - box.left;
-        d = `M${x},${y1} C${x + 40},${y1} ${x + 40},${y2} ${x},${y2}`;
+        d = `M${x},${y1} C${x + 38},${y1} ${x + 38},${y2} ${x + 3},${y2}`;
       } else {
-        const x1 = a.right - box.left, x2 = b.left - box.left, mid = (x1 + x2) / 2;
+        const x1 = a.right - box.left, x2 = b.left - box.left - 3, mid = (x1 + x2) / 2;
         d = `M${x1},${y1} C${mid},${y1} ${mid},${y2} ${x2},${y2}`;
       }
-      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      path.setAttribute("d", d);
-      path.setAttribute("class", `edge${e.weak ? " weak" : ""}${keep && !(keep.has(e.from) && keep.has(e.to)) ? " dim" : ""}`);
-      return path;
-    }));
+      const kind = e.dep ? "dep" : e.weak ? "weak" : "fact";
+      const active = keep && keep.has(e.from) && keep.has(e.to);
+      const cls = `edge${e.weak ? " weak" : ""}${e.dep ? " dep" : ""}${keep ? (active ? " active" : " dim") : ""}`;
+      return svgEl("path", { d, class: cls, "marker-end": `url(#arrow-${kind})` });
+    });
+    svg.replaceChildren(buildDefs(), ...paths);
   }
-  const info = h("p", { class: "muted" });
+
+  const info = h("div", { class: "graph-bar muted", "aria-live": "polite" });
   main.append(h("h1", {}, "Graph"),
     h("div", { class: "legend" },
-      h("span", {}, h("i"), "rests on a fact / active requirement"),
-      h("span", {}, h("i", { class: "weak" }), "rests on an open assumption or question / unfinished requirement")),
+      h("span", {}, h("i"), "grounded / active"),
+      h("span", {}, h("i", { class: "weak" }), "open assumption or question / unfinished"),
+      h("span", {}, h("i", { class: "dep" }), "spec builds on spec")),
     info, h("div", { class: "graph-wrap" }, wrap));
-  redraw = () => draw(selected ? lineage(selected) : null);
+
+  redraw = () => draw(activeId() ? lineage(activeId()) : null);
+  if (typeof ResizeObserver !== "undefined") {
+    const ro = new ResizeObserver(() => (wrap.isConnected ? redraw?.() : ro.disconnect()));
+    ro.observe(wrap);
+  }
+  const onKey = (ev) => {
+    if (!wrap.isConnected) return removeEventListener("keydown", onKey);
+    if (ev.key === "Escape" && selected) select(null);
+  };
+  addEventListener("keydown", onKey);
+
   const focus = params.get("focus");
-  requestAnimationFrame(() => (focus && byId[focus] ? select(focus) : select(null)));
+  requestAnimationFrame(() => (focus && byId[focus] ? select(focus) : applyHighlight()));
 }
 
 // ---------- capture ----------
