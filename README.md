@@ -94,9 +94,11 @@ Example output:
 
 - **Dashboard:** the state of the spec at a glance. Each record type gets a bar coloured green (done), amber (needs attention) or red (broken), and every segment links to those records. Below it: the specs that need attention and exactly what blocks them, and the open questions and assumptions that hold things back, questions first.
 - **Tasks:** what a human must do next, worked out from the records: *fix now* (broken requirements, check errors), *answer questions* (with "we know → record the fact" and "we have a guess → record the assumption" buttons), *test assumptions* (ranked by what they unlock, with "it held → record the fact" and "it failed → mark invalidated" buttons), *quick wins* (requirements or specs that can be activated) and *tidy up*.
-- **Graph:** assumptions → facts → questions → requirements → specs. Solid edges rest on facts, dashed edges on open assumptions and open questions. Click a record to trace its lineage.
+- **Graph:** arrows run left to right from what a record rests on to what rests on it (solid green for facts, dashed amber for open assumptions/questions, purple for `spec builds on spec`). Hover or focus a record to preview its lineage, or click (or press `Enter` in the search box) to lock it: active nodes and edges rise into focus on their own layer while unrelated cards blur and step back, and the sticky toolbar shows counts, a two-line excerpt, and `Builds on` jumps. Press `Esc` to clear.
 - **Records:** filter by type, search, and open any record to see its text, what it rests on, what uses it and what a change would affect.
 - **Capture:** a form per record type. It picks the next free ID, shows the file, and opens GitHub's editor with it filled in. Choose "create a new branch and start a pull request" and CI checks the record. There is no bot or ingest pipeline.
+
+The header includes a **Theme** toggle (`System` / `Light` / `Dark`, persisted in `localStorage`) that updates native controls and scrollbars alongside CSS tokens; route transitions and focus effects respect `prefers-reduced-motion`.
 
 Local preview: `python tools/spec.py index && python -m http.server -d site 8000`.
 

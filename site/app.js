@@ -1,4 +1,4 @@
-// Meta-Specs Lite workspace: one module, no build step.
+// ASDLC Meta-Specs workspace: one module, no build step.
 // Reads data/index.json (written by `python tools/spec.py index`) and renders five views.
 
 const PREFIXES = ["ASM", "FCT", "QST", "REQ", "SPC"];
@@ -281,9 +281,26 @@ function record(id) {
 }
 
 function graph(params) {
-  const wrap = h("div", { class: "graph" });
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  const NS = "http://www.w3.org/2000/svg";
+  const svgEl = (tag, attrs = {}) => {
+    const el = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
+    return el;
+  };
+  const wrap = h("div", { class: "graph", role: "group", "aria-label": "Record graph" });
+  // Two edge layers: the base layer sits under every card, the live layer (the selected lineage) sits above
+  // dimmed cards but below lit ones, so a highlighted path is never cut by a faded card. See the z-index tokens in styles.css.
+  const baseLayer = svgEl("svg", { class: "edges edges-base", "aria-hidden": "true", focusable: "false" });
+  const liveLayer = svgEl("svg", { class: "edges edges-live", "aria-hidden": "true", focusable: "false" });
+  const defs = svgEl("defs");
+  for (const kind of ["fact", "weak", "dep"]) {
+    const marker = svgEl("marker", { id: `arrow-${kind}`, viewBox: "0 0 10 10", refX: 8, refY: 5, markerWidth: 6, markerHeight: 6, orient: "auto-start-reverse" });
+    marker.append(svgEl("path", { d: "M 0 1.5 L 8 5 L 0 8.5 z", class: `arrow-${kind}` }));
+    defs.append(marker);
+  }
+
   const nodes = {};
+  const order = [];
   const edges = [];
   const builtOn = (e) => prefix(e.from) === "SPC" && prefix(e.to) === "SPC";
   for (const r of data.records) {
@@ -296,125 +313,116 @@ function graph(params) {
     }
   }
 
-  let selected = null;
-  let hovered = null;
+  let selected = null, hovered = null, query = "";
 
+  /** What a record rests on (up) and what a change to it affects (down). A spec built on another spec shows that spec, not its whole ground. */
   function lineage(id) {
-    const seen = new Set([id]);
-    const walk = (start, dir) => {
-      const todo = [start];
+    const walk = (dir) => {
+      const seen = new Set(), todo = [id];
       while (todo.length) {
         const cur = todo.pop();
         for (const e of edges) {
           const next = dir === "up" ? (e.to === cur && e.from) : (e.from === cur && e.to);
-          if (!next || seen.has(next)) continue;
+          if (!next || next === id || seen.has(next)) continue;
           seen.add(next);
-          // A spec built on another spec shows that spec, not its whole ground; otherwise every feature lights up everything.
           if (!(dir === "up" && builtOn(e))) todo.push(next);
         }
       }
+      return seen;
     };
-    walk(id, "up"); walk(id, "down");
-    return seen;
+    const up = walk("up"), down = walk("down");
+    return { id, up, down, all: new Set([id, ...up, ...down]) };
   }
+  const current = () => { const id = selected || hovered; return id && byId[id] ? lineage(id) : null; };
+  const matchesOf = () => (query ? new Set(order.filter((id) => `${id} ${byId[id].title}`.toLowerCase().includes(query))) : null);
+  const EXCERPT = { REQ: "Statement", ASM: "Statement", FCT: "Statement", QST: "Question", SPC: "Purpose" };
+  const excerpt = (r) => section(r.body, EXCERPT[prefix(r.id)]).replace(/\s+/g, " ").trim();
 
-  const activeId = () => selected || hovered;
-
-  function renderStatus() {
-    const id = activeId();
-    if (!id || !byId[id]) {
-      info.className = "graph-bar muted";
-      info.replaceChildren("Click a record to lock its lineage · Hover to preview.");
+  // The bar keeps a fixed shape (main row, actions, two-line excerpt) so previewing never shifts the graph under the pointer.
+  function renderStatus(lin, matches) {
+    const text = lin ? excerpt(byId[lin.id]) : "";
+    const ex = h("p", { class: "graph-bar-excerpt", ...(text ? { html: inline(text) } : {}) });
+    if (!lin) {
+      bar.classList.remove("active");
+      bar.replaceChildren(
+        h("div", { class: "graph-bar-main muted" }, matches
+          ? (matches.size ? `${matches.size} match${matches.size > 1 ? "es" : ""} · press Enter to select the first` : "No records match.")
+          : "Hover or focus a record to preview its lineage · click to select it · Esc to clear."),
+        h("div", { class: "graph-bar-actions" }), ex);
       return;
     }
-    const r = byId[id];
-    const upCount = upstream(r).filter((x) => byId[x]).length;
-    const downCount = (usedBy[id] || []).length;
-    info.className = "graph-bar active";
-    info.replaceChildren(
+    const r = byId[lin.id];
+    bar.classList.add("active");
+    bar.replaceChildren(
       h("div", { class: "graph-bar-main" },
-        h("span", { class: `rid t-${prefix(id)}` }, id),
-        badge(r.status),
-        h("strong", {}, r.title),
-        h("span", { class: "muted" }, `${upCount} upstream · ${downCount} downstream`),
-        !selected ? h("span", { class: "muted" }, "(preview)") : null),
+        h("span", { class: `rid t-${prefix(r.id)}` }, r.id), badge(r.status), h("strong", {}, r.title),
+        h("span", { class: "muted" }, `↑ rests on ${lin.up.size} · ↓ affects ${lin.down.size}`),
+        selected ? null : h("span", { class: "muted" }, "· preview")),
       h("div", { class: "graph-bar-actions" },
-        r.depends_on?.length
-          ? h("span", { class: "muted" }, "Builds on ", r.depends_on.map((depId, i) => [
-              i ? ", " : "",
-              h("button", { type: "button", class: "chip-inline", onclick: () => select(depId) }, depId),
-            ]))
-          : null,
-        selected ? h("a", { class: "btn ghost", href: `#/record/${id}` }, "Open record →") : null,
-        selected ? h("button", { type: "button", class: "btn ghost", onclick: () => select(null) }, "Clear (Esc)") : null));
+        selected && r.depends_on?.length ? h("span", { class: "muted" }, "Builds on ",
+          r.depends_on.map((d, i) => [i ? " " : "", h("button", { type: "button", class: "chip-inline", onclick: () => select(d, true) }, d)])) : null,
+        selected ? h("a", { class: "btn ghost", href: `#/record/${r.id}` }, "Open record →") : null,
+        selected ? h("button", { type: "button", class: "btn ghost", onclick: () => select(null) }, "Clear (Esc)") : null),
+      ex);
   }
 
   function applyHighlight() {
-    const id = activeId();
-    const keep = id ? lineage(id) : null;
+    const lin = current();
+    const matches = matchesOf();
+    wrap.classList.toggle("focus", !!lin);
     for (const [nid, el] of Object.entries(nodes)) {
-      el.classList.toggle("dim", !!keep && !keep.has(nid));
+      const lit = !!lin && lin.all.has(nid);
+      el.classList.toggle("lit", lit);
+      el.classList.toggle("dim", lin ? !lit : !!matches && !matches.has(nid));
+      el.classList.toggle("up", !!lin && lin.up.has(nid));
+      el.classList.toggle("down", !!lin && lin.down.has(nid));
       el.classList.toggle("sel", nid === selected);
-      el.classList.toggle("hov", nid === hovered && nid !== selected);
+      el.classList.toggle("match", !lin && !!matches && matches.has(nid));
       el.setAttribute("aria-pressed", String(nid === selected));
     }
-    renderStatus();
-    draw(keep);
+    renderStatus(lin, matches);
+    draw(lin);
   }
 
-  function select(id) {
-    selected = !id || selected === id ? null : id;
-    if (selected) hovered = null;
+  /** Click toggles a selection; `reveal` (chips, search, deep links) always selects and scrolls the card into view. */
+  function select(id, reveal = false) {
+    const toggledOff = id && selected === id && !reveal;
+    selected = !id || toggledOff ? null : id;
+    hovered = toggledOff ? id : null;
     applyHighlight();
+    if (selected && reveal) nodes[selected].scrollIntoView({ block: "nearest", inline: "nearest" });
   }
-
   function preview(id) {
     if (selected || hovered === id) return;
     hovered = id;
     applyHighlight();
   }
 
-  wrap.append(svg, ...PREFIXES.map((p) => {
+  const columns = PREFIXES.map((p) => {
     const items = ofType(p);
     return h("div", { class: "col" },
-      h("h3", {}, LABELS[p], " ", h("span", { class: "muted" }, `(${items.length})`)),
-      items.map((r) => (nodes[r.id] = h("button", {
-        type: "button",
-        class: `node t-${p}`,
-        title: `${r.id}: ${r.title}`,
-        "aria-pressed": "false",
-        onclick: () => select(r.id),
-        onmouseenter: () => preview(r.id),
-        onmouseleave: () => preview(null),
-      },
-      h("div", { class: "node-head" }, h("span", { class: `rid t-${p}` }, r.id), badge(r.status)),
-      h("div", {}, r.title)))));
-  }));
+      h("h3", {}, LABELS[p], " ", h("span", { class: "muted" }, items.length)),
+      items.map((r) => {
+        order.push(r.id);
+        return (nodes[r.id] = h("button", {
+          type: "button", class: `node t-${p}`, "aria-pressed": "false", "aria-label": `${r.id}, ${r.status}: ${r.title}`,
+          onclick: () => select(r.id),
+          onmouseenter: () => preview(r.id), onmouseleave: () => preview(null),
+          onfocus: () => preview(r.id), onblur: () => preview(null),
+        }, h("div", { class: "node-head" }, h("span", { class: `rid t-${p}` }, r.id), badge(r.status)), h("div", {}, r.title)));
+      }));
+  });
+  wrap.append(baseLayer, ...columns, liveLayer);
 
-  function svgEl(tag, attrs = {}) {
-    const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
-    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
-    return el;
-  }
-
-  function buildDefs() {
-    const defs = svgEl("defs");
-    for (const [id, color] of [["fact", "var(--fact)"], ["weak", "var(--assume)"], ["dep", "var(--spec)"]]) {
-      const m = svgEl("marker", { id: `arrow-${id}`, viewBox: "0 0 10 10", refX: 8, refY: 5, markerWidth: 6, markerHeight: 6, orient: "auto-start-reverse" });
-      m.append(svgEl("path", { d: "M 0 1.5 L 8 5 L 0 8.5 z", fill: color }));
-      defs.append(m);
-    }
-    return defs;
-  }
-
-  function draw(keep) {
+  function draw(lin) {
     const box = wrap.getBoundingClientRect();
     if (!box.width) return;
-    const paths = edges.map((e) => {
+    const base = [], live = [];
+    for (const e of edges) {
       const a = nodes[e.from].getBoundingClientRect(), b = nodes[e.to].getBoundingClientRect();
       const y1 = a.top + a.height / 2 - box.top, y2 = b.top + b.height / 2 - box.top;
       let d;
-      if (e.dep) { // spec builds on spec: curve cleanly inside padded right gutter
+      if (e.dep) { // spec builds on spec: loop through the padded gutter right of the Specs column
         const x = a.right - box.left;
         d = `M${x},${y1} C${x + 38},${y1} ${x + 38},${y2} ${x + 3},${y2}`;
       } else {
@@ -422,34 +430,53 @@ function graph(params) {
         d = `M${x1},${y1} C${mid},${y1} ${mid},${y2} ${x2},${y2}`;
       }
       const kind = e.dep ? "dep" : e.weak ? "weak" : "fact";
-      const active = keep && keep.has(e.from) && keep.has(e.to);
-      const cls = `edge${e.weak ? " weak" : ""}${e.dep ? " dep" : ""}${keep ? (active ? " active" : " dim") : ""}`;
-      return svgEl("path", { d, class: cls, "marker-end": `url(#arrow-${kind})` });
-    });
-    svg.replaceChildren(buildDefs(), ...paths);
+      const on = !!lin && lin.all.has(e.from) && lin.all.has(e.to);
+      (on ? live : base).push(svgEl("path", { d, class: `edge edge-${kind}${on ? " on" : ""}`, "marker-end": `url(#arrow-${kind})` }));
+    }
+    baseLayer.replaceChildren(defs, ...base);
+    liveLayer.replaceChildren(...live);
   }
 
-  const info = h("div", { class: "graph-bar muted", "aria-live": "polite" });
-  main.append(h("h1", {}, "Graph"),
-    h("div", { class: "legend" },
-      h("span", {}, h("i"), "grounded / active"),
-      h("span", {}, h("i", { class: "weak" }), "open assumption or question / unfinished"),
-      h("span", {}, h("i", { class: "dep" }), "spec builds on spec")),
-    info, h("div", { class: "graph-wrap" }, wrap));
+  const search = h("input", { type: "search", class: "graph-search", placeholder: "Find a record…", "aria-label": "Find a record in the graph", autocomplete: "off" });
+  search.addEventListener("input", () => { query = search.value.trim().toLowerCase(); applyHighlight(); });
+  search.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter") {
+      const m = matchesOf();
+      const first = m && order.find((id) => m.has(id));
+      if (first) select(first, true);
+    }
+    if (ev.key === "Escape" && search.value) ev.stopPropagation(); // the browser clears the field; keep the selection
+  });
 
-  redraw = () => draw(activeId() ? lineage(activeId()) : null);
+  const bar = h("div", { class: "graph-bar", "aria-live": "polite" });
+  main.append(h("h1", {}, "Graph"),
+    h("p", { class: "muted lede" }, "Arrows run from what a record rests on to what rests on it. Select a record to bring its lineage forward; everything else steps back."),
+    h("div", { class: "graph-toolbar-sticky" },
+      h("div", { class: "graph-toolbar glass" },
+        h("div", { class: "graph-toolbar-row" }, search,
+          h("div", { class: "legend" },
+            h("span", {}, h("i"), "grounded"),
+            h("span", {}, h("i", { class: "weak" }), "open assumption or question"),
+            h("span", {}, h("i", { class: "dep" }), "spec builds on spec"),
+            h("span", {}, "↑ rests on · ↓ affects"))),
+        bar)),
+    h("div", { class: "graph-wrap" }, wrap));
+
+  redraw = () => draw(current());
   if (typeof ResizeObserver !== "undefined") {
     const ro = new ResizeObserver(() => (wrap.isConnected ? redraw?.() : ro.disconnect()));
     ro.observe(wrap);
   }
   const onKey = (ev) => {
     if (!wrap.isConnected) return removeEventListener("keydown", onKey);
-    if (ev.key === "Escape" && selected) select(null);
+    if (ev.key !== "Escape") return;
+    if (selected) select(null);
+    else if (query) { search.value = ""; query = ""; applyHighlight(); }
   };
   addEventListener("keydown", onKey);
 
   const focus = params.get("focus");
-  requestAnimationFrame(() => (focus && byId[focus] ? select(focus) : applyHighlight()));
+  requestAnimationFrame(() => (focus && byId[focus] ? select(focus, true) : applyHighlight()));
 }
 
 // ---------- capture ----------
@@ -646,29 +673,72 @@ function notFound() {
   main.append(h("h1", {}, "Not found"), h("p", {}, h("a", { href: "#/" }, "Back to the dashboard")));
 }
 
+// ---------- theme ----------
+function initTheme() {
+  const btn = document.getElementById("theme-toggle");
+  const modes = ["system", "light", "dark"];
+  const labels = { system: "Theme: System", light: "Theme: Light", dark: "Theme: Dark" };
+  let mode = modes.includes(store.get("theme")) ? store.get("theme") : "system";
+  const apply = (next) => {
+    mode = next;
+    if (mode === "system") { delete document.documentElement.dataset.theme; store.del("theme"); }
+    else { document.documentElement.dataset.theme = mode; store.set("theme", mode); }
+    if (btn) { btn.textContent = labels[mode]; btn.setAttribute("aria-label", labels[mode]); }
+    requestAnimationFrame(() => redraw?.());
+  };
+  btn?.addEventListener("click", () => apply(modes[(modes.indexOf(mode) + 1) % modes.length]));
+  apply(mode);
+}
+
 // ---------- router ----------
+let booted = false;
+let lastSection = null;
+
 function route() {
   const [path, query = ""] = (location.hash.replace(/^#\/?/, "")).split("?");
   const [section = "", arg] = path.split("/");
   const params = new URLSearchParams(query);
-  redraw = null;
-  main.replaceChildren();
-  if (section === "") dashboard();
-  else if (section === "records") records(params);
-  else if (section === "record") record(decodeURIComponent(arg || ""));
-  else if (section === "graph") graph(params);
-  else if (section === "capture") capture(arg || "requirement", params);
-  else if (section === "tasks") tasksView();
-  else notFound();
-  document.querySelectorAll(".top nav a").forEach((a) => {
-    const on = a.dataset.route === section || (section === "record" && a.dataset.route === "records");
-    on ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current");
-  });
-  document.title = `${main.querySelector("h1")?.textContent || "Workspace"} · Meta-Specs Lite`;
-  window.scrollTo({ top: 0 });
+  const changed = booted && lastSection !== section;
+  lastSection = section;
+
+  const render = () => {
+    redraw = null;
+    main.classList.toggle("wide", section === "graph");
+    main.replaceChildren();
+    if (section === "") dashboard();
+    else if (section === "records") records(params);
+    else if (section === "record") record(decodeURIComponent(arg || ""));
+    else if (section === "graph") graph(params);
+    else if (section === "capture") capture(arg || "requirement", params);
+    else if (section === "tasks") tasksView();
+    else notFound();
+    document.querySelectorAll(".top nav a").forEach((a) => {
+      const on = a.dataset.route === section || (section === "record" && a.dataset.route === "records");
+      on ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current");
+    });
+    const heading = main.querySelector("h1");
+    document.title = `${heading?.textContent || "Workspace"} · ASDLC Meta-Specs`;
+    window.scrollTo({ top: 0 });
+    return heading;
+  };
+
+  const focusHeading = () => {
+    const heading = main.querySelector("h1");
+    if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); }
+  };
+
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (changed && document.startViewTransition && !reduce) {
+    const vt = document.startViewTransition(render);
+    vt.finished.finally(focusHeading);
+  } else {
+    render();
+    if (changed) focusHeading();
+  }
 }
 
 async function start() {
+  initTheme();
   try {
     const res = await fetch("data/index.json", { cache: "no-cache" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -689,6 +759,7 @@ async function start() {
   addEventListener("hashchange", route);
   addEventListener("resize", () => redraw?.());
   route();
+  booted = true;
 }
 
 start();
