@@ -8,7 +8,7 @@ Most specs mix verified truths with guesswork and never say which is which. Here
 
 > **Facts → requirements → specs.**
 
-This is the simplified version of the original engine, which is kept in the [`target_state`](https://github.com/jvanheerikhuize/asdlc-meta-specs/tree/target_state) branch. It keeps the same principles with 5 record types instead of 10 and one script instead of a toolchain.
+It keeps the model minimal with 5 record types and one script (`tools/spec.py`).
 
 ## How it works, in six pictures
 
@@ -138,10 +138,10 @@ records/          all records, one file each (ASM, FCT, QST, REQ, SPC)
 tools/spec.py     check · impact · render · index
 site/             the Pages workspace (index.html, app.js, styles.css)
 docs/concepts/    the six pictures above
-ROADMAP.md        from this starting point to the target state
+ROADMAP.md        planned evolution, one evidence-backed step at a time
 tests/            one test per acceptance scenario
 ```
 
 ## Roadmap
 
-This repository is the starting point. The full original engine is kept in the [`target_state`](https://github.com/jvanheerikhuize/asdlc-meta-specs/tree/target_state) branch, and [ROADMAP.md](ROADMAP.md) explains how to grow towards it: one evidence-backed step at a time.
+[ROADMAP.md](ROADMAP.md) explains how the repository evolves: one evidence-backed step at a time.
