@@ -1,9 +1,10 @@
 name: pages
 
-# Builds the record index and deploys site/ to GitHub Pages on every push to main.
+# Builds the record index, publishes /latest/ and /v*/ blueprint channels, and deploys site/ to GitHub Pages.
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
@@ -20,6 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -27,6 +30,16 @@ jobs:
       - run: python tools/spec.py check --strict --verify tests
       - run: python -m unittest discover -s tests -v
       - run: python tools/spec.py index
+      - name: Assemble versioned blueprint channels (/latest and /v*)
+        run: |
+          mkdir -p site/latest/tools site/latest/site
+          cp tools/spec.py site/latest/tools/spec.py
+          cp site/index.html site/app.js site/styles.css site/latest/site/
+          for tag in $(git tag -l 'v*'); do
+            mkdir -p "site/$tag/tools" "site/$tag/site"
+            git archive "$tag" tools/spec.py | tar -x -C "site/$tag" || cp tools/spec.py "site/$tag/tools/spec.py"
+            git archive "$tag" site/index.html site/app.js site/styles.css | tar -x -C "site/$tag" || cp site/index.html site/app.js site/styles.css "site/$tag/site/"
+          done
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

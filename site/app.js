@@ -683,7 +683,8 @@ function capture(kind, params) {
     const meta = { id, title: yamlStr(values.title.trim() || "Untitled"), status: built.status, ...built.meta };
     const body = Object.entries(built.sections).map(([head, text]) => `## ${head}\n${(text || "").trim()}\n`).join("\n");
     const text = `---\n${Object.entries(meta).map(([k, v]) => `${k}: ${v}`).join("\n")}\n---\n\n${body}`;
-    const path = `records/${id}-${slug(values.title)}.md`;
+    const recDir = data.records_dir || (data.records[0]?.path.replace(/\/[^/]+$/, "")) || "records";
+    const path = `${recDir}/${id}-${slug(values.title)}.md`;
     preview.textContent = `${path}\n\n${text}`;
     const missing = def.required.filter((k) => !(Array.isArray(values[k]) ? values[k].length : String(values[k]).trim()));
     if (missing.length) {
@@ -806,6 +807,13 @@ async function start() {
   usedBy = {};
   for (const r of data.records) for (const up of upstream(r)) (usedBy[up] ||= []).push(r.id);
   document.getElementById("repo-link").href = gh("");
+  if (data.repo && !data.repo.endsWith("/asdlc-meta-specs")) {
+    const brand = document.querySelector(".brand");
+    if (brand && brand.textContent.trim() === "ASDLC Meta-Specs") {
+      const repoShort = data.repo.split("/")[1];
+      brand.replaceChildren(repoShort, " ", h("span", {}, "Meta-Specs"));
+    }
+  }
   const all = tasks();
   if (all.length) document.querySelector('.top-nav a[data-route="tasks"]')?.append(h("span", { class: `count ${all.some((t) => t.level === "fix") ? "fix" : "test"}` }, all.length));
   addEventListener("hashchange", route);
