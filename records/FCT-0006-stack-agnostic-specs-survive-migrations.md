@@ -1,10 +1,10 @@
 ---
 id: FCT-0006
-title: Technology-stack agnostic specification corpora survive stack migrations without record edits
+title: Externalizing incidental technology choices into a separate binding keeps specification corpora stack-neutral
 status: active
 promoted_from: ASM-0004
-evidence: The lumen media appliance specification corpus (36 records) defines end-to-end streaming, transcoding, state persistence, and network guard capabilities without naming any programming language, relational store, UI framework, or bundler, isolating all concrete implementation technologies in TECH_STACK.md.
+evidence: "Both the 31-record asdlc-meta-specs corpus and the 36-record lumen media appliance corpus define end-to-end behavioural requirements with zero technology-stack terms in records/ (passing tools/spec.py check --strict), isolating concrete runtime, storage, and framework choices in TECH_STACK.md bound at render time; full cross-stack re-implementation without record edits remains an empirical follow-up evaluation."
 ---
 
 ## Statement
-When requirements and specs describe behaviour rather than product choices, implementation technologies and frameworks can be swapped or refactored without altering any record in the specification corpus.
+When requirements and specifications describe observable system behaviour and isolate incidental product, language, or framework choices in an external technical binding document (`TECH_STACK.md`), complete specification corpora can be authored and validated without embedding technology names in `records/`.

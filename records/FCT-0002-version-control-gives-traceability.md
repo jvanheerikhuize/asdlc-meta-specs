@@ -1,9 +1,9 @@
 ---
 id: FCT-0002
-title: Plain text under version control gives every change an author, a diff and a review
+title: Plain text under version control provides commit attribution, line-level diffs, and reversible history
 status: active
-evidence: Inherent to version control; every pull-request based workflow relies on it.
+evidence: "Version control systems record author metadata, timestamps, line-level diffs, and parent commits for every committed change to plain-text files; human or agent peer review is enforced by repository pull-request policy on top of those primitives (Gotel and Finkelstein 1994, doi:10.1109/ICRE.1994.292398)."
 ---
 
 ## Statement
-Storing records as plain text in a repository means every change to the spec is attributable, reviewable and reversible with no extra tooling.
+Storing specification records as plain text in version control makes every committed change attributable, diffable, and reversible without specialized requirements databases, while repository branch and pull-request policies govern whether changes receive review before merge.
