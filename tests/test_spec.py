@@ -101,13 +101,13 @@ class CheckTest(unittest.TestCase):
                   SPC_0002=spc("SPC-0002", "feature", "[REQ-0001]", "[SPC-0001]"))
         self.assertTrue(any("cycle" in e for e in g.check()[0]))
 
-    def test_fact_freshness_warns_when_stale(self):
+    def test_fact_freshness_warns_when_stale(self):  # REQ-0008
         stale_fact = FACT.replace("status: active", "status: active\nreview_after: 2020-01-01")
         errors, warnings = Graph(FCT_0001=stale_fact, REQ_0001=req()).check()
         self.assertEqual(errors, [])
         self.assertTrue(any("past review date" in w for w in warnings))
 
-    def test_fact_freshness_invalid_date_fails(self):
+    def test_fact_freshness_invalid_date_fails(self):  # REQ-0008
         bad_fact = FACT.replace("status: active", "status: active\nreview_after: not-a-date")
         errors, warnings = Graph(FCT_0001=bad_fact, REQ_0001=req()).check()
         self.assertTrue(any("invalid review_after date" in e for e in errors))
@@ -252,6 +252,29 @@ class WorkspaceContractTest(unittest.TestCase):
             self.assertIn(kind, self.app)
         self.assertIn('field("Review after", r.review_after)', self.app)
         self.assertIn("theme-toggle", self.html)
+
+
+class TraceabilityTest(unittest.TestCase):
+    def test_scenario_ids_and_verify_traceability(self):  # REQ-0013
+        records = spec.load()
+        md = spec.render_markdown(records["SPC-0001"], records)
+        self.assertIn("**REQ-0001#1**", md)
+        with tempfile.TemporaryDirectory() as tmp:
+            tfile = Path(tmp) / "test_sample.py"
+            tfile.write_text("# REQ-0001#1\n", encoding="utf-8")
+            g = Graph(FCT_0001=FACT, REQ_0001=req())
+            errors, warnings = spec.verify_traceability(g.records, Path(tmp))
+            self.assertEqual(errors + warnings, [])
+
+            tfile.write_text("# uncited\n", encoding="utf-8")
+            errors, warnings = spec.verify_traceability(g.records, Path(tmp))
+            self.assertEqual(errors, [])
+            self.assertTrue(any("REQ-0001" in w for w in warnings))
+
+            bad_cite = "REQ-0001" + "#99"
+            tfile.write_text(f"# {bad_cite}\n", encoding="utf-8")
+            errors, warnings = spec.verify_traceability(g.records, Path(tmp))
+            self.assertTrue(any(bad_cite in e for e in errors))
 
 
 if __name__ == "__main__":

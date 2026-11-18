@@ -38,7 +38,7 @@ Small additions that make the chain more truthful:
 - ~~**Playbook workflows for agent extraction, assumption testing, and question resolution.**~~ Done: documented in [`README.md`](README.md#playbook-agent--human-workflows) with copy-pasteable prompts.
 - ~~**Separate tech-stack file (`TECH_STACK.md`) bound at render time.**~~ Done: adopted in both [`TECH_STACK.md`](TECH_STACK.md) and consumer repositories (`lumen`), and bound into rendered specs via `python tools/spec.py render --stack TECH_STACK.md` (`REQ-0005`), keeping `records/` 100% stack-agnostic.
 - **Projection to OpenSpec and Spec Kit** as small renderer functions in `tools/spec.py` (no template engine). Trigger: when a consumer project actively uses OpenSpec or Spec Kit.
-- **Acceptance criteria with their own IDs and code traceability.** Once tests in an implementing repo can cite `REQ-0001#1`, `tools/spec.py check` can report which active requirements lack passing code verification, closing the loop `facts → requirements → specs → tests`.
+- ~~**Acceptance criteria with their own IDs and code traceability.**~~ Done: rendered Markdown labels each scenario `**REQ-xxxx#n**` (`REQ-0013`), and `python tools/spec.py check --verify DIR` verifies test/code citations, closing the loop `facts → requirements → specs → tests`.
 
 ### Phase 3: Scale on evidence
 

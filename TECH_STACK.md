@@ -47,12 +47,13 @@ Together with the rendered specifications (`SPC-0001`, `SPC-0002`, `SPC-0003`), 
 - `topo(specs: list[Record], records: dict[str, Record]) -> list[Record]`: orders specs with `skeleton` before `feature` and dependencies before dependents, raising `ValueError("spec dependency cycle: ...")` on cycles.
 - `impact(changed: str, records: dict[str, Record]) -> tuple[list[str], list[Record]]`: returns `(sorted_non_spec_ids, ordered_spec_records)` downstream of `changed`.
 - `render_markdown(spec: Record, records: dict[str, Record], stack: str = "") -> str` and `render_gherkin(spec: Record, records: dict[str, Record], stack: str = "") -> str`.
-- `to_index(records: dict[str, Record]) -> dict` and `main(argv: list[str] | None = None) -> int`.
+- `to_index(records: dict[str, Record]) -> dict`, `verify_traceability(records: dict[str, Record], code_root: Path) -> tuple[list[str], list[str]]`, and `main(argv: list[str] | None = None) -> int`.
 
 ### CLI Subcommands
 
-1. `python tools/spec.py check [--strict]`
+1. `python tools/spec.py check [--strict] [--verify DIR]`
    - Prints `WARN  <filename>: <message>` for each warning and `ERROR <filename>: <message>` for each error.
+   - When `--verify DIR` is passed, scans `DIR` for `REQ-xxxx` / `REQ-xxxx#n` citations, errors on out-of-range scenario IDs, and warns on uncited active requirements or scenarios.
    - Prints summary line: `<N> records · <E> errors · <W> warnings`.
    - If `errors == 0`, prints each spec in topological order (`skeleton` before `feature`, breaking ties by ID):
      `  <SPC-ID> [<tier:<8>] <readiness:>3}% ready  <title>`

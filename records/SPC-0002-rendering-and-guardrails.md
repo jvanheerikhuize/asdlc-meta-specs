@@ -4,7 +4,7 @@ title: Rendering and guardrails
 status: active
 tier: feature
 depends_on: [SPC-0001]
-requirements: [REQ-0004, REQ-0005, REQ-0006, REQ-0009]
+requirements: [REQ-0004, REQ-0005, REQ-0006, REQ-0009, REQ-0013]
 ---
 
 ## Purpose
