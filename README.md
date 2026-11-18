@@ -64,10 +64,10 @@ flowchart LR
 pip install -r requirements.txt
 python tools/spec.py check --strict          # validate links, statuses, DAG, and stack-neutrality
 python tools/spec.py impact FCT-0001         # list affected records and spec rebuild order
-python tools/spec.py render --tier skeleton  # render dist/SPC-*.md
-python tools/spec.py render --format gherkin # render dist/SPC-*.feature
-python tools/spec.py index                   # update site/data/index.json for the web workspace
-python -m unittest discover -s tests         # run test suite
+python tools/spec.py render --tier skeleton --stack TECH_STACK.md  # render dist/SPC-*.md with stack bound
+python tools/spec.py render --format gherkin                       # render dist/SPC-*.feature
+python tools/spec.py index                                         # update site/data/index.json for the web workspace
+python -m unittest discover -s tests                               # run test suite
 ```
 
 ## Playbook: Agent & Human Workflows

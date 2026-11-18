@@ -184,6 +184,21 @@ class RenderTest(unittest.TestCase):
             self.assertIn(rid, feature)
         self.assertEqual(feature.count("Scenario:"), md.count("```gherkin"))
 
+    def test_render_binds_optional_tech_stack(self):  # REQ-0005
+        records = spec.load()
+        s = records["SPC-0001"]
+        md = spec.render_markdown(s, records, stack="Runtime: Python 3.10+")
+        self.assertIn("## Technology Stack\n\nRuntime: Python 3.10+", md)
+        with tempfile.TemporaryDirectory() as tmp:
+            stack_file = Path(tmp) / "TECH_STACK.md"
+            stack_file.write_text("Runtime: Python 3.10+\n", encoding="utf-8")
+            out_dir = Path(tmp) / "dist"
+            rc = spec.main(["render", "--tier", "skeleton", "--stack", str(stack_file), "--out", str(out_dir)])
+            self.assertEqual(rc, 0)
+            rendered = (out_dir / "SPC-0001.md").read_text(encoding="utf-8")
+            self.assertIn("## Technology Stack\n\nRuntime: Python 3.10+", rendered)
+            self.assertEqual(spec.main(["render", "--stack", str(Path(tmp) / "missing.md"), "--out", str(out_dir)]), 1)
+
 
 class IndexTest(unittest.TestCase):
     def test_index_has_everything_the_site_reads(self):  # REQ-0009
