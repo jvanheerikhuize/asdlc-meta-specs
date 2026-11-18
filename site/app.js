@@ -20,7 +20,12 @@ function h(tag, attrs = {}, ...kids) {
 }
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const prefix = (id) => id.slice(0, 3);
-const badge = (status) => h("span", { class: `badge s-${status}` }, status);
+const BADGE_VARIANT = {
+  active: "success", validated: "success", answered: "success",
+  open: "warning", provisional: "warning", draft: "warning", stale: "warning", ready: "info", asked: "warning",
+  broken: "accent", invalidated: "neutral", deprecated: "neutral",
+};
+const badge = (status) => h("ui-badge", { variant: BADGE_VARIANT[status] || "neutral" }, status);
 const rid = (id) => h("a", { class: `rid t-${prefix(id)}`, href: `#/record/${id}` }, id);
 const ofType = (p) => data.records.filter((r) => prefix(r.id) === p);
 const gh = (path) => (data.repo ? `https://github.com/${data.repo}/${path}` : "#");
@@ -172,14 +177,17 @@ function dashboard() {
       h("ui-stat-tile", { value: String(open.length), label: "Open QST / ASM", status: open.length ? "wait" : "done", variant: open.length ? "warning" : "success" }),
       h("ui-stat-tile", { value: String(fine.length), label: "Specs Active", status: "done", variant: "accent" })),
     todo.length || data.summary?.errors
-      ? h("a", { class: `callout ${per("fix") || data.summary?.errors ? "bad" : "wait"}`, href: "#/tasks" },
-          h("b", {}, `${todo.length || data.summary.errors} task${(todo.length || data.summary.errors) > 1 ? "s" : ""} need you`),
-          h("span", {}, Object.keys(LEVELS).filter(per).map((l) => `${per(l)} ${LEVELS[l][0].toLowerCase()}`).join(" · ") || `${data.summary.errors} validation error(s)`),
-          h("span", { class: "go" }, "Open tasks →"))
-      : h("div", { class: "callout done" }, h("b", {}, "Nothing needs you"), h("span", {}, "Every requirement rests on recorded facts and all declared grounds are consistent.")),
+      ? h("a", { href: "#/tasks", style: "text-decoration:none;display:block;margin:16px 0 8px" },
+          h("ui-callout", {
+            variant: per("fix") || data.summary?.errors ? "danger" : "warning",
+            title: `${todo.length || data.summary.errors} task${(todo.length || data.summary.errors) > 1 ? "s" : ""} need you`,
+          }, Object.keys(LEVELS).filter(per).map((l) => `${per(l)} ${LEVELS[l][0].toLowerCase()}`).join(" · ") || `${data.summary.errors} validation error(s)`,
+             " · ", h("strong", {}, "Open tasks →")))
+      : h("ui-callout", { variant: "success", title: "Nothing needs you", style: "margin:16px 0 8px" },
+          "Every requirement rests on recorded facts and all declared grounds are consistent."),
 
     h("h2", {}, "State of the spec"),
-    h("div", { class: "legend" }, ...[["done", "done"], ["wait", "needs attention"], ["bad", "broken"], ["off", "retired"]].map(([t, l]) => h("span", {}, h("span", { class: `dot ${t}` }), l))),
+    h("div", { class: "legend" }, ...[["done", "done"], ["wait", "needs attention"], ["bad", "broken"], ["off", "retired"]].map(([t, l]) => h("span", {}, h("ui-dot", { status: t }), l))),
     h("div", { class: "states" }, PREFIXES.map(stateRow)),
 
     h("h2", {}, "Specs requiring attention"),
@@ -202,16 +210,16 @@ function stateRow(p) {
   return h("div", { class: "state" },
     h("a", { class: "state-name", href: `#/records?type=${p}` }, LABELS[p], h("span", { class: "muted" }, ` ${rs.length}`)),
     h("div", { class: "seg" }, groups.map((g) => h("a", { class: `seg-${g.t}`, href: link(g), style: `flex:${g.n}`, title: `${g.n} ${g.label}` }))),
-    h("div", { class: "seg-legend" }, groups.map((g) => h("a", { href: link(g) }, h("span", { class: `dot ${g.t}` }), `${g.n} ${g.label}`))));
+    h("div", { class: "seg-legend" }, groups.map((g) => h("a", { href: link(g) }, h("ui-dot", { status: g.t }), `${g.n} ${g.label}`))));
 }
 
 function specCard(sp) {
   const reqs = (sp.requirements || []).map((id) => byId[id]).filter(Boolean);
   const pending = reqs.filter((r) => r.status !== "active");
   return h("div", { class: "card" },
-    h("div", {}, rid(sp.id), " ", badge(sp.status), " ", h("span", { class: "badge" }, sp.tier)),
+    h("div", { style: "display:flex;align-items:center;gap:6px;flex-wrap:wrap" }, rid(sp.id), badge(sp.status), h("ui-badge", { variant: "info" }, sp.tier)),
     h("h3", {}, h("a", { href: `#/record/${sp.id}` }, sp.title)),
-    h("div", { class: "bar", title: `${sp.readiness}% of requirements active` }, h("i", { style: `width:${sp.readiness}%` })),
+    h("ui-progress", { value: String(sp.readiness), variant: sp.readiness === 100 ? "success" : "warning", "aria-label": `${sp.readiness}% of requirements active` }),
     h("div", { class: "muted" }, `${reqs.length - pending.length} of ${reqs.length} requirements active`),
     h("ul", { class: "blockers" },
       sp.issues.map((i) => h("li", { class: "bad" }, i)),
@@ -224,7 +232,7 @@ function tasksView() {
   const todo = tasks();
   main.append(h("h1", {}, "Tasks"),
     h("p", { class: "muted" }, "What a human needs to do to move the spec forward, worked out from the records. Each action opens GitHub; CI checks the change."));
-  if (!todo.length) return main.append(h("div", { class: "callout done" }, h("b", {}, "Nothing to do"), h("span", {}, "Every requirement rests on facts and every spec is ready.")));
+  if (!todo.length) return main.append(h("ui-callout", { variant: "success", title: "Nothing to do" }, "Every requirement rests on facts and every spec is ready."));
   for (const [lvl, [title, intro]] of Object.entries(LEVELS)) {
     const group = todo.filter((t) => t.level === lvl);
     if (!group.length) continue;
@@ -241,21 +249,28 @@ function records(params) {
   const type = params.get("type") || "";
   const status = params.get("status") || "";
   const list = h("ul", { class: "list" });
-  const search = h("input", { type: "search", placeholder: "Search id, title or text…", "aria-label": "Search records" });
+  const search = h("ui-input", { type: "search", placeholder: "Search id, title or text…", "aria-label": "Search records" });
   const fill = () => {
-    const q = search.value.toLowerCase();
+    const q = (search.value || "").toLowerCase();
     const rows = data.records.filter((r) => (!type || prefix(r.id) === type) && (!status || effective(r) === status) &&
       (!q || `${r.id} ${r.title} ${r.body}`.toLowerCase().includes(q)));
     list.replaceChildren(...(rows.length ? rows.map((r) => h("li", {}, rid(r.id),
       h("a", { class: "grow", href: `#/record/${r.id}`, style: "color:inherit" }, r.title), badge(r.status)))
       : [h("li", { class: "muted" }, "No records match.")]));
   };
-  search.addEventListener("input", fill);
+  search.addEventListener("ui-input", fill);
   main.append(h("h1", {}, "Records"),
     h("div", { class: "toolbar" },
-      ["", ...PREFIXES].map((p) => h("a", { class: "chip", href: p ? `#/records?type=${p}` : "#/records", "aria-pressed": String(p === type) },
-        p ? `${LABELS[p]} (${ofType(p).length})` : `All (${data.records.length})`)),
-      status ? h("a", { class: "chip filter", href: type ? `#/records?type=${type}` : "#/records", title: "Clear status filter" }, `status: ${status} ×`) : "",
+      ["", ...PREFIXES].map((p) => h("ui-chip", {
+        pressed: p === type,
+        onclick: () => { location.hash = p ? `#/records?type=${p}` : "#/records"; },
+      }, p ? `${LABELS[p]} (${ofType(p).length})` : `All (${data.records.length})`)),
+      status ? h("ui-chip", {
+        variant: "accent",
+        pressed: true,
+        title: "Clear status filter",
+        onclick: () => { location.hash = type ? `#/records?type=${type}` : "#/records"; },
+      }, `status: ${status} ×`) : "",
       search),
     list);
   fill();
@@ -268,12 +283,12 @@ function record(id) {
   const field = (label, value) => value == null || value === "" ? null : [h("dt", {}, label), h("dd", {}, value)];
   main.append(
     h("p", {}, h("a", { href: `#/records?type=${prefix(id)}` }, `← ${LABELS[prefix(id)]}`)),
-    h("div", {}, rid(id), " ", badge(r.status)),
+    h("div", { style: "display:flex;align-items:center;gap:8px;margin-bottom:6px" }, rid(id), badge(r.status)),
     h("h1", {}, r.title),
-    r.issues.length ? h("div", { class: "issues" }, r.issues.map((i) => h("div", {}, i))) : "",
-    h("div", { class: "record-grid" },
+    r.issues.length ? h("ui-callout", { variant: "danger", title: "Validation Issues", style: "margin:12px 0" }, r.issues.map((i) => h("div", {}, i))) : "",
+    h("detail-layout", { style: "margin-top:16px" },
       h("article", { class: "prose", html: markdown(r.body) }),
-      h("aside", {},
+      h("div", { slot: "aside" },
         h("dl", { class: "meta" },
           field("Confidence", r.confidence),
           field("Evidence", r.evidence),
@@ -290,8 +305,8 @@ function record(id) {
           field("Requirements", links(r.requirements)),
           field("Used by", links(usedBy[id])),
           field("Changing this affects", links(r.downstream))),
-        h("p", {},
-          h("a", { class: "btn ghost", href: `#/graph?focus=${id}` }, "Show in graph"), " ",
+        h("p", { style: "display:flex;gap:8px;flex-wrap:wrap;margin-top:12px" },
+          h("a", { class: "btn ghost", href: `#/graph?focus=${id}` }, "Show in graph"),
           h("a", { class: "btn ghost", href: gh(`edit/main/${r.path}`), target: "_blank", rel: "noopener" }, "Edit on GitHub")))));
 }
 
@@ -453,8 +468,8 @@ function graph(params) {
     liveLayer.replaceChildren(...live);
   }
 
-  const search = h("input", { type: "search", class: "graph-search", placeholder: "Find a record…", "aria-label": "Find a record in the graph", autocomplete: "off" });
-  search.addEventListener("input", () => { query = search.value.trim().toLowerCase(); applyHighlight(); });
+  const search = h("ui-input", { type: "search", class: "graph-search", placeholder: "Find a record…", "aria-label": "Find a record in the graph" });
+  search.addEventListener("ui-input", (e) => { query = (e.detail.value || "").trim().toLowerCase(); applyHighlight(); });
   search.addEventListener("keydown", (ev) => {
     if (ev.key === "Enter") {
       const m = matchesOf();
@@ -627,28 +642,40 @@ function capture(kind, params) {
   if (kind === "fact" && byId[params.get("promote")]) values.promoted_from = params.get("promote");
   if (byId[params.get("answers")] && fields.some((f) => f.key === "answers")) values.answers = params.get("answers");
   const id = nextId(def.prefix);
-  const preview = h("pre", { class: "preview" });
+  const preview = h("ui-code-block", { language: "markdown" });
   const submit = h("a", { class: "btn", target: "_blank", rel: "noopener" }, "Propose on GitHub");
-  const status = h("div", { class: "note" });
+  const status = h("div", { class: "note", style: "margin-top:8px" });
   const followUp = h("div");
 
   function control(f) {
     const set = (val) => { values[f.key] = val; store.set(key, values); update(); };
     if (f.type === "checks") {
       return h("fieldset", { class: "field" }, h("legend", {}, f.label),
-        h("div", { class: "checks" }, f.options.length ? f.options.map((o) => h("label", {},
-          h("input", { type: "checkbox", checked: values[f.key].includes(o.value),
-            onchange: (e) => set(e.target.checked ? [...values[f.key], o.value] : values[f.key].filter((x) => x !== o.value)) }), o.label))
-          : h("span", { class: "muted" }, "Nothing to pick yet.")),
+        h("div", { class: "checks" }, f.options.length ? f.options.map((o) => {
+          const cb = h("ui-checkbox", {
+            value: o.value,
+            checked: values[f.key].includes(o.value),
+          }, o.label);
+          cb.addEventListener("ui-change", (e) => {
+            set(e.detail.checked ? [...values[f.key], o.value] : values[f.key].filter((x) => x !== o.value));
+          });
+          return cb;
+        }) : h("span", { class: "muted" }, "Nothing to pick yet.")),
         f.hint && h("small", {}, f.hint));
     }
     const fid = `f-${f.key}`;
-    const input = f.type === "textarea" ? h("textarea", { id: fid, rows: 4, placeholder: f.placeholder })
-      : f.type === "select" ? h("select", { id: fid }, f.options.map((o) => h("option", { value: o.value }, o.label)))
-      : h("input", { id: fid, type: f.type, placeholder: f.placeholder, ...(f.type === "number" ? { min: 0, max: 1, step: 0.05 } : {}) });
-    input.value = values[f.key];
-    input.addEventListener("input", () => set(input.value));
-    return h("div", { class: "field" }, h("label", { for: fid }, f.label), input, f.hint && h("small", {}, f.hint));
+    let input;
+    if (f.type === "textarea") {
+      input = h("ui-textarea", { id: fid, rows: "4", placeholder: f.placeholder || "", value: values[f.key], "aria-label": f.label });
+      input.addEventListener("ui-input", (e) => set(e.detail.value));
+    } else if (f.type === "select") {
+      input = h("ui-select", { id: fid, options: JSON.stringify(f.options), value: values[f.key], "aria-label": f.label });
+      input.addEventListener("ui-change", (e) => set(e.detail.value));
+    } else {
+      input = h("ui-input", { id: fid, type: f.type, placeholder: f.placeholder || "", value: values[f.key], "aria-label": f.label });
+      input.addEventListener("ui-input", (e) => set(e.detail.value));
+    }
+    return h("div", { class: "field" }, h("ui-label", { for: fid }, f.label), input, f.hint && h("small", {}, f.hint));
   }
 
   function update() {
@@ -671,17 +698,21 @@ function capture(kind, params) {
     followUp.replaceChildren(...[built.followUp].flat().filter(Boolean));
   }
 
+  const clearBtn = h("ui-button", { variant: "secondary", size: "md" }, "Clear");
+  clearBtn.addEventListener("ui-press", () => { store.del(key); route(); });
+
   main.append(
     h("h1", {}, `Capture: ${def.label}`),
     h("div", { class: "toolbar" }, Object.entries(CAPTURES).map(([k, d]) =>
-      h("a", { class: "chip", href: `#/capture/${k}`, "aria-pressed": String(k === kind) }, d.label))),
+      h("ui-chip", {
+        pressed: k === kind,
+        onclick: () => { location.hash = `#/capture/${k}`; },
+      }, d.label))),
     h("p", { class: "muted" }, def.intro),
     h("div", { class: "capture" },
       h("form", { onsubmit: (e) => e.preventDefault() }, fields.map(control)),
-      h("div", {}, h("div", { class: "field" }, h("label", {}, `Preview · ${id}`), preview),
-        h("p", {}, submit, " ",
-          h("button", { class: "btn ghost", type: "button", onclick: () => navigator.clipboard?.writeText(preview.textContent.split("\n\n").slice(1).join("\n\n")) }, "Copy"), " ",
-          h("button", { class: "btn ghost", type: "button", onclick: () => { store.del(key); route(); } }, "Clear")),
+      h("div", {}, h("div", { class: "field" }, h("ui-label", {}, `Preview · ${id}`), preview),
+        h("div", { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px" }, submit, clearBtn),
         status, followUp)));
   update();
 }
@@ -733,7 +764,7 @@ function route() {
     else if (section === "capture") capture(arg || "requirement", params);
     else if (section === "tasks") tasksView();
     else notFound();
-    document.querySelectorAll(".top nav a").forEach((a) => {
+    document.querySelectorAll(".top-nav a").forEach((a) => {
       const on = a.dataset.route === section || (section === "record" && a.dataset.route === "records");
       on ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current");
     });
@@ -776,7 +807,7 @@ async function start() {
   for (const r of data.records) for (const up of upstream(r)) (usedBy[up] ||= []).push(r.id);
   document.getElementById("repo-link").href = gh("");
   const all = tasks();
-  if (all.length) document.querySelector('.top nav a[data-route="tasks"]').append(h("span", { class: `count ${all.some((t) => t.level === "fix") ? "fix" : "test"}` }, all.length));
+  if (all.length) document.querySelector('.top-nav a[data-route="tasks"]')?.append(h("span", { class: `count ${all.some((t) => t.level === "fix") ? "fix" : "test"}` }, all.length));
   addEventListener("hashchange", route);
   addEventListener("resize", () => redraw?.());
   route();
