@@ -507,8 +507,9 @@ const CAPTURES = {
     ],
     required: ["title", "statement", "because"],
     build(v) {
-      const shaky = (v.because || []).some((id) => prefix(id) === "ASM");
-      return { status: shaky ? "provisional" : "active", meta: { because: `[${(v.because || []).join(", ")}]` },
+      const because = v.because || [];
+      const shaky = !because.length || because.some((id) => prefix(id) === "ASM");
+      return { status: shaky ? "provisional" : "active", meta: { because: `[${because.join(", ")}]` },
         sections: { Statement: v.statement, Acceptance: v.acceptance } };
     },
   },
