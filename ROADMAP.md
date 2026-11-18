@@ -33,11 +33,11 @@ Small additions that make the chain more truthful:
 - ~~**Fact freshness (`review_after` on `FCT`).**~~ Done: specified by `REQ-0008` and checked by `tools/spec.py check`; flags stale facts as warnings and surfaces them on the dashboard and Tasks queue.
 - ~~**Non-goals on `SPC`.**~~ Done: optional `## Non-goals` section on `SPC` records (`REQ-0005`), rendered before `## Requirements` to tell implementing agents what not to build.
 
-### Phase 2: Bridge to agents
+### Phase 2: Bridge to agents (complete)
 
 - ~~**Playbook workflows for agent extraction, assumption testing, and question resolution.**~~ Done: documented in [`README.md`](README.md#playbook-agent--human-workflows) with copy-pasteable prompts.
 - ~~**Separate tech-stack file (`TECH_STACK.md`) bound at render time.**~~ Done: adopted in both [`TECH_STACK.md`](TECH_STACK.md) and consumer repositories (`lumen`), and bound into rendered specs via `python tools/spec.py render --stack TECH_STACK.md` (`REQ-0005`), keeping `records/` 100% stack-agnostic.
-- **Projection to OpenSpec and Spec Kit** as small renderer functions in `tools/spec.py` (no template engine). Trigger: when a consumer project actively uses OpenSpec or Spec Kit.
+- ~~**Projection to OpenSpec and Spec Kit**~~ Done: `render_openspec` and `render_speckit` in `tools/spec.py` (`--format openspec` / `--format speckit`, `REQ-0005`).
 - ~~**Acceptance criteria with their own IDs and code traceability.**~~ Done: rendered Markdown labels each scenario `**REQ-xxxx#n**` (`REQ-0013`), and `python tools/spec.py check --verify DIR` verifies test/code citations, closing the loop `facts → requirements → specs → tests`.
 
 ### Phase 3: Scale on evidence

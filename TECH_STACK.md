@@ -46,7 +46,7 @@ Together with the rendered specifications (`SPC-0001`, `SPC-0002`, `SPC-0003`), 
 - `readiness(spec: Record, records: dict[str, Record]) -> int`: returns `round(100 * len(active_reqs) / len(reqs))` or `0` if empty.
 - `topo(specs: list[Record], records: dict[str, Record]) -> list[Record]`: orders specs with `skeleton` before `feature` and dependencies before dependents, raising `ValueError("spec dependency cycle: ...")` on cycles.
 - `impact(changed: str, records: dict[str, Record]) -> tuple[list[str], list[Record]]`: returns `(sorted_non_spec_ids, ordered_spec_records)` downstream of `changed`.
-- `render_markdown(spec: Record, records: dict[str, Record], stack: str = "") -> str` and `render_gherkin(spec: Record, records: dict[str, Record], stack: str = "") -> str`.
+- `render_markdown(...)`, `render_gherkin(...)`, `render_openspec(...)`, `render_speckit(spec: Record, records: dict[str, Record], stack: str = "") -> str`.
 - `to_index(records: dict[str, Record]) -> dict`, `verify_traceability(records: dict[str, Record], code_root: Path) -> tuple[list[str], list[str]]`, and `main(argv: list[str] | None = None) -> int`.
 
 ### CLI Subcommands
@@ -65,8 +65,8 @@ Together with the rendered specifications (`SPC-0001`, `SPC-0002`, `SPC-0003`), 
      Changing <ID> affects: <comma-separated sorted non-SPC IDs or 'nothing'>
      Rebuild specs in order: <SPC-ID -> SPC-ID ... or 'none'>
      ```
-3. `python tools/spec.py render [--tier skeleton|feature] [--format markdown|gherkin] [--stack FILE] [--out DIR]`
-   - Default `--format` is `markdown` (`.md`); `gherkin` writes `.feature` files. Default `--out` is `dist`.
+3. `python tools/spec.py render [--tier skeleton|feature] [--format markdown|gherkin|openspec|speckit] [--stack FILE] [--out DIR]`
+   - Default `--format` is `markdown` (`.md`); `gherkin` writes `.feature`, `openspec` writes `.openspec.md`, and `speckit` writes `.speckit.md`. Default `--out` is `dist`.
    - When `--stack FILE` is provided, reads `FILE` (exiting `1` with `unknown stack file <FILE>` if missing) and appends a `## Technology Stack` section to rendered Markdown specs.
    - Writes `<out>/<SPC-ID><ext>` for each matching spec in topological order and prints `wrote <out>/<SPC-ID><ext>`.
 4. `python tools/spec.py index [--out FILE]`
