@@ -254,6 +254,9 @@ def render_markdown(spec: Record, records: dict[str, Record], stack: str = "") -
     if spec.meta.get("depends_on"):
         out += ["Builds on: " + ", ".join(spec.meta["depends_on"]), ""]
     out += [spec.section("Purpose"), ""]
+    non_goals = spec.section("Non-goals")
+    if non_goals:
+        out += ["## Non-goals", "", non_goals, ""]
     out += _asked(spec, records, "##")
     out += ["## Requirements", ""]
     for rid in spec.meta.get("requirements") or []:

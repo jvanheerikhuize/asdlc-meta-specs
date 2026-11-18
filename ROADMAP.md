@@ -31,7 +31,7 @@ Small additions that make the chain more truthful:
 
 - ~~**Open questions (`QST`).**~~ Done: included in the core model (`REQ-0007`, part of `SPC-0001`). Without `QST`, the only way to record an unknown is to invent a guess (`ASM`). Resolving ambiguity before coding measurably improves generated code (`FCT-0003`, ClarifyGPT).
 - ~~**Fact freshness (`review_after` on `FCT`).**~~ Done: specified by `REQ-0008` and checked by `tools/spec.py check`; flags stale facts as warnings and surfaces them on the dashboard and Tasks queue.
-- **Non-goals on `SPC`.** One optional section or field that tells implementing agents what *not* to build, preventing scope creep during autonomous runs.
+- ~~**Non-goals on `SPC`.**~~ Done: optional `## Non-goals` section on `SPC` records (`REQ-0005`), rendered before `## Requirements` to tell implementing agents what not to build.
 
 ### Phase 2: Bridge to agents
 
