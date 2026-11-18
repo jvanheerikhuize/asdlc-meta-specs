@@ -203,6 +203,39 @@ Preview locally:
 python tools/spec.py index && python -m http.server -d site 8000
 ```
 
+---
+
+### 7. Clean-room rewrite from specs alone
+
+Test whether the specification corpus and `TECH_STACK.md` are genuinely self-contained by having a fresh agent with no prior context rebuild the application from scratch in an isolated directory.
+
+1. Render the specs with `TECH_STACK.md` bound, then copy only `dist/`, `records/`, `TECH_STACK.md`, and `requirements.txt` into a clean directory (leaving out `tools/`, `site/`, `tests/`, and `.github/`):
+   ```bash
+   python tools/spec.py render --stack TECH_STACK.md
+   mkdir -p /tmp/asdlc-clean-room
+   cp -r dist records TECH_STACK.md requirements.txt /tmp/asdlc-clean-room/
+   ```
+2. Open a brand-new agent session in `/tmp/asdlc-clean-room` (with no access to the original repository) and give it the prompt below.
+3. Verify the rebuilt repository passes `python tools/spec.py check --strict --verify tests`, `python -m unittest discover -s tests -v`, and `python tools/spec.py index`.
+
+**Example prompt:**
+
+```text
+Build this application from scratch using only `TECH_STACK.md`, `requirements.txt`, `dist/SPC-*.md`, and `records/`:
+
+1. Read `TECH_STACK.md` and the rendered specifications in topological order (`dist/SPC-0001.md`, then `dist/SPC-0002.md`, then `dist/SPC-0003.md`). Do not look up or reference any external implementation.
+2. Build each spec tier in order:
+   - `SPC-0001` (skeleton): `tools/spec.py` record loader, `check`, `impact`, and topological ordering.
+   - `SPC-0002` (feature): `render` (`markdown`, `gherkin`, `openspec`, `speckit`, `--tier`, `--stack`), `index`, stack-term guardrails, and `--verify` scenario traceability.
+   - `SPC-0003` (feature): zero-build static web workspace in `site/` (`index.html`, `app.js`, `styles.css`).
+3. Write `tests/test_spec.py` covering every acceptance scenario in `records/REQ-*.md`, citing `REQ-xxxx` / `REQ-xxxx#n` in the tests.
+4. Do not modify `records/` unless a genuine specification gap blocks implementation; if you hit a gap, stop and report it.
+5. Verify everything passes:
+   - `python3 tools/spec.py check --strict --verify tests`
+   - `python3 -m unittest discover -s tests -v`
+   - `python3 tools/spec.py index`
+```
+
 ## Layout
 
 ```text
