@@ -48,9 +48,9 @@ This directory preserves independent technical, corpus, and research audits of `
 | :--- | :--- | :--- | :--- |
 | `B01` | P1 | Live corpus expected to stay all-active/green in `test_index_has_everything_the_site_reads` (`REQ-0007`, `REQ-0009`) | **Resolved in Pass 1** (`tests/test_spec.py` decoupled from live active state using synthetic fixtures) |
 | `B02` | P1 | Blocked or provisional requirement without scenarios vanishes from Gherkin output (`REQ-0004`, `REQ-0005`, `REQ-0007`) | **Resolved in Pass 1** (`REQ-0005`, `render_gherkin` preserves scenario-less requirements and blockers as Gherkin comments) |
-| `B03` | P1 | `--verify` measures text citation coverage rather than executed behavioral passes (`REQ-0004`, `REQ-0010`–`REQ-0013`) | **Open (Pass 2)** |
+| `B03` | P1 | `--verify` measures text citation coverage rather than executed behavioral passes (`REQ-0004`, `REQ-0010`–`REQ-0013`) | **Resolved in Pass 2 (scope clarified):** `--verify` documented as citation coverage; executed-test binding remains an intentional boundary |
 | `B04` | P1 | Shape guards allow empty `## Statement` on requirements or empty `## How we validate it` on assumptions (`REQ-0001`, `REQ-0002`, `REQ-0003`, `REQ-0007`) | **Resolved in Pass 1** (`REQ-0001`, `check()` in `tools/spec.py`) |
-| `B05` | P2 | Freshness has two clocks: strict `YYYY-MM-DD` date grammar and index `generated_at` / source SHA (`REQ-0008`–`REQ-0010`) | **Partially resolved in Pass 1** (`tools/spec.py` enforces strict `YYYY-MM-DD` regex; `generated_at` & UI alignment in Pass 2) |
-| `B06` | P2 | Local eligibility vs dependency-wide readiness and UI badge copy (`REQ-0002`, `REQ-0003`, `REQ-0007`) | **Open (Pass 2)** |
-| `B07` | P2 | Corpus calibration for `FCT-0001` (150ms benchmark) and `FCT-0005` (dated clean-room PR boundaries) | **Open (Pass 2)** |
+| `B05` | P2 | Freshness has two clocks: strict `YYYY-MM-DD` date grammar and index `generated_at` / source SHA (`REQ-0008`–`REQ-0010`) | **Resolved in Pass 1 & 2** (`tools/spec.py` strict `YYYY-MM-DD` regex, `generated_at` & `revision` in `to_index()`, displayed in `site/app.js`) |
+| `B06` | P2 | Local eligibility vs dependency-wide readiness and UI badge copy (`REQ-0002`, `REQ-0003`, `REQ-0007`) | **Resolved in Pass 2** (`site/app.js` uses `Local eligibility` and `Locally active`; `check()` warns when spec-blocking `QST` is answered by open `ASM`) |
+| `B07` | P2 | Corpus calibration for `FCT-0001` (150ms benchmark) and `FCT-0005` (dated clean-room PR boundaries) | **Resolved in Pass 2** (`FCT-0001` bounded to observed runs; `FCT-0005` dated to PR #15 / PR #17 snapshots) |
 

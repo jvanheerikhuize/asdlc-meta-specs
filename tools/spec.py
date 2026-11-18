@@ -14,7 +14,7 @@ import os
 import re
 import subprocess
 import sys
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import yaml
@@ -175,6 +175,8 @@ def check(records: dict[str, Record]) -> tuple[list[str], list[str]]:
                 for b in blocked:
                     if b in records and records[b].prefix == "REQ" and answer not in (records[b].meta.get("because") or []):
                         warn(r, f"answered by {answer}, but {b} does not cite it in 'because'")
+                    if b in records and records[b].prefix == "SPC" and records[answer].prefix == "ASM" and records[answer].status == "open":
+                        warn(r, f"answered by open assumption {answer}, which is not yet validated")
 
         # 4. Epistemic gate: a requirement is only as solid as what it rests on
         if r.prefix == "REQ":
@@ -458,6 +460,15 @@ def github_repo() -> str:
     return m.group(1) if m else ""
 
 
+def git_revision() -> str:
+    """Short git commit SHA for the published index, if available."""
+    try:
+        return subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT,
+                              capture_output=True, text=True, check=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return ""
+
+
 def to_index(records: dict[str, Record]) -> dict:
     """Everything the Pages site needs, in one JSON document."""
     errors, warnings = check(records)
@@ -489,6 +500,8 @@ def to_index(records: dict[str, Record]) -> dict:
         rows.append(row)
     return {
         "repo": github_repo(),
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "revision": git_revision(),
         "summary": {"records": len(records), "errors": len(errors), "warnings": len(warnings)},
         "issues": global_issues,
         "spec_order": [s.id for s in topo(specs, records)] if not errors else sorted(s.id for s in specs),
@@ -501,7 +514,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("check")
     c.add_argument("--strict", action="store_true", help="treat warnings as errors")
-    c.add_argument("--verify", help="verify active requirements against test/code citations in DIR")
+    c.add_argument("--verify", help="check citation coverage for active requirements and numbered scenarios in DIR")
     i = sub.add_parser("impact")
     i.add_argument("id")
     r = sub.add_parser("render")

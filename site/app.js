@@ -165,6 +165,7 @@ function dashboard() {
 
   main.append(
     h("h1", {}, "Dashboard"),
+    data.generated_at ? h("p", { class: "muted" }, `Index generated ${data.generated_at}${data.revision ? ` (${data.revision})` : ""}`) : "",
     todo.length || data.summary?.errors
       ? h("a", { class: `callout ${per("fix") || data.summary?.errors ? "bad" : "wait"}`, href: "#/tasks" },
           h("b", {}, `${todo.length || data.summary.errors} task${(todo.length || data.summary.errors) > 1 ? "s" : ""} need you`),
@@ -177,8 +178,8 @@ function dashboard() {
     h("div", { class: "states" }, PREFIXES.map(stateRow)),
 
     h("h2", {}, "Specs requiring attention"),
-    attention.length ? h("div", { class: "cards" }, attention.map(specCard)) : h("p", { class: "muted" }, "None. All specs are ready."),
-    fine.length ? h("p", { class: "muted" }, "Ready: ", idList(fine), " ✓") : "",
+    attention.length ? h("div", { class: "cards" }, attention.map(specCard)) : h("p", { class: "muted" }, "None. All specs are locally active."),
+    fine.length ? h("p", { class: "muted" }, "Locally active: ", idList(fine), " ✓") : "",
 
     h("h2", {}, "What's holding things back"),
     open.length
@@ -273,7 +274,7 @@ function record(id) {
           field("Evidence", r.evidence),
           field("Review after", r.review_after),
           field("Tier", r.tier),
-          field("Readiness", r.readiness != null ? `${r.readiness}%` : null),
+          field("Local eligibility", r.readiness != null ? `${(r.requirements || []).filter((reqId) => byId[reqId]?.status === "active").length}/${(r.requirements || []).length} direct requirements active (${r.readiness}%)` : null),
           field("Promoted from", r.promoted_from && rid(r.promoted_from)),
           field("Promoted to", r.promoted_to && rid(r.promoted_to)),
           field("Answered by", r.answered_by && rid(r.answered_by)),

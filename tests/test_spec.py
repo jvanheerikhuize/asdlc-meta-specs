@@ -175,6 +175,12 @@ class QuestionTest(unittest.TestCase):
                             QST_0001=qst("answered", extra="answered_by: FCT-0002\n")).check()
         self.assertTrue(any("does not cite" in w for w in warnings))
 
+    def test_spec_question_answered_by_open_assumption_warns(self):  # REQ-0007
+        _, warnings = Graph(FCT_0001=FACT, ASM_0001=asm("open"), REQ_0001=req(),
+                            SPC_0001=spc("SPC-0001", "skeleton", "[REQ-0001]", status="active"),
+                            QST_0001=qst("answered", blocks="[SPC-0001]", extra="answered_by: ASM-0001\n")).check()
+        self.assertTrue(any("open assumption ASM-0001" in w for w in warnings))
+
     def test_question_must_block_something(self):
         errors, _ = Graph(QST_0001=qst(blocks="[]")).check()
         self.assertTrue(any("blocks" in e for e in errors))
@@ -269,6 +275,8 @@ class RenderTest(unittest.TestCase):
 class IndexTest(unittest.TestCase):
     def test_index_has_everything_the_site_reads(self):  # REQ-0009
         index = spec.to_index(spec.load())
+        self.assertIn("generated_at", index)
+        self.assertIn("revision", index)
         self.assertEqual(index["summary"]["errors"], 0)
         self.assertEqual(index["issues"], [])
         self.assertGreaterEqual(len(index["spec_order"]), 1)
