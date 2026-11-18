@@ -17,27 +17,27 @@ flowchart LR
     P2 --> P3["3 · Scale on evidence"]
 ```
 
-### Phase 0: Use it (in progress)
+### Phase 0: Use it (complete)
 
 Run real projects on the record model, extract existing repositories into `records/`, and close out this repo's own open items:
 
 - ~~**Extract a production application corpus.**~~ Done: applied to a real self-hosted media appliance (`lumen`, 36 records across 1 `skeleton` and 4 `feature` specs, passing `tools/spec.py check --strict` with 0 errors and 0 warnings).
-- ~~**Interactive lineage & task triage in the workspace.**~~ Done: the static workspace (`site/`) derives actionable queues (*fix now*, *answer questions*, *test assumptions*, *quick wins*) and provides interactive left-to-right graph lineage focus.
-- ~~**Settle this repo's own open grounds.**~~ Done: all initial assumptions (`ASM-0001`..`ASM-0004`) promoted to facts (`FCT-0001`, `FCT-0005`..`FCT-0007`), questions answered (`QST-0001`..`QST-0002`), bringing both `SPC-0001` and `SPC-0002` to 100% active readiness.
+- ~~**Interactive lineage & task triage in the workspace.**~~ Done: the static workspace (`site/`, specified by `SPC-0003`) derives actionable queues (*fix now*, *answer questions*, *test assumptions*, *quick wins*) and provides interactive left-to-right graph lineage focus.
+- ~~**Settle this repo's own open grounds & verify self-recreation.**~~ Done: all initial assumptions (`ASM-0001`..`ASM-0004`) promoted to facts (`FCT-0001`, `FCT-0005`..`FCT-0007`), questions answered (`QST-0001`..`QST-0002`), and the 30-record corpus (`SPC-0001`..`SPC-0003` + `TECH_STACK.md`) verified via clean-room blind reconstruction.
 
 ### Phase 1: Sharpen the axiom
 
 Small additions that make the chain more truthful:
 
 - ~~**Open questions (`QST`).**~~ Done: included in the core model (`REQ-0007`, part of `SPC-0001`). Without `QST`, the only way to record an unknown is to invent a guess (`ASM`). Resolving ambiguity before coding measurably improves generated code (`FCT-0003`, ClarifyGPT).
-- ~~**Fact freshness (`review_after` on `FCT`).**~~ Done: checked by `tools/spec.py check`, flags stale facts as warnings, surfaces on dashboard and Tasks queue.
+- ~~**Fact freshness (`review_after` on `FCT`).**~~ Done: specified by `REQ-0008` and checked by `tools/spec.py check`; flags stale facts as warnings and surfaces them on the dashboard and Tasks queue.
 - **Non-goals on `SPC`.** One optional section or field that tells implementing agents what *not* to build, preventing scope creep during autonomous runs.
 
 ### Phase 2: Bridge to agents
 
 - ~~**Playbook workflows for agent extraction, assumption testing, and question resolution.**~~ Done: documented in [`README.md`](README.md#playbook-agent--human-workflows) with copy-pasteable prompts.
-- **Separate tech-stack file (`TECH_STACK.md`) bound at render time.** Proven as a convention in consumer repositories (`TECH_STACK.md` alongside `records/` keeps all 36 records in `lumen` 100% stack-agnostic). Next step: optional `--stack TECH_STACK.md` injection in `tools/spec.py render` once a second stack re-implementation validates `ASM-0004`.
-- **Projection to OpenSpec and Spec Kit** as small renderer functions in `tools/spec.py` (no template engine). Trigger: `QST-0002` answered and `ASM-0003` validated against a live consumer tool.
+- ~~**Separate tech-stack file (`TECH_STACK.md`) bound at render time.**~~ Done: adopted in both [`TECH_STACK.md`](TECH_STACK.md) and consumer repositories (`lumen`), and bound into rendered specs via `python tools/spec.py render --stack TECH_STACK.md` (`REQ-0005`), keeping `records/` 100% stack-agnostic.
+- **Projection to OpenSpec and Spec Kit** as small renderer functions in `tools/spec.py` (no template engine). Trigger: when a consumer project actively uses OpenSpec or Spec Kit.
 - **Acceptance criteria with their own IDs and code traceability.** Once tests in an implementing repo can cite `REQ-0001#1`, `tools/spec.py check` can report which active requirements lack passing code verification, closing the loop `facts → requirements → specs → tests`.
 
 ### Phase 3: Scale on evidence
