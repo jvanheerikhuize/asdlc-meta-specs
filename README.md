@@ -220,4 +220,4 @@ asdlc-meta-specs/
 
 ## Self-specification & Roadmap
 
-The records in [`records/`](records/) specify this repository itself: `SPC-0001` (`skeleton`) is 100% grounded in facts and `active`. `SPC-0002` (`feature`) is now 67% ready: `ASM-0002` and `ASM-0004` have been validated into facts (`FCT-0005`, `FCT-0006`), `QST-0002` has been answered by `FCT-0004`, leaving only `ASM-0003` to validate before full activation. See [ROADMAP.md](ROADMAP.md) for the next steps.
+The records in [`records/`](records/) specify this repository itself: both `SPC-0001` (`skeleton`) and `SPC-0002` (`feature`) are 100% grounded in verified facts and `active`. Every initial open assumption (`ASM-0001`..`ASM-0004`) has been validated into facts (`FCT-0001`, `FCT-0005`..`FCT-0007`) and all open questions (`QST-0001`..`QST-0002`) are answered. See [ROADMAP.md](ROADMAP.md) for the next evolution steps.

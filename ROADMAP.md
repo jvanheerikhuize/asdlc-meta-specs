@@ -23,14 +23,14 @@ Run real projects on the record model, extract existing repositories into `recor
 
 - ~~**Extract a production application corpus.**~~ Done: applied to a real self-hosted media appliance (`lumen`, 36 records across 1 `skeleton` and 4 `feature` specs, passing `tools/spec.py check --strict` with 0 errors and 0 warnings).
 - ~~**Interactive lineage & task triage in the workspace.**~~ Done: the static workspace (`site/`) derives actionable queues (*fix now*, *answer questions*, *test assumptions*, *quick wins*) and provides interactive left-to-right graph lineage focus.
-- **Settle this repo's own open grounds.** Progress: `ASM-0002` promoted to `FCT-0005`, `ASM-0004` promoted to `FCT-0006`, and `QST-0002` answered by `FCT-0004`. `SPC-0002` (*Rendering and guardrails*) is now 67% ready, with only `ASM-0003` remaining to validate.
+- ~~**Settle this repo's own open grounds.**~~ Done: all initial assumptions (`ASM-0001`..`ASM-0004`) promoted to facts (`FCT-0001`, `FCT-0005`..`FCT-0007`), questions answered (`QST-0001`..`QST-0002`), bringing both `SPC-0001` and `SPC-0002` to 100% active readiness.
 
 ### Phase 1: Sharpen the axiom
 
 Small additions that make the chain more truthful:
 
 - ~~**Open questions (`QST`).**~~ Done: included in the core model (`REQ-0007`, part of `SPC-0001`). Without `QST`, the only way to record an unknown is to invent a guess (`ASM`). Resolving ambiguity before coding measurably improves generated code (`FCT-0003`, ClarifyGPT).
-- **Fact freshness (`review_after` on `FCT`).** Facts about the world decay (traffic, latency, external APIs, regulations). A fact past its review date turns amber on the dashboard and appears in the Tasks queue.
+- ~~**Fact freshness (`review_after` on `FCT`).**~~ Done: checked by `tools/spec.py check`, flags stale facts as warnings, surfaces on dashboard and Tasks queue.
 - **Non-goals on `SPC`.** One optional section or field that tells implementing agents what *not* to build, preventing scope creep during autonomous runs.
 
 ### Phase 2: Bridge to agents

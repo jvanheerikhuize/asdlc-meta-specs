@@ -1,8 +1,9 @@
 ---
 id: ASM-0003
 title: A single record graph can feed any spec-driven tool through small renderers
-status: open
+status: validated
 confidence: 0.7
+promoted_to: FCT-0007
 ---
 
 ## Statement

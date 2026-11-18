@@ -101,6 +101,17 @@ class CheckTest(unittest.TestCase):
                   SPC_0002=spc("SPC-0002", "feature", "[REQ-0001]", "[SPC-0001]"))
         self.assertTrue(any("cycle" in e for e in g.check()[0]))
 
+    def test_fact_freshness_warns_when_stale(self):
+        stale_fact = FACT.replace("status: active", "status: active\nreview_after: 2020-01-01")
+        errors, warnings = Graph(FCT_0001=stale_fact, REQ_0001=req()).check()
+        self.assertEqual(errors, [])
+        self.assertTrue(any("past review date" in w for w in warnings))
+
+    def test_fact_freshness_invalid_date_fails(self):
+        bad_fact = FACT.replace("status: active", "status: active\nreview_after: not-a-date")
+        errors, warnings = Graph(FCT_0001=bad_fact, REQ_0001=req()).check()
+        self.assertTrue(any("invalid review_after date" in e for e in errors))
+
 
 class QuestionTest(unittest.TestCase):
     def test_open_question_keeps_requirement_provisional(self):  # REQ-0007

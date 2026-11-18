@@ -14,6 +14,7 @@ import os
 import re
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 
 import yaml
@@ -112,6 +113,14 @@ def check(records: dict[str, Record]) -> tuple[list[str], list[str]]:
             source = r.meta.get("promoted_from")
             if source in records and records[source].status != "validated":
                 err(r, f"promoted from {source}, which is not validated")
+            review = r.meta.get("review_after")
+            if review:
+                try:
+                    review_date = date.fromisoformat(str(review))
+                    if date.today() > review_date:
+                        warn(r, f"fact is past review date {review_date.isoformat()} and may be stale")
+                except ValueError:
+                    err(r, f"invalid review_after date format {review!r} (expected YYYY-MM-DD)")
 
         # 3. Open questions: a gap we know about, with no candidate answer yet
         if r.prefix == "QST":
