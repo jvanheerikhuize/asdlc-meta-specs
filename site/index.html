@@ -12,22 +12,20 @@
   <script type="module" src="app.js"></script>
 </head>
 <body>
-  <page-shell>
-    <ui-navbar id="navbar" slot="header">
-      <a class="brand" slot="brand" href="#/">ASDLC <span>Meta-Specs</span></a>
-      <nav slot="nav" class="top-nav" aria-label="Primary">
-        <a href="#/" data-route="">Dashboard</a>
-        <a href="#/tasks" data-route="tasks">Tasks</a>
-        <a href="#/graph" data-route="graph">Graph</a>
-        <a href="#/records" data-route="records">Records</a>
-        <a href="#/capture/requirement" data-route="capture">Capture</a>
-      </nav>
-    </ui-navbar>
-    <main id="main" tabindex="-1"><p class="muted">Loading…</p></main>
-    <footer slot="footer" class="foot">
-      <span>Facts → requirements → specs.</span>
-      <a id="repo-link" href="#">Repository</a>
-    </footer>
-  </page-shell>
+  <ui-navbar id="navbar">
+    <a class="brand" slot="brand" href="#/">ASDLC <span>Meta-Specs</span></a>
+    <nav slot="nav" class="top-nav" aria-label="Primary">
+      <a href="#/" data-route="">Dashboard</a>
+      <a href="#/tasks" data-route="tasks">Tasks</a>
+      <a href="#/graph" data-route="graph">Graph</a>
+      <a href="#/records" data-route="records">Records</a>
+      <a href="#/capture/requirement" data-route="capture">Capture</a>
+    </nav>
+  </ui-navbar>
+  <main id="main" tabindex="-1"><p class="muted">Loading…</p></main>
+  <footer class="foot">
+    <span>Facts → requirements → specs.</span>
+    <a id="repo-link" href="#">Repository</a>
+  </footer>
 </body>
 </html>
