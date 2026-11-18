@@ -10,10 +10,10 @@ Together with the rendered specifications (`SPC-0001`, `SPC-0002`, `SPC-0003`), 
 
 | Layer | Technology | Role |
 | :--- | :--- | :--- |
-| **CLI & Checker (`tools/spec.py`)** | **Python 3.10+** + **`PyYAML`** (`requirements.txt`) | Single-file CLI (~400 LOC) implementing `check`, `impact`, `render`, and `index`. Uses only the Python standard library (`argparse`, `datetime.date`, `json`, `os`, `pathlib`, `re`, `subprocess`, `sys`) plus `yaml.safe_load`. |
+| **CLI & Checker (`tools/spec.py`)** | **Python 3.10+** + **`PyYAML`** (`requirements.txt`) | Single-file CLI (~510 LOC) implementing `check`, `impact`, `render`, and `index`. Uses only the Python standard library (`argparse`, `datetime.date`, `json`, `os`, `pathlib`, `re`, `subprocess`, `sys`) plus `yaml.safe_load`. |
 | **Automated Test Suite (`tests/test_spec.py`)** | **Python `unittest`** | Unit and acceptance test suite executed via `python3 -m unittest discover -s tests -v`. |
 | **Static Web Workspace (`site/`)** | **HTML5 (`site/index.html`)**, **Vanilla ES Module (`site/app.js`)**, **CSS3 (`site/styles.css`)** | Zero-build single-page application served statically (GitHub Pages or `python3 -m http.server -d site 8000`), reading `site/data/index.json`. |
-| **CI / CD (`.github/workflows/`)** | **GitHub Actions** | Runs `python tools/spec.py check --strict` and `python -m unittest discover -s tests -v` on every push/PR, and deploys `site/` to GitHub Pages on `main`. |
+| **CI / CD (`.github/workflows/`)** | **GitHub Actions** | Runs `python tools/spec.py check --strict --verify tests` and `python -m unittest discover -s tests -v` on every push/PR, and deploys `site/` to GitHub Pages on `main`. |
 
 ---
 
@@ -78,7 +78,7 @@ Together with the rendered specifications (`SPC-0001`, `SPC-0002`, `SPC-0003`), 
 ```json
 {
   "repo": "owner/name",
-  "summary": { "records": 30, "errors": 0, "warnings": 0 },
+  "summary": { "records": 31, "errors": 0, "warnings": 0 },
   "spec_order": ["SPC-0001", "SPC-0002", "SPC-0003"],
   "records": [
     {
@@ -96,8 +96,9 @@ Together with the rendered specifications (`SPC-0001`, `SPC-0002`, `SPC-0003`), 
   ]
 }
 ```
+- `repo` is resolved by `github_repo()` from `GITHUB_REPOSITORY` or `git remote get-url origin` (`owner/name`).
 - `created_at` and `updated_at` front-matter keys are omitted from `records` entries.
-- Specs additionally carry `"readiness": <0..100>` and `"open_questions": [...]`.
+- `REQ` and `SPC` entries carry `"open_questions": [...]`; `SPC` entries additionally carry `"readiness": <0..100>`.
 - Any check errors/warnings for a record are attached to its `"issues"` list as `"error: <msg>"` or `"warning: <msg>"` (matching `name[:8]` against `r.id`).
 
 ---
@@ -107,7 +108,8 @@ Together with the rendered specifications (`SPC-0001`, `SPC-0002`, `SPC-0003`), 
 - **`site/index.html`**: Sticky glass top bar with brand link (`#/`), 5 primary navigation links (`Dashboard` `#/`, `Tasks` `#/tasks`, `Graph` `#/graph`, `Records` `#/records`, `Capture` `#/capture/requirement`), `#theme-toggle` button (`Theme: System` / `Light` / `Dark`), `<main id="main" tabindex="-1">`, and footer with `#repo-link`.
 - **`site/app.js`**:
   - Fetches `data/index.json` (`cache: "no-cache"`), builds lookup maps (`byId`, `askedBy`, `usedBy`), attaches a badge with total task count to the `Tasks` nav link, and routes on `location.hash`.
-  - Uses `localStorage` under prefix `asdlc:` (`asdlc:theme` and `asdlc:capture:<kind>`).
+  - Uses `localStorage` keys `"theme"` and `"capture:<kind>"`.
+  - Links record edits to `https://github.com/<repo>/edit/main/<path>` and new record proposals to `https://github.com/<repo>/new/main?filename=<path>&value=<content>`.
   - Uses `document.startViewTransition` when switching top-level routes unless `prefers-reduced-motion: reduce` is active.
   - Implements the 5 views specified in `SPC-0003` (`dashboard`, `tasksView`, `graph`, `records`/`record`, `capture`).
-- **`site/styles.css`**: CSS custom properties for light/dark color tokens (`--bg`, `--fg`, `--card`, `--line`, `--done`, `--wait`, `--bad`, `--off`, `--dep`), responsive grid layouts, `.glass` backdrop blur, and z-index layering for the interactive graph (`.graph.focus .node.lit`, `.edges-base`, `.edges-live`).
+- **`site/styles.css`**: CSS custom properties for light/dark color tokens (`--bg`, `--surface`, `--text`, `--muted`, `--line`, `--bad`, `--soft`, `--fact`, `--assume`, `--question`, `--spec`, `--accent`), responsive grid layouts, `.glass` backdrop blur, and z-index layering for the interactive graph (`.graph.focus .node.lit`, `.edges-base`, `.edges-live`).
