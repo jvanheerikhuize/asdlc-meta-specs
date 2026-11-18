@@ -46,8 +46,9 @@ Together with the rendered specifications (`SPC-0001`, `SPC-0002`, `SPC-0003`), 
 - `readiness(spec: Record, records: dict[str, Record]) -> int`: returns `round(100 * len(active_reqs) / len(reqs))` or `0` if empty.
 - `topo(specs: list[Record], records: dict[str, Record]) -> list[Record]`: orders specs with `skeleton` before `feature` and dependencies before dependents, raising `ValueError("spec dependency cycle: ...")` on cycles.
 - `impact(changed: str, records: dict[str, Record]) -> tuple[list[str], list[Record]]`: returns `(sorted_non_spec_ids, ordered_spec_records)` downstream of `changed`.
-- `render_markdown(...)`, `render_gherkin(...)`, `render_openspec(...)`, `render_speckit(spec: Record, records: dict[str, Record], stack: str = "") -> str`.
-- `to_index(records: dict[str, Record]) -> dict`, `verify_traceability(records: dict[str, Record], code_root: Path) -> tuple[list[str], list[str]]`, and `main(argv: list[str] | None = None) -> int`.
+- `render_markdown(...)`, `render_gherkin(...)`, `render_openspec(...)`, `render_speckit(spec: Record, records: dict[str, Record], stack: str = "") -> str`: all Markdown-family renderers (`markdown`, `openspec`, `speckit`) accept optional `stack` text and append `## Technology Stack` when provided.
+- `to_index(records: dict[str, Record]) -> dict`: dates parsed from front-matter (such as `review_after` parsed by PyYAML as `datetime.date`) are formatted as ISO `YYYY-MM-DD` strings before JSON serialization.
+- `verify_traceability(records: dict[str, Record], code_root: Path) -> tuple[list[str], list[str]]`, and `main(argv: list[str] | None = None) -> int`.
 
 ### CLI Subcommands
 
