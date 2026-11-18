@@ -6,7 +6,7 @@ because: [FCT-0005]
 ---
 
 ## Statement
-A requirement MUST have at least one Given/When/Then scenario before it can become `active`.
+A requirement MUST have at least one Given/When/Then scenario before it can become `active` (failing with `active requirement needs at least one Given/When/Then ...`).
 
 ## Acceptance
 - Given an `active` requirement with no scenario
