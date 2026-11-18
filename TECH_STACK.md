@@ -37,6 +37,7 @@ Together with the rendered specifications (`SPC-0001`, `SPC-0002`, `SPC-0003`), 
 ### Python Module API (`tools/spec.py`)
 
 - `TYPES = {"ASM": "assumption", "FCT": "fact", "QST": "question", "REQ": "requirement", "SPC": "spec"}`
+- `valid_scenario(sc: list[str]) -> bool`: verifies that each scenario step starts with `Given`, `When`, `Then`, `And`, or `But` and includes at least one `Given`, `When`, and `Then` step.
 - `class Record(path: Path, meta: dict, body: str)`:
   - Attributes: `self.path`, `self.meta`, `self.body`, `self.id = str(meta.get("id", ""))`, `self.prefix = self.id[:3]`, `self.status = meta.get("status")`, `self.title = meta.get("title", "")`.
   - Methods: `links() -> list[str]`, `section(heading: str) -> str`, `scenarios() -> list[list[str]]` (splits `## Acceptance` on blank lines and strips leading `-`).
@@ -46,15 +47,15 @@ Together with the rendered specifications (`SPC-0001`, `SPC-0002`, `SPC-0003`), 
 - `readiness(spec: Record, records: dict[str, Record]) -> int`: returns `round(100 * len(active_reqs) / len(reqs))` or `0` if empty.
 - `topo(specs: list[Record], records: dict[str, Record]) -> list[Record]`: orders specs with `skeleton` before `feature` and dependencies before dependents, raising `ValueError("spec dependency cycle: ...")` on cycles.
 - `impact(changed: str, records: dict[str, Record]) -> tuple[list[str], list[Record]]`: returns `(sorted_non_spec_ids, ordered_spec_records)` downstream of `changed`.
-- `render_markdown(...)`, `render_gherkin(...)`, `render_openspec(...)`, `render_speckit(spec: Record, records: dict[str, Record], stack: str = "") -> str`: all Markdown-family renderers (`markdown`, `openspec`, `speckit`) accept optional `stack` text and append `## Technology Stack` when provided.
-- `to_index(records: dict[str, Record]) -> dict`: dates parsed from front-matter (such as `review_after` parsed by PyYAML as `datetime.date`) are formatted as ISO `YYYY-MM-DD` strings before JSON serialization.
+- `render_markdown(...)`, `render_gherkin(...)`, `render_openspec(...)`, `render_speckit(spec: Record, records: dict[str, Record], stack: str = "") -> str`: all Markdown-family renderers (`markdown`, `openspec`, `speckit`) accept optional `stack` text and append `## Technology Stack` when provided, and all four renderers surface spec-level and requirement-level open questions.
+- `to_index(records: dict[str, Record]) -> dict`: dates parsed from front-matter (such as `review_after` parsed by PyYAML as `datetime.date`) are formatted as ISO `YYYY-MM-DD` strings before JSON serialization, and global diagnostics not tied to a single record ID are preserved in top-level `"issues"`.
 - `verify_traceability(records: dict[str, Record], code_root: Path) -> tuple[list[str], list[str]]`, and `main(argv: list[str] | None = None) -> int`.
 
 ### CLI Subcommands
 
 1. `python tools/spec.py check [--strict] [--verify DIR]`
    - Prints `WARN  <filename>: <message>` for each warning and `ERROR <filename>: <message>` for each error.
-   - When `--verify DIR` is passed, scans `DIR` for `REQ-xxxx` / `REQ-xxxx#n` citations, errors on out-of-range scenario IDs, and warns on uncited active requirements or scenarios.
+   - When `--verify DIR` is passed, scans `DIR` for `REQ-xxxx` / `REQ-xxxx#n` citations, errors on unknown requirement IDs or out-of-range scenario IDs, and warns on uncited active requirements or scenarios.
    - Prints summary line: `<N> records · <E> errors · <W> warnings`.
    - If `errors == 0`, prints each spec in topological order (`skeleton` before `feature`, breaking ties by ID):
      `  <SPC-ID> [<tier:<8>] <readiness:>3}% ready  <title>`
@@ -80,6 +81,7 @@ Together with the rendered specifications (`SPC-0001`, `SPC-0002`, `SPC-0003`), 
 {
   "repo": "owner/name",
   "summary": { "records": 31, "errors": 0, "warnings": 0 },
+  "issues": [],
   "spec_order": ["SPC-0001", "SPC-0002", "SPC-0003"],
   "records": [
     {
@@ -98,9 +100,9 @@ Together with the rendered specifications (`SPC-0001`, `SPC-0002`, `SPC-0003`), 
 }
 ```
 - `repo` is resolved by `github_repo()` from `GITHUB_REPOSITORY` or `git remote get-url origin` (`owner/name`).
-- `created_at` and `updated_at` front-matter keys are omitted from `records` entries.
+- `created_at` and `updated_at` front-matter keys are omitted from `records` entries; any `datetime.date` front-matter values (such as unquoted `review_after`) are converted to ISO `YYYY-MM-DD` strings.
 - `REQ` and `SPC` entries carry `"open_questions": [...]`; `SPC` entries additionally carry `"readiness": <0..100>`.
-- Any check errors/warnings for a record are attached to its `"issues"` list as `"error: <msg>"` or `"warning: <msg>"` (matching `name[:8]` against `r.id`).
+- Any check errors/warnings for a record are attached to its `"issues"` list as `"error: <msg>"` or `"warning: <msg>"` (matching `name[:8]` against `r.id`), while global errors not tied to a single record ID are placed in top-level `"issues"`.
 
 ---
 

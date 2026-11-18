@@ -42,6 +42,16 @@ STACK_TERMS = [
 STACK_RE = re.compile(r"(?<![\w-])(" + "|".join(re.escape(t) for t in STACK_TERMS) + r")(?![\w-])", re.I)
 
 
+SCENARIO_STEP_RE = re.compile(r"^(given|when|then|and|but)\b\s+\S", re.I)
+
+
+def valid_scenario(sc: list[str]) -> bool:
+    if not sc or not all(SCENARIO_STEP_RE.match(ln) for ln in sc):
+        return False
+    kws = {ln.split(None, 1)[0].lower() for ln in sc}
+    return {"given", "when", "then"} <= kws
+
+
 class Record:
     def __init__(self, path: Path, meta: dict, body: str):
         self.path, self.meta, self.body = path, meta, body
@@ -94,6 +104,8 @@ def check(records: dict[str, Record]) -> tuple[list[str], list[str]]:
             continue
         if not r.path.name.startswith(r.id + "-"):
             err(r, f"filename must start with '{r.id}-'")
+        if not str(r.title).strip():
+            err(r, "missing title")
         if r.status not in STATUSES[r.prefix]:
             err(r, f"status {r.status!r} not in {sorted(STATUSES[r.prefix])}")
         for link in r.links():
@@ -102,17 +114,34 @@ def check(records: dict[str, Record]) -> tuple[list[str], list[str]]:
 
         # 2. Assumptions are promoted to facts, both sides agree
         if r.prefix == "ASM":
+            conf = r.meta.get("confidence")
+            if conf is not None:
+                try:
+                    if isinstance(conf, bool) or not (0.0 <= float(conf) <= 1.0):
+                        raise ValueError
+                except (TypeError, ValueError):
+                    err(r, f"confidence {conf!r} must be a number between 0 and 1")
             target = r.meta.get("promoted_to")
             if r.status == "validated" and not target:
                 err(r, "validated assumption must name the fact it was promoted_to")
-            if target in records and records[target].meta.get("promoted_from") != r.id:
-                err(r, f"{target} must declare promoted_from: {r.id}")
+            if r.status != "validated" and target:
+                err(r, "non-validated assumption cannot declare promoted_to")
+            if target in records:
+                if records[target].prefix != "FCT":
+                    err(r, f"'promoted_to' must be a fact, not {target}")
+                elif records[target].meta.get("promoted_from") != r.id:
+                    err(r, f"{target} must declare promoted_from: {r.id}")
         if r.prefix == "FCT":
             if not r.meta.get("evidence"):
                 err(r, "a fact needs evidence")
             source = r.meta.get("promoted_from")
-            if source in records and records[source].status != "validated":
-                err(r, f"promoted from {source}, which is not validated")
+            if source in records:
+                if records[source].prefix != "ASM":
+                    err(r, f"'promoted_from' must be an assumption, not {source}")
+                elif records[source].status != "validated":
+                    err(r, f"promoted from {source}, which is not validated")
+                elif records[source].meta.get("promoted_to") != r.id:
+                    err(r, f"{source} must declare promoted_to: {r.id}")
             review = r.meta.get("review_after")
             if review:
                 try:
@@ -162,7 +191,11 @@ def check(records: dict[str, Record]) -> tuple[list[str], list[str]]:
             asked = open_questions(r, records)
             if asked and r.status == "active":
                 err(r, f"blocked by open question(s) {asked} -> status must be 'provisional'")
-            if r.status == "active" and not r.scenarios():
+            scenarios = r.scenarios()
+            for idx, sc in enumerate(scenarios, 1):
+                if not valid_scenario(sc):
+                    err(r, f"malformed acceptance scenario #{idx} (steps must start with Given/When/Then/And/But and include Given, When, and Then)")
+            if r.status == "active" and not scenarios:
                 err(r, "active requirement needs at least one Given/When/Then under '## Acceptance'")
 
         # 5. Specs: skeleton first, features layer on top, no cycles
@@ -170,13 +203,17 @@ def check(records: dict[str, Record]) -> tuple[list[str], list[str]]:
             tier = r.meta.get("tier")
             if tier not in ("skeleton", "feature"):
                 err(r, "tier must be 'skeleton' or 'feature'")
-            for req in r.meta.get("requirements") or []:
+            reqs = r.meta.get("requirements") or []
+            for req in reqs:
                 if req in records and records[req].prefix != "REQ":
                     err(r, f"'requirements' lists non-requirement {req}")
             for dep in r.meta.get("depends_on") or []:
-                if dep in records and tier == "skeleton" and records[dep].meta.get("tier") == "feature":
-                    err(r, f"skeleton spec cannot depend on feature {dep}")
-            if r.status == "active" and readiness(r, records) < 100:
+                if dep in records:
+                    if records[dep].prefix != "SPC":
+                        err(r, f"'depends_on' lists non-spec {dep}")
+                    elif tier == "skeleton" and records[dep].meta.get("tier") == "feature":
+                        err(r, f"skeleton spec cannot depend on feature {dep}")
+            if r.status == "active" and (not reqs or any(q not in records or records[q].status != "active" for q in reqs)):
                 err(r, "spec can only be active when all its requirements are active")
             if r.status == "active" and open_questions(r, records):
                 err(r, f"spec blocked by open question(s) {open_questions(r, records)} cannot be active")
@@ -217,7 +254,7 @@ def topo(specs: list[Record], records: dict[str, Record]) -> list[Record]:
             raise ValueError(f"spec dependency cycle: {' -> '.join(trail + (s.id,))}")
         state[s.id] = "visiting"
         for dep in s.meta.get("depends_on") or []:
-            if dep in records:
+            if dep in records and records[dep].prefix == "SPC":
                 visit(records[dep], trail + (s.id,))
         state[s.id] = "done"
         order.append(s)
@@ -265,11 +302,13 @@ def verify_traceability(records: dict[str, Record], code_root: Path) -> tuple[li
         text = p.read_text(encoding="utf-8", errors="ignore")
         for m in cite_re.finditer(text):
             rid, num = m.group(1), m.group(2)
-            if num is None:
+            if rid not in records or records[rid].prefix != "REQ":
+                errors.append(f"{p.name}: cites unknown requirement {rid}")
+            elif num is None:
                 bare_cited.add(rid)
             else:
                 idx = int(num)
-                if rid in records and (idx < 1 or idx > len(records[rid].scenarios())):
+                if idx < 1 or idx > len(records[rid].scenarios()):
                     errors.append(f"{p.name}: cites unknown scenario {rid}#{idx}")
                 else:
                     scen_cited.add((rid, idx))
@@ -318,7 +357,8 @@ def _asked(r: Record, records: dict[str, Record], level: str) -> list[str]:
 
 
 def render_gherkin(spec: Record, records: dict[str, Record], stack: str = "") -> str:
-    out = [f"Feature: {spec.title}", ""]
+    spec_qs = [f"@{q}" for q in open_questions(spec, records)]
+    out = ([f"{' '.join(spec_qs)}"] if spec_qs else []) + [f"Feature: {spec.title}", ""]
     for rid in spec.meta.get("requirements") or []:
         req = records[rid]
         tags = ([] if req.status == "active" else [f"@{req.status}"]) + [f"@{q}" for q in open_questions(req, records)]
@@ -338,7 +378,10 @@ def render_openspec(spec: Record, records: dict[str, Record], stack: str = "") -
     out += ["## Requirements", ""]
     for rid in spec.meta.get("requirements") or []:
         req = records[rid]
-        out += [f"### Requirement: {rid} · {req.title}", "", req.section("Statement"), ""]
+        grounds = ", ".join(req.meta.get("because") or [])
+        out += [f"### Requirement: {rid} · {req.title}", "",
+                f"*Status: {req.status} · Grounds: {grounds}*", "",
+                req.section("Statement"), ""]
         out += _asked(req, records, "####")
         for i, sc in enumerate(req.scenarios(), 1):
             out += [f"#### Scenario: {rid}#{i}"]
@@ -407,10 +450,15 @@ def to_index(records: dict[str, Record]) -> dict:
     """Everything the Pages site needs, in one JSON document."""
     errors, warnings = check(records)
     issues: dict[str, list[str]] = {}
+    global_issues: list[str] = []
     for level, items in (("error", errors), ("warning", warnings)):
         for item in items:
             name, _, msg = item.partition(": ")
-            issues.setdefault(name[:8], []).append(f"{level}: {msg}")
+            rid = name[:8]
+            if rid in records:
+                issues.setdefault(rid, []).append(f"{level}: {msg}")
+            else:
+                global_issues.append(f"{level}: {item}")
     specs = [r for r in records.values() if r.prefix == "SPC"]
     rows = []
     for r in records.values():
@@ -418,7 +466,8 @@ def to_index(records: dict[str, Record]) -> dict:
             touched, hit = impact(r.id, records)
         except ValueError:  # spec cycle, already reported by check()
             touched, hit = [], []
-        row = {k: v for k, v in r.meta.items() if k not in ("created_at", "updated_at")}
+        row = {k: (v.isoformat() if isinstance(v, date) else v)
+               for k, v in r.meta.items() if k not in ("created_at", "updated_at")}
         row.update(type=TYPES[r.prefix], path=f"records/{r.path.name}", body=r.body.strip(),
                    downstream=touched + [s.id for s in hit], issues=issues.get(r.id, []))
         if r.prefix == "SPC":
@@ -429,6 +478,7 @@ def to_index(records: dict[str, Record]) -> dict:
     return {
         "repo": github_repo(),
         "summary": {"records": len(records), "errors": len(errors), "warnings": len(warnings)},
+        "issues": global_issues,
         "spec_order": [s.id for s in topo(specs, records)] if not errors else sorted(s.id for s in specs),
         "records": rows,
     }

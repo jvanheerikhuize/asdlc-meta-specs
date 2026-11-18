@@ -70,14 +70,16 @@ function markdown(src) {
 // ---------- state ----------
 // Every status maps to one tone: done (green), wait (amber, needs a human), bad (red), off (grey, retired).
 const TONES = {
-  FCT: { active: ["done", "known"], deprecated: ["off", "retired"] },
+  FCT: { active: ["done", "known"], stale: ["wait", "past review date"], deprecated: ["off", "retired"] },
   ASM: { validated: ["done", "proven"], open: ["wait", "need testing"], invalidated: ["off", "refuted"] },
   QST: { answered: ["done", "answered"], open: ["wait", "need an answer"] },
   REQ: { active: ["done", "active"], ready: ["wait", "ready to activate"], asked: ["wait", "waiting on a question"], provisional: ["wait", "waiting on assumptions"], broken: ["bad", "broken"] },
   SPC: { active: ["done", "ready"], draft: ["wait", "in progress"] },
 };
+const isStale = (r) => prefix(r.id) === "FCT" && r.status === "active" && r.review_after && new Date().toISOString().slice(0, 10) > String(r.review_after);
 /** The status a record really has: a requirement resting on something refuted is broken, one with an open question is waiting on it, and one resting only on facts is ready, whatever its file says. */
 function effective(r) {
+  if (isStale(r)) return "stale";
   if (prefix(r.id) !== "REQ" || r.status === "active") return r.status;
   const grounds = (r.because || []).map((g) => byId[g]).filter(Boolean);
   if (grounds.some((g) => tone(g) === "off")) return "broken";
@@ -85,10 +87,7 @@ function effective(r) {
   return grounds.length && grounds.every((g) => prefix(g.id) === "FCT") ? "ready" : r.status;
 }
 function tone(r) {
-  if (prefix(r.id) === "FCT" && r.status === "active" && r.review_after && new Date(r.review_after) < new Date()) {
-    return "wait";
-  }
-  return (TONES[prefix(r.id)][r.status] || ["off", r.status])[0];
+  return (TONES[prefix(r.id)][effective(r)] || TONES[prefix(r.id)][r.status] || ["off", r.status])[0];
 }
 const section = (body, heading) => (body.match(new RegExp(`^## ${heading}\\s*\\n([\\s\\S]*?)(?=^## |$(?![\\s\\S]))`, "m")) || [, ""])[1].trim();
 const editLink = (r, label = "Edit on GitHub") => h("a", { class: "btn ghost", href: gh(`edit/main/${r.path}`), target: "_blank", rel: "noopener" }, label);
@@ -111,6 +110,10 @@ function blocker(req) {
 function tasks() {
   const out = [];
   const add = (level, r, title, why, actions, unlocks = []) => out.push({ level, r, title, why, actions, unlocks });
+  for (const issue of data.issues || []) {
+    const [lvl, msg] = issue.split(": ", 2);
+    add(lvl === "error" ? "fix" : "tidy", { id: "GRAPH", title: "Global graph validation" }, ["Fix graph validation error"], [msg || issue], []);
+  }
   for (const r of ofType("REQ")) {
     if (r.status !== "active") {
       const [kind, why] = blocker(r);
@@ -131,7 +134,7 @@ function tasks() {
       [h("a", { class: "btn", href: `#/capture/fact?promote=${a.id}` }, "It held → record the fact"),
        editLink(a, "It failed → set status: invalidated")], a.downstream);
   }
-  for (const sp of ofType("SPC").filter((s) => s.status !== "active" && s.readiness === 100 && !s.open_questions.length))
+  for (const sp of ofType("SPC").filter((s) => s.status !== "active" && (s.requirements || []).length && (s.requirements || []).every((q) => byId[q]?.status === "active") && !s.open_questions.length))
     add("quick", sp, ["Activate ", rid(sp.id)], ["Every requirement in it is active. Set ", h("code", {}, "status: active"), "."], [editLink(sp)]);
   for (const r of data.records) for (const issue of r.issues) {
     const [lvl, msg] = issue.split(": ", 2);
@@ -162,10 +165,10 @@ function dashboard() {
 
   main.append(
     h("h1", {}, "Dashboard"),
-    todo.length
-      ? h("a", { class: `callout ${per("fix") ? "bad" : "wait"}`, href: "#/tasks" },
-          h("b", {}, `${todo.length} task${todo.length > 1 ? "s" : ""} need you`),
-          h("span", {}, Object.keys(LEVELS).filter(per).map((l) => `${per(l)} ${LEVELS[l][0].toLowerCase()}`).join(" · ")),
+    todo.length || data.summary?.errors
+      ? h("a", { class: `callout ${per("fix") || data.summary?.errors ? "bad" : "wait"}`, href: "#/tasks" },
+          h("b", {}, `${todo.length || data.summary.errors} task${(todo.length || data.summary.errors) > 1 ? "s" : ""} need you`),
+          h("span", {}, Object.keys(LEVELS).filter(per).map((l) => `${per(l)} ${LEVELS[l][0].toLowerCase()}`).join(" · ") || `${data.summary.errors} validation error(s)`),
           h("span", { class: "go" }, "Open tasks →"))
       : h("div", { class: "callout done" }, h("b", {}, "Nothing needs you"), h("span", {}, "Every requirement rests on facts and every spec is ready.")),
 
