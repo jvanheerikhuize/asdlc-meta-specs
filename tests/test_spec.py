@@ -186,22 +186,49 @@ class RenderTest(unittest.TestCase):
 
 
 class IndexTest(unittest.TestCase):
-    def test_index_has_everything_the_site_reads(self):
+    def test_index_has_everything_the_site_reads(self):  # REQ-0009
         index = spec.to_index(spec.load())
         self.assertEqual(index["summary"]["errors"], 0)
-        self.assertEqual(index["spec_order"], ["SPC-0001", "SPC-0002"])
+        self.assertEqual(index["spec_order"], ["SPC-0001", "SPC-0002", "SPC-0003"])
         rows = {r["id"]: r for r in index["records"]}
         self.assertEqual(rows["SPC-0001"]["readiness"], 100)
+        self.assertEqual(rows["SPC-0002"]["readiness"], 100)
+        self.assertEqual(rows["SPC-0003"]["readiness"], 100)
         self.assertIn("SPC-0002", rows["ASM-0002"]["downstream"])
         self.assertTrue(rows["REQ-0001"]["path"].startswith("records/REQ-0001-"))
         self.assertEqual(rows["REQ-0005"]["open_questions"], [])
         self.assertEqual(rows["QST-0002"]["status"], "answered")
         self.assertEqual(rows["QST-0002"]["type"], "question")
 
-    def test_issues_are_attached_to_their_record(self):
+    def test_issues_are_attached_to_their_record(self):  # REQ-0009
         index = spec.to_index(Graph(ASM_0001=asm("open"), REQ_0001=req(because="[ASM-0001]")).records)
         rows = {r["id"]: r for r in index["records"]}
         self.assertTrue(any("provisional" in i for i in rows["REQ-0001"]["issues"]))
+
+
+class WorkspaceContractTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        site = Path(__file__).resolve().parent.parent / "site"
+        cls.html = (site / "index.html").read_text(encoding="utf-8")
+        cls.app = (site / "app.js").read_text(encoding="utf-8")
+
+    def test_dashboard_and_five_task_levels_present(self):  # REQ-0010
+        for level in ("Fix now", "Answer questions", "Test assumptions", "Quick wins", "Tidy up"):
+            self.assertIn(level, self.app)
+        self.assertIn("review_after", self.app)
+
+    def test_interactive_graph_lineage_stops_at_spec_boundary(self):  # REQ-0011
+        self.assertIn('const PREFIXES = ["ASM", "FCT", "QST", "REQ", "SPC"]', self.app)
+        self.assertIn("!(dir === \"up\" && builtOn(e))", self.app)
+        self.assertIn("edges-base", self.app)
+        self.assertIn("edges-live", self.app)
+
+    def test_record_browser_guided_capture_and_theme_toggle(self):  # REQ-0012
+        for kind in ("requirement:", "assumption:", "fact:", "question:", "spec:"):
+            self.assertIn(kind, self.app)
+        self.assertIn('field("Review after", r.review_after)', self.app)
+        self.assertIn("theme-toggle", self.html)
 
 
 if __name__ == "__main__":

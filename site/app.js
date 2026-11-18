@@ -268,6 +268,7 @@ function record(id) {
         h("dl", { class: "meta" },
           field("Confidence", r.confidence),
           field("Evidence", r.evidence),
+          field("Review after", r.review_after),
           field("Tier", r.tier),
           field("Readiness", r.readiness != null ? `${r.readiness}%` : null),
           field("Promoted from", r.promoted_from && rid(r.promoted_from)),

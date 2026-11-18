@@ -214,10 +214,11 @@ asdlc-meta-specs/
 ├── docs/
 │   └── concepts/     the six overview diagrams
 ├── tests/
-│   └── test_spec.py  one unit test per acceptance scenario
+│   └── test_spec.py  unit and acceptance test suite
+├── TECH_STACK.md     concrete runtime, CLI, JSON index, and SPA bindings
 └── ROADMAP.md        evidence-backed evolution plan
 ```
 
 ## Self-specification & Roadmap
 
-The records in [`records/`](records/) specify this repository itself: both `SPC-0001` (`skeleton`) and `SPC-0002` (`feature`) are 100% grounded in verified facts and `active`. Every initial open assumption (`ASM-0001`..`ASM-0004`) has been validated into facts (`FCT-0001`, `FCT-0005`..`FCT-0007`) and all open questions (`QST-0001`..`QST-0002`) are answered. See [ROADMAP.md](ROADMAP.md) for the next evolution steps.
+The 30 records in [`records/`](records/) together with [`TECH_STACK.md`](TECH_STACK.md) completely specify this repository (`SPC-0001` for the record graph and checker, `SPC-0002` for rendering, index export, and guardrails, and `SPC-0003` for the interactive web workspace) and are verified by clean-room blind reconstruction. See [ROADMAP.md](ROADMAP.md) for the next evolution steps.
