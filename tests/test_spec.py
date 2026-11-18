@@ -238,6 +238,7 @@ class WorkspaceContractTest(unittest.TestCase):
         self.assertIn("!(dir === \"up\" && builtOn(e))", self.app)
         self.assertIn("edges-base", self.app)
         self.assertIn("edges-live", self.app)
+        self.assertIn('wrap.classList.toggle("focus", !!(lin || matches))', self.app)
 
     def test_record_browser_guided_capture_and_theme_toggle(self):  # REQ-0012
         for kind in ("requirement:", "assumption:", "fact:", "question:", "spec:"):
