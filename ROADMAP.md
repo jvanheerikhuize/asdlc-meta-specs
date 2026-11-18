@@ -4,11 +4,9 @@ This repository grows **one evidence-backed step at a time**, keeping the model 
 
 ## The reasoning
 
-**1. Grow with the repo's own method.** The axiom here is *facts → requirements → specs*. A roadmap is a set of requirements for the repo itself, so it is subject to the same rule. Candidate features start as **assumptions** ("we will need separate validation records", "teams need an ingest bot"). A capability is added when a real need has been observed and written down as a fact, not before.
-
-**2. Simplicity is what makes the idea transferable.** The model fits in one diagram and one table. Each addition has to be worth the explaining it costs. As a rule of thumb, anything added must also show up in the **check** (a rule), the **dashboard** (a state) and the **Tasks tab** (a human action). If it does none of these, it is documentation, not structure.
-
-**3. Grow along the axiom, not along the architecture.** The most valuable additions make the facts-to-specs chain stronger: catching facts that go stale, making questions explicit, tracing specs to code. Additions that make the system more complete but not more truthful come later: more record types for their own sake, schemas, automation.
+1. **Grow with the repo's own method.** The axiom is *facts → requirements → specs*. Candidate features start as **assumptions** ("we will need separate validation records", "teams need an ingest bot") and are added only when a real need has been observed and recorded as a fact.
+2. **Simplicity makes the idea transferable.** The model fits in one diagram and one table. Anything added to the core model must earn its place in three places: the **check** (a rule), the **dashboard** (a state), and the **Tasks tab** (a human or agent action).
+3. **Grow along the axiom, not along the architecture.** The highest-value additions strengthen the chain from facts to code: making gaps explicit (`QST`), catching stale facts, and verifying acceptance scenarios against real implementations.
 
 ## Phases
 
@@ -19,37 +17,42 @@ flowchart LR
     P2 --> P3["3 · Scale on evidence"]
 ```
 
-### Phase 0: Use it (now)
+### Phase 0: Use it (in progress)
 
-Run a real project on this repo and record friction as assumptions (`ASM`) in `records/`. This turns the candidate list below from opinions into evidence. Close out the repo's own open assumptions (`ASM-0002` to `ASM-0004`) and its open question (`QST-0002`). They hold back `SPC-0002`, and settling them is the first real exercise of the workflow.
+Run real projects on the record model, extract existing repositories into `records/`, and close out this repo's own open items:
+
+- ~~**Extract a production application corpus.**~~ Done: applied to a real self-hosted media appliance (`lumen`, 36 records across 1 `skeleton` and 4 `feature` specs, passing `tools/spec.py check --strict` with 0 errors and 0 warnings).
+- ~~**Interactive lineage & task triage in the workspace.**~~ Done: the static workspace (`site/`) derives actionable queues (*fix now*, *answer questions*, *test assumptions*, *quick wins*) and provides interactive left-to-right graph lineage focus.
+- **Settle this repo's own open grounds (`ASM-0002` to `ASM-0004` and `QST-0002`).** These hold back `SPC-0002` (*Rendering and guardrails*). Validating or refuting them with agent runs is the next exercise of Playbook Workflows 2 and 3.
 
 ### Phase 1: Sharpen the axiom
 
-Small, cheap additions that make the chain more truthful:
+Small additions that make the chain more truthful:
 
-- ~~**Open questions (`QST`).**~~ Done: included in the core model (`REQ-0007`, part of the skeleton). An assumption is a belief with a candidate answer; a question has none yet ("ascending or descending?"). Without a question record the only way to write down a gap is to invent an assumption, which is the hidden guessing the axiom is meant to prevent. Resolving ambiguity first measurably improves generated code (`FCT-0003`, ClarifyGPT).
-- **Fact freshness (`review_after` on `FCT`).** Facts about the world decay: traffic, latency, regulations. A fact past its date should turn amber on the dashboard and become a task. This applies the axiom over time.
-- **Non-goals on `SPC`.** One optional field that tells agents what *not* to build. It costs almost nothing and blocks a common failure mode.
+- ~~**Open questions (`QST`).**~~ Done: included in the core model (`REQ-0007`, part of `SPC-0001`). Without `QST`, the only way to record an unknown is to invent a guess (`ASM`). Resolving ambiguity before coding measurably improves generated code (`FCT-0003`, ClarifyGPT).
+- **Fact freshness (`review_after` on `FCT`).** Facts about the world decay (traffic, latency, external APIs, regulations). A fact past its review date turns amber on the dashboard and appears in the Tasks queue.
+- **Non-goals on `SPC`.** One optional section or field that tells implementing agents what *not* to build, preventing scope creep during autonomous runs.
 
 ### Phase 2: Bridge to agents
 
-- **Projection to OpenSpec and Spec Kit** as more renderer functions in `tools/spec.py`, not a template engine. Trigger: `ASM-0003` validated and a real consumer tool in use.
-- **Acceptance criteria with their own IDs and code traceability.** Today scenarios live inside requirements. Once tests in an implementing repo can say `@verifies("REQ-0001#1")`, a checker can report which requirements are unproven in code. That closes the loop facts → requirements → specs → code.
-- **A separate tech-stack file.** Records stay technology-free; a small file per implementation names the concrete choices (SQL, Vue, REST APIs, Azure, Azure DevOps, GitHub Copilot) and is added when rendering. Trigger: the first implementation repo consumes these specs and needs concrete technology choices bound outside the records.
+- ~~**Playbook workflows for agent extraction, assumption testing, and question resolution.**~~ Done: documented in [`README.md`](README.md#playbook-agent--human-workflows) with copy-pasteable prompts.
+- **Separate tech-stack file (`TECH_STACK.md`) bound at render time.** Proven as a convention in consumer repositories (`TECH_STACK.md` alongside `records/` keeps all 36 records in `lumen` 100% stack-agnostic). Next step: optional `--stack TECH_STACK.md` injection in `tools/spec.py render` once a second stack re-implementation validates `ASM-0004`.
+- **Projection to OpenSpec and Spec Kit** as small renderer functions in `tools/spec.py` (no template engine). Trigger: `QST-0002` answered and `ASM-0003` validated against a live consumer tool.
+- **Acceptance criteria with their own IDs and code traceability.** Once tests in an implementing repo can cite `REQ-0001#1`, `tools/spec.py check` can report which active requirements lack passing code verification, closing the loop `facts → requirements → specs → tests`.
 
 ### Phase 3: Scale on evidence
 
-Add each of these only when its trigger is observed:
+Add each capability only when its trigger is observed in real usage:
 
 | Candidate feature | Current state | Add when |
 | :--- | :--- | :--- |
-| `VAL` validation records | `evidence` field on facts | facts need several pieces of evidence, or experiments are reused |
-| `CON` constraints | `SHOULD`/`MUST` requirements, README principles | the same rule is repeated across three or more requirements |
-| `DEC` decisions | none | a choice between alternatives keeps being reopened |
-| `CHG` change proposals | pull requests | a change spans many records and needs review as one unit beyond a PR |
-| JSON Schemas | rules in the checker | other tools write records and need a contract |
-| Issue → bot → PR capture | GitHub editor from the form | contributors without GitHub fluency, or volume makes manual PRs a bottleneck |
-| `TRM` terms, `CTR` contracts | none | agents demonstrably drift on vocabulary or interfaces across specs |
-| `autonomy_tier` | none | agents act on specs without a human reviewing every PR |
+| `VAL` validation records | `evidence` field on `FCT` | A single fact needs multiple independent validation runs or reusable benchmark logs |
+| `CON` constraints | `SHOULD`/`MUST` requirements + `TECH_STACK.md` | The same cross-cutting rule is repeated across three or more requirements |
+| `DEC` decisions | Git history + `FCT`/`ASM` grounds | Architectural choices between alternatives keep getting reopened |
+| `CHG` change proposals | Pull requests + `tools/spec.py impact` | A change spans many records and needs review as one unit beyond a PR |
+| JSON Schemas | Rules in `tools/spec.py check` | External tools write records directly and need a machine-readable schema contract |
+| Issue → bot → PR capture | GitHub web editor links from the Capture tab | Contributors without GitHub fluency hit friction, or volume makes manual PRs a bottleneck |
+| `TRM` terms, `CTR` contracts | Inline definitions in `REQ`/`SPC` | Agents demonstrably drift on domain vocabulary or interfaces across specs |
+| `autonomy_tier` | Human PR review | Agents act on specs without a human reviewing every pull request |
 
-Some of these may never be needed. That is a valid outcome: every candidate is a hypothesis to be tested in real use.
+Some of these may never be needed. Every candidate is an assumption to be tested in real use.
