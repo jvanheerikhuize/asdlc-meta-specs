@@ -19,26 +19,27 @@ flowchart LR
 
 ### Phase 0: Use it (complete)
 
-Run real projects on the record model, extract existing repositories into `records/`, and close out this repo's own open items:
+Run real projects on the record model, extract existing repositories into `records/`, and close out this repo's initial open items:
 
-- ~~**Extract a production application corpus.**~~ Done: applied to a real self-hosted media appliance (`lumen`, 36 records across 1 `skeleton` and 4 `feature` specs, passing `tools/spec.py check --strict` with 0 errors and 0 warnings).
-- ~~**Interactive lineage & task triage in the workspace.**~~ Done: the static workspace (`site/`, specified by `SPC-0003`) derives actionable queues (*fix now*, *answer questions*, *test assumptions*, *quick wins*) and provides interactive left-to-right graph lineage focus.
-- ~~**Settle this repo's own open grounds & verify self-recreation.**~~ Done: all initial assumptions (`ASM-0001`..`ASM-0004`) promoted to facts (`FCT-0001`, `FCT-0005`..`FCT-0007`), questions answered (`QST-0001`..`QST-0002`), and the 31-record corpus (`SPC-0001`..`SPC-0003` + `TECH_STACK.md`) verified via clean-room blind reconstruction.
+- ~~**Extract a production application corpus.**~~ Done: applied to a self-hosted media appliance (`lumen`, 36 records across 1 `skeleton` and 4 `feature` specs, passing `tools/spec.py check --strict` with 0 errors and 0 warnings).
+- ~~**Interactive lineage & task triage in the workspace.**~~ Done: the static workspace (`site/`, specified by `SPC-0003`) derives actionable queues (*fix now*, *answer questions*, *test assumptions*, *quick wins*, *tidy up*) and provides interactive left-to-right graph lineage focus.
+- ~~**Settle this repo's initial grounds & run a clean-room reconstruction trial.**~~ Done: initial assumptions (`ASM-0001`..`ASM-0004`) promoted to bounded facts (`FCT-0001`, `FCT-0005`..`FCT-0007`), questions answered (`QST-0001`..`QST-0002`), and the 31-record corpus (`SPC-0001`..`SPC-0003` + `TECH_STACK.md`) exercised via clean-room reconstruction and calibrated against the [2026-11-18 Sol 6.1 audit](docs/audits/README.md).
 
-### Phase 1: Sharpen the axiom
+### Phase 1: Sharpen the axiom (complete)
 
 Small additions that make the chain more truthful:
 
-- ~~**Open questions (`QST`).**~~ Done: included in the core model (`REQ-0007`, part of `SPC-0001`). Without `QST`, the only way to record an unknown is to invent a guess (`ASM`). Resolving ambiguity before coding measurably improves generated code (`FCT-0003`, ClarifyGPT).
-- ~~**Fact freshness (`review_after` on `FCT`).**~~ Done: specified by `REQ-0008` and checked by `tools/spec.py check`; flags stale facts as warnings and surfaces them on the dashboard and Tasks queue.
+- ~~**Open questions (`QST`).**~~ Done: included in the core model (`REQ-0007`, part of `SPC-0001`). Without `QST`, the only way to record an unknown is to invent a guess (`ASM`). Detecting ambiguity and asking clarifying questions before coding improved GPT-4 Pass@1 on MBPP-sanitized from 70.96% to 80.80% (`FCT-0003`, ClarifyGPT).
+- ~~**Fact freshness (`review_after` on `FCT`).**~~ Done: specified by `REQ-0008` and checked by `tools/spec.py check`; flags stale time-sensitive facts as warnings and surfaces them on the dashboard and Tasks queue.
 - ~~**Non-goals on `SPC`.**~~ Done: optional `## Non-goals` section on `SPC` records (`REQ-0005`), rendered before `## Requirements` to tell implementing agents what not to build.
+- ~~**Trust-boundary hardening from independent audit.**~~ Done: enforced structured `Given`/`When`/`Then` scenario validation, exact active-requirement spec gates, ISO date normalization in index exports, fail-closed global error surfacing, and validation-gated Pages deployment ([`docs/audits/`](docs/audits/)).
 
 ### Phase 2: Bridge to agents (complete)
 
 - ~~**Playbook workflows for agent extraction, assumption testing, and question resolution.**~~ Done: documented in [`README.md`](README.md#playbook-agent--human-workflows) with copy-pasteable prompts.
-- ~~**Separate tech-stack file (`TECH_STACK.md`) bound at render time.**~~ Done: adopted in both [`TECH_STACK.md`](TECH_STACK.md) and consumer repositories (`lumen`), and bound into rendered specs via `python tools/spec.py render --stack TECH_STACK.md` (`REQ-0005`), keeping `records/` 100% stack-agnostic.
-- ~~**Projection to OpenSpec and Spec Kit**~~ Done: `render_openspec` and `render_speckit` in `tools/spec.py` (`--format openspec` / `--format speckit`, `REQ-0005`).
-- ~~**Acceptance criteria with their own IDs and code traceability.**~~ Done: rendered Markdown labels each scenario `**REQ-xxxx#n**` (`REQ-0013`), and `python tools/spec.py check --verify DIR` verifies test/code citations, closing the loop `facts → requirements → specs → tests`.
+- ~~**Separate tech-stack file (`TECH_STACK.md`) bound at render time.**~~ Done: adopted in both [`TECH_STACK.md`](TECH_STACK.md) and consumer repositories (`lumen`), and bound into rendered specs via `python tools/spec.py render --stack TECH_STACK.md` (`REQ-0005`), keeping `records/` free of incidental stack names.
+- ~~**Projection to OpenSpec and Spec Kit**~~ Done: `render_openspec` and `render_speckit` in `tools/spec.py` (`--format openspec` / `--format speckit`, `REQ-0005`), preserving spec-level and requirement-level open questions across all four target views.
+- ~~**Acceptance criteria with their own IDs and code citation checks.**~~ Done: rendered Markdown labels each scenario `**REQ-xxxx#n**` (`REQ-0013`), and `python tools/spec.py check --verify DIR` verifies test/code citations and rejects unknown requirement or scenario IDs.
 
 ### Phase 3: Scale on evidence
 
