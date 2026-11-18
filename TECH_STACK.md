@@ -120,11 +120,12 @@ Together with the rendered specifications (`SPC-0001`, `SPC-0002`, `SPC-0003`), 
 ## 5. Design System (`site/styles.css`)
 
 1. **Token Architecture:** Uses a zero-build, native **CSS Custom Properties** token system (aligned with the **Open Props** sub-atomic token model, vendored inline with zero external CDN or npm dependencies so `site/` works offline and on GitHub Pages). Frameworks like Pico CSS are intentionally avoided so custom SVG lineage graphs and segmented status bars require no reset overrides.
-2. **Invariant Scale, Typography & Z-Index Tokens:** Sizes, radii, font sizes, and stacking layers remain constant across themes:
-   - Controls & radii: `--control-h: 36px`, `--control-h-sm: 32px`, `--badge-h: 20px`, `--radius: 8px`, `--radius-lg: 10px`, `--pill: 999px`.
-   - Typography: `--fs-control: 14px`, `--fs-sm: 13px`, `--fs-xs: 12px`, system UI sans-serif stack.
+2. **Invariant Scale, Spacing, Typography & Z-Index Tokens:** Sizes, spacing, radii, font families/sizes, and stacking layers remain constant across themes:
+   - Spacing: `--space-1: 4px`, `--space-2: 8px`, `--space-3: 12px`, `--space-4: 16px`, `--space-5: 24px`, `--space-6: 36px`.
+   - Controls & radii: `--control-h: 36px`, `--control-h-sm: 32px`, `--badge-h: 20px`, `--radius-sm: 4px`, `--radius: 8px`, `--radius-lg: 10px`, `--pill: 999px`.
+   - Typography: `--font-sans: system-ui, -apple-system, "Segoe UI", sans-serif`, `--font-mono: ui-monospace, SFMono-Regular, Menlo, monospace`, `--fs-body: 15px`, `--fs-control: 14px`, `--fs-sm: 13px`, `--fs-xs: 12px`.
    - Z-index layers: `--z-edge: 1`, `--z-node: 2`, `--z-edge-active: 3`, `--z-node-active: 4`, `--z-sticky: 20`, `--z-header: 30`.
 3. **Theme-Adaptive Color & Elevation Tokens:** Driven by `color-scheme: light dark`, `@media (prefers-color-scheme: dark)` (when `:root:not([data-theme="light"])`), and explicit `:root[data-theme="dark"]` overrides:
    - **Surfaces & Ink:** Light `--bg: #f7f7f5`, `--surface: #ffffff`, `--soft: #f0efeb`, `--text: #1d1d1b`, `--muted: #6b6b66`, `--line: #e3e2dd`; Dark `--bg: #141413`, `--surface: #1d1d1b`, `--soft: #262624`, `--text: #ecebe6`, `--muted: #9c9b95`, `--line: #33332f`.
-   - **Semantic & Record-Type Accents:** Light `--accent: #3d5afe`, `--fact: #1b8a5a`, `--assume: #c27c0e`, `--req: #3d5afe`, `--spec: #7b3fbf`, `--question: #c2255c`, `--bad: #c62828`; Dark `--accent: #7c8cff`, `--fact: #4cc38a`, `--assume: #e6a23c`, `--req: #7c8cff`, `--spec: #b98cf0`, `--question: #f06595`, `--bad: #ef6b6b`.
+   - **Semantic & Record-Type Accents:** Light `--accent: #3d5afe`, `--on-accent: #ffffff`, `--fact: #1b8a5a`, `--assume: #c27c0e`, `--req: #3d5afe`, `--spec: #7b3fbf`, `--question: #c2255c`, `--bad: #c62828`; Dark `--accent: #7c8cff`, `--on-accent: #ffffff`, `--fact: #4cc38a`, `--assume: #e6a23c`, `--req: #7c8cff`, `--spec: #b98cf0`, `--question: #f06595`, `--bad: #ef6b6b`.
    - **Elevation:** `--shadow-sm` and `--shadow-lg` scale opacity from `0.07`/`0.11` (light) to `0.35`/`0.48` (dark).
