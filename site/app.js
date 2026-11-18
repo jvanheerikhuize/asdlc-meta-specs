@@ -166,6 +166,11 @@ function dashboard() {
   main.append(
     h("h1", {}, "Dashboard"),
     data.generated_at ? h("p", { class: "muted" }, `Index generated ${data.generated_at}${data.revision ? ` (${data.revision})` : ""}`) : "",
+    h("div", { class: "tiles" },
+      h("ui-stat-tile", { value: String(data.records.length), label: "Total Records", status: "info" }),
+      h("ui-stat-tile", { value: String(ofType("FCT").filter((r) => r.status === "active").length), label: "Active Facts", status: "done", variant: "success" }),
+      h("ui-stat-tile", { value: String(open.length), label: "Open QST / ASM", status: open.length ? "wait" : "done", variant: open.length ? "warning" : "success" }),
+      h("ui-stat-tile", { value: String(fine.length), label: "Specs Active", status: "done", variant: "accent" })),
     todo.length || data.summary?.errors
       ? h("a", { class: `callout ${per("fix") || data.summary?.errors ? "bad" : "wait"}`, href: "#/tasks" },
           h("b", {}, `${todo.length || data.summary.errors} task${(todo.length || data.summary.errors) > 1 ? "s" : ""} need you`),
@@ -687,18 +692,22 @@ function notFound() {
 
 // ---------- theme ----------
 function initTheme() {
-  const btn = document.getElementById("theme-toggle");
-  const modes = ["system", "light", "dark"];
-  const labels = { system: "Theme: System", light: "Theme: Light", dark: "Theme: Dark" };
-  let mode = modes.includes(store.get("theme")) ? store.get("theme") : "system";
+  const navbar = document.getElementById("navbar");
+  const saved = store.get("theme");
+  let mode = saved === "light" ? "light" : "dark";
   const apply = (next) => {
-    mode = next;
-    if (mode === "system") { delete document.documentElement.dataset.theme; store.del("theme"); }
-    else { document.documentElement.dataset.theme = mode; store.set("theme", mode); }
-    if (btn) { btn.textContent = labels[mode]; btn.setAttribute("aria-label", labels[mode]); }
+    mode = next === "light" ? "light" : "dark";
+    if (mode === "light") {
+      document.documentElement.dataset.theme = "light";
+      store.set("theme", "light");
+    } else {
+      delete document.documentElement.dataset.theme;
+      store.set("theme", "dark");
+    }
+    if (navbar) navbar.setAttribute("theme", mode);
     requestAnimationFrame(() => redraw?.());
   };
-  btn?.addEventListener("click", () => apply(modes[(modes.indexOf(mode) + 1) % modes.length]));
+  navbar?.addEventListener("ui-theme-change", (e) => apply(e.detail?.theme));
   apply(mode);
 }
 
