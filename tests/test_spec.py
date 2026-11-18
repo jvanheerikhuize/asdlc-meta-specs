@@ -142,7 +142,7 @@ class QuestionTest(unittest.TestCase):
         errors, _ = Graph(QST_0001=qst(blocks="[]")).check()
         self.assertTrue(any("blocks" in e for e in errors))
 
-    def test_open_question_is_rendered_where_it_blocks(self):  # REQ-0007
+    def test_open_question_is_rendered_where_it_blocks(self):  # REQ-0005
         g = Graph(FCT_0001=FACT, REQ_0001=req("provisional"), QST_0001=qst(),
                   SPC_0001=spc("SPC-0001", "skeleton", "[REQ-0001]"))
         s = g.records["SPC-0001"]
