@@ -1,8 +1,8 @@
 ---
 id: REQ-0004
 title: Every active requirement carries a Given/When/Then scenario
-status: provisional
-because: [ASM-0002]
+status: active
+because: [FCT-0005]
 ---
 
 ## Statement

@@ -183,7 +183,8 @@ class IndexTest(unittest.TestCase):
         self.assertEqual(rows["SPC-0001"]["readiness"], 100)
         self.assertIn("SPC-0002", rows["ASM-0002"]["downstream"])
         self.assertTrue(rows["REQ-0001"]["path"].startswith("records/REQ-0001-"))
-        self.assertEqual(rows["REQ-0005"]["open_questions"], ["QST-0002"])
+        self.assertEqual(rows["REQ-0005"]["open_questions"], [])
+        self.assertEqual(rows["QST-0002"]["status"], "answered")
         self.assertEqual(rows["QST-0002"]["type"], "question")
 
     def test_issues_are_attached_to_their_record(self):

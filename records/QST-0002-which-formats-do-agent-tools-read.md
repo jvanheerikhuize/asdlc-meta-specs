@@ -1,8 +1,9 @@
 ---
 id: QST-0002
 title: Which spec formats do the agent tools we target read without conversion?
-status: open
+status: answered
 blocks: [REQ-0005]
+answered_by: FCT-0004
 ---
 
 ## Question

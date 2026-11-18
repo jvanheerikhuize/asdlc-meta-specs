@@ -2,7 +2,7 @@
 id: REQ-0005
 title: Specs render to several target formats from the same records
 status: provisional
-because: [ASM-0003]
+because: [ASM-0003, FCT-0004]
 ---
 
 ## Statement

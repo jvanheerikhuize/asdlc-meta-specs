@@ -23,7 +23,7 @@ Run real projects on the record model, extract existing repositories into `recor
 
 - ~~**Extract a production application corpus.**~~ Done: applied to a real self-hosted media appliance (`lumen`, 36 records across 1 `skeleton` and 4 `feature` specs, passing `tools/spec.py check --strict` with 0 errors and 0 warnings).
 - ~~**Interactive lineage & task triage in the workspace.**~~ Done: the static workspace (`site/`) derives actionable queues (*fix now*, *answer questions*, *test assumptions*, *quick wins*) and provides interactive left-to-right graph lineage focus.
-- **Settle this repo's own open grounds (`ASM-0002` to `ASM-0004` and `QST-0002`).** These hold back `SPC-0002` (*Rendering and guardrails*). Validating or refuting them with agent runs is the next exercise of Playbook Workflows 2 and 3.
+- **Settle this repo's own open grounds.** Progress: `ASM-0002` promoted to `FCT-0005`, `ASM-0004` promoted to `FCT-0006`, and `QST-0002` answered by `FCT-0004`. `SPC-0002` (*Rendering and guardrails*) is now 67% ready, with only `ASM-0003` remaining to validate.
 
 ### Phase 1: Sharpen the axiom
 

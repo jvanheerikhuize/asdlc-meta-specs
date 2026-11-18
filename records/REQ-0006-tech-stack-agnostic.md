@@ -1,8 +1,8 @@
 ---
 id: REQ-0006
 title: Specs describe behaviour, never technology
-status: provisional
-because: [ASM-0004]
+status: active
+because: [FCT-0006]
 ---
 
 ## Statement
