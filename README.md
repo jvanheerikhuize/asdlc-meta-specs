@@ -6,7 +6,7 @@ Specs for agentic software development that are **honest about what they know**.
 
 > **Facts → requirements → specs.**
 
-Most specs mix verified truths with guesswork. Here, every requirement says **`because`** and links to the **facts** or **assumptions** it rests on. Unknowns with no candidate answer yet are recorded as **open questions** so agents ask instead of guessing. One script (`tools/spec.py`) checks that no requirement or spec is marked more certain than its grounds.
+Most specs mix verified observations with guesswork. This repository provides a small, version-controlled **evidence, rationale, and uncertainty layer** for spec-anchored development: every requirement says **`because`** and links to the **facts** or **assumptions** it rests on, and unknowns with no candidate answer yet are recorded as **open questions** so agents ask instead of guessing. One script (`tools/spec.py`) checks that declared grounds and statuses stay structurally consistent.
 
 ## How it works, in six pictures
 
@@ -40,8 +40,8 @@ flowchart LR
 
 | Record | What it is | Allowed statuses | Key fields |
 | :--- | :--- | :--- | :--- |
-| `FCT` Fact | Verified truth about the domain or system | `active`, `deprecated` | `evidence`, `promoted_from` |
-| `ASM` Assumption | A belief we have not proven yet, with a test plan | `open`, `validated`, `invalidated` | `confidence`, `promoted_to` |
+| `FCT` Fact | Verified observation or policy decision with scoped evidence | `active`, `deprecated` | `evidence`, `promoted_from`, `review_after` |
+| `ASM` Assumption | A belief we have not proven yet, with a validation plan | `open`, `validated`, `invalidated` | `confidence`, `promoted_to` |
 | `QST` Question | A known gap with no candidate answer yet | `open`, `answered` | `blocks`, `answered_by` |
 | `REQ` Requirement | Behavioural `MUST`/`SHOULD` + Given/When/Then scenarios | `provisional`, `active`, `broken` | `because` |
 | `SPC` Spec | Group of requirements (`skeleton` or `feature` tier) | `draft`, `active` | `tier`, `requirements`, `depends_on` |
@@ -50,13 +50,13 @@ flowchart LR
 
 1. **Honest grounds:** A `REQ` resting on an open `ASM` or blocked by an open `QST` must be `provisional`. If its `FCT` is `deprecated` or its `ASM` is `invalidated`, it must be `broken`. Only requirements resting strictly on `active` facts can be `active`.
 2. **Gaps are questions, not guesses:** Open `QST` records block requirements and specs until `answered_by` a `FCT` or `ASM`.
-3. **Stack-agnostic records:** Records describe behaviour, never frameworks, languages, databases, or vendors. Keep concrete technology choices in a separate `TECH_STACK.md`.
-4. **Skeleton first:** `skeleton` specs cannot depend on `feature` specs, spec dependencies must be acyclic, and a spec can be `active` only when 100% of its requirements are `active`.
+3. **Stack-agnostic records:** Records describe behaviour, never incidental frameworks, languages, databases, or vendors. Keep concrete technology choices in a separate `TECH_STACK.md`.
+4. **Skeleton first:** `skeleton` specs cannot depend on `feature` specs, spec dependencies must be acyclic, and a spec can be `active` only when every one of its requirements is `active`.
 
 ### Why this axiom?
 
-- **Domain facts vs. assumptions:** Requirements hold only when domain properties hold ([Zave & Jackson 1997](https://doi.org/10.1145/237432.237434); [van Lamsweerde 2000](https://webperso.info.ucl.ac.be/%7Eavl/files/TSE-Obstacles.pdf)). Unchecked assumptions drive real failures ([Lutz 1993](https://ntrs.nasa.gov/citations/20060042270); [Ariane 501](https://en.wikipedia.org/wiki/Ariane_flight_V88)).
-- **Clarifying before coding:** Incomplete requirements top industry failure surveys ([NaPiRE](https://arxiv.org/abs/1611.10288)), and resolving ambiguity before code generation raises LLM pass rates from 70.96% to 80.80% ([ClarifyGPT, FSE 2024](https://arxiv.org/abs/2310.10996)).
+- **Domain knowledge vs. assumptions:** Requirements hold only when underlying domain properties hold ([Zave & Jackson 1997](https://doi.org/10.1145/237432.237434); [Doyle 1979](https://doi.org/10.1016/0004-3702(79)90008-0); [van Lamsweerde 2000](https://webperso.info.ucl.ac.be/%7Eavl/files/TSE-Obstacles.pdf)). Unchecked domain and interface assumptions are a recurring source of safety-critical software errors ([Lutz 1994](https://ntrs.nasa.gov/citations/20060042270); [Ariane 501](https://en.wikipedia.org/wiki/Ariane_flight_V88)).
+- **Clarifying before coding:** Incomplete or hidden requirements rank among the most frequently reported problems in practitioner surveys across 228 companies ([NaPiRE, EMSE 2017](https://doi.org/10.1007/s10664-016-9451-7)), and detecting ambiguity to ask clarifying questions before code generation raised GPT-4 Pass@1 on MBPP-sanitized from 70.96% to 80.80% ([ClarifyGPT, FSE 2024](https://doi.org/10.1145/3660810)).
 
 ## Quick start
 
@@ -205,9 +205,9 @@ python tools/spec.py index && python -m http.server -d site 8000
 
 ---
 
-### 7. Clean-room rewrite from specs alone
+### 7. Clean-room reconstruction trial
 
-Test whether the specification corpus and `TECH_STACK.md` are genuinely self-contained by having a fresh agent with no prior context rebuild the application from scratch in an isolated directory.
+Test how well the specification corpus and `TECH_STACK.md` recover the application by having a fresh agent with no prior context rebuild the implementation in an isolated directory and evaluating the result against held-out tests.
 
 1. Render the specs with `TECH_STACK.md` bound, then copy only `dist/`, `records/`, `TECH_STACK.md`, and `requirements.txt` into a clean directory (leaving out `tools/`, `site/`, `tests/`, and `.github/`):
    ```bash
@@ -216,7 +216,7 @@ Test whether the specification corpus and `TECH_STACK.md` are genuinely self-con
    cp -r dist records TECH_STACK.md requirements.txt /tmp/asdlc-clean-room/
    ```
 2. Open a brand-new agent session in `/tmp/asdlc-clean-room` (with no access to the original repository) and give it the prompt below.
-3. Verify the rebuilt repository passes `python tools/spec.py check --strict --verify tests`, `python -m unittest discover -s tests -v`, and `python tools/spec.py index`.
+3. Verify the rebuilt repository passes `python tools/spec.py check --strict --verify tests`, `python -m unittest discover -s tests -v`, `python tools/spec.py index`, and any held-out test suite from the parent repository.
 
 **Example prompt:**
 
@@ -226,7 +226,7 @@ Build this application from scratch using only `TECH_STACK.md`, `requirements.tx
 1. Read `TECH_STACK.md` and the rendered specifications in topological order (`dist/SPC-0001.md`, then `dist/SPC-0002.md`, then `dist/SPC-0003.md`). Do not look up or reference any external implementation.
 2. Build each spec tier in order:
    - `SPC-0001` (skeleton): `tools/spec.py` record loader, `check`, `impact`, and topological ordering.
-   - `SPC-0002` (feature): `render` (`markdown`, `gherkin`, `openspec`, `speckit`, `--tier`, `--stack`), `index`, stack-term guardrails, and `--verify` scenario traceability.
+   - `SPC-0002` (feature): `render` (`markdown`, `gherkin`, `openspec`, `speckit`, `--tier`, `--stack`), `index`, stack-term guardrails, and `--verify` scenario citation checks.
    - `SPC-0003` (feature): zero-build static web workspace in `site/` (`index.html`, `app.js`, `styles.css`).
 3. Write `tests/test_spec.py` covering every acceptance scenario in `records/REQ-*.md`, citing `REQ-xxxx` / `REQ-xxxx#n` in the tests.
 4. Do not modify `records/` unless a genuine specification gap blocks implementation; if you hit a gap, stop and report it.
@@ -245,13 +245,15 @@ asdlc-meta-specs/
 │   └── spec.py       check · impact · render · index
 ├── site/             zero-build GitHub Pages workspace (index.html, app.js, styles.css)
 ├── docs/
+│   ├── audits/       independent research & assurance audit reports and disposition tracker
 │   └── concepts/     the six overview diagrams
 ├── tests/
 │   └── test_spec.py  unit and acceptance test suite
 ├── TECH_STACK.md     concrete runtime, CLI, JSON index, and SPA bindings
-└── ROADMAP.md        evidence-backed evolution plan
+├── ROADMAP.md        evidence-backed evolution plan
+└── LICENSE           MIT license
 ```
 
 ## Self-specification & Roadmap
 
-The 31 records in [`records/`](records/) together with [`TECH_STACK.md`](TECH_STACK.md) completely specify this repository (`SPC-0001` for the record graph and checker, `SPC-0002` for rendering, index export, and guardrails, and `SPC-0003` for the interactive web workspace) and are verified by clean-room blind reconstruction. See [ROADMAP.md](ROADMAP.md) for the next evolution steps.
+The 31 records in [`records/`](records/) together with [`TECH_STACK.md`](TECH_STACK.md) specify this repository's core behaviour (`SPC-0001` for the record graph and checker, `SPC-0002` for rendering, index export, and guardrails, and `SPC-0003` for the interactive web workspace) and have been exercised through clean-room reconstruction and independent audit ([`docs/audits/`](docs/audits/)). See [ROADMAP.md](ROADMAP.md) for the next evolution steps.

@@ -39,4 +39,4 @@ This directory preserves independent technical, corpus, and research audits of `
 | `A09` | P2 | Rounded readiness (`round(...) == 100`) used as active-spec gate | **Resolved in Pass 2 & 3** (`REQ-0003`, `tools/spec.py`, `site/app.js`) |
 | `A10` | P2 | Positional scenario IDs (`REQ-xxxx#n`) and unknown requirement citations | **Resolved in Pass 2 & 3** (`REQ-0013`, `verify_traceability`) |
 | `A11` | P2 | Backend/frontend stale-date alignment and segmented status bar consistency | **Resolved in Pass 2 & 3** (`REQ-0010`, `site/app.js`) |
-| `A12` | P2 | Operational hygiene (license, runtime matrix, positioning copy) | Planned for Pass 4 (`README.md`, `ROADMAP.md`, `LICENSE`, `.github/workflows/check.yml`) |
+| `A12` | P2 | Operational hygiene (license, runtime matrix, positioning copy) | **Resolved in Pass 4** (`README.md`, `ROADMAP.md`, `LICENSE`, `requirements.txt`, `.github/workflows/check.yml`, `site/app.js`) |

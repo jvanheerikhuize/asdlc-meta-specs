@@ -70,11 +70,11 @@ function markdown(src) {
 // ---------- state ----------
 // Every status maps to one tone: done (green), wait (amber, needs a human), bad (red), off (grey, retired).
 const TONES = {
-  FCT: { active: ["done", "known"], stale: ["wait", "past review date"], deprecated: ["off", "retired"] },
-  ASM: { validated: ["done", "proven"], open: ["wait", "need testing"], invalidated: ["off", "refuted"] },
+  FCT: { active: ["done", "recorded"], stale: ["wait", "past review date"], deprecated: ["off", "retired"] },
+  ASM: { validated: ["done", "validated"], open: ["wait", "need testing"], invalidated: ["off", "refuted"] },
   QST: { answered: ["done", "answered"], open: ["wait", "need an answer"] },
   REQ: { active: ["done", "active"], ready: ["wait", "ready to activate"], asked: ["wait", "waiting on a question"], provisional: ["wait", "waiting on assumptions"], broken: ["bad", "broken"] },
-  SPC: { active: ["done", "ready"], draft: ["wait", "in progress"] },
+  SPC: { active: ["done", "active"], draft: ["wait", "in progress"] },
 };
 const isStale = (r) => prefix(r.id) === "FCT" && r.status === "active" && r.review_after && new Date().toISOString().slice(0, 10) > String(r.review_after);
 /** The status a record really has: a requirement resting on something refuted is broken, one with an open question is waiting on it, and one resting only on facts is ready, whatever its file says. */
@@ -170,7 +170,7 @@ function dashboard() {
           h("b", {}, `${todo.length || data.summary.errors} task${(todo.length || data.summary.errors) > 1 ? "s" : ""} need you`),
           h("span", {}, Object.keys(LEVELS).filter(per).map((l) => `${per(l)} ${LEVELS[l][0].toLowerCase()}`).join(" · ") || `${data.summary.errors} validation error(s)`),
           h("span", { class: "go" }, "Open tasks →"))
-      : h("div", { class: "callout done" }, h("b", {}, "Nothing needs you"), h("span", {}, "Every requirement rests on facts and every spec is ready.")),
+      : h("div", { class: "callout done" }, h("b", {}, "Nothing needs you"), h("span", {}, "Every requirement rests on recorded facts and all declared grounds are consistent.")),
 
     h("h2", {}, "State of the spec"),
     h("div", { class: "legend" }, ...[["done", "done"], ["wait", "needs attention"], ["bad", "broken"], ["off", "retired"]].map(([t, l]) => h("span", {}, h("span", { class: `dot ${t}` }), l))),
