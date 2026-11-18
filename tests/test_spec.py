@@ -271,6 +271,27 @@ class RenderTest(unittest.TestCase):
         self.assertIn("## User Scenarios & Testing", sk_md)
         self.assertIn("- **REQ-0001**:", sk_md)
 
+    def test_hidden_specs_records_discovery_and_readme_generation(self):  # REQ-0001, REQ-0005
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            rec_dir = root / ".specs" / "records"
+            rec_dir.mkdir(parents=True)
+            (rec_dir / "FCT-0001-fact.md").write_text(FACT, encoding="utf-8")
+            (rec_dir / "REQ-0001-req.md").write_text(req(), encoding="utf-8")
+            (rec_dir / "SPC-0001-core.md").write_text(
+                spc("SPC-0001", "skeleton", "[REQ-0001]", status="active"),
+                encoding="utf-8",
+            )
+            self.assertEqual(spec.main(["--root", str(root), "check", "--strict"]), 0)
+            self.assertEqual(spec.main(["--root", str(root), "render"]), 0)
+            self.assertTrue((root / "specs" / "SPC-0001.md").is_file())
+            readme = (root / "specs" / "README.md").read_text(encoding="utf-8")
+            self.assertIn("Auto-generated from `.specs/records/`", readme)
+            self.assertIn("[`SPC-0001`](SPC-0001.md)", readme)
+            idx = spec.to_index(spec.load(root), root)
+            self.assertEqual(idx["records_dir"], ".specs/records")
+            self.assertTrue(idx["records"][0]["path"].startswith(".specs/records/"))
+
 
 class IndexTest(unittest.TestCase):
     def test_index_has_everything_the_site_reads(self):  # REQ-0009

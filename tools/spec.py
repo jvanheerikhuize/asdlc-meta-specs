@@ -22,6 +22,14 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 RECORDS = ROOT / "records"
 
+
+def resolve_records_dir(base: Path = ROOT) -> Path:
+    """Prefer hidden .specs/records/ in consumer repos; fall back to records/ in the upstream blueprint repo."""
+    hidden = base / ".specs" / "records"
+    if hidden.is_dir():
+        return hidden
+    return base / "records"
+
 TYPES = {"ASM": "assumption", "FCT": "fact", "QST": "question", "REQ": "requirement", "SPC": "spec"}
 STATUSES = {
     "ASM": {"open", "validated", "invalidated"},
@@ -78,9 +86,10 @@ class Record:
         return [[ln.strip().lstrip("-").strip() for ln in b.splitlines() if ln.strip()] for b in blocks if b.strip()]
 
 
-def load(root: Path = RECORDS) -> dict[str, Record]:
+def load(root: Path | None = None) -> dict[str, Record]:
+    target = resolve_records_dir(ROOT) if root is None else (resolve_records_dir(root) if (root / ".specs" / "records").is_dir() or (root / "records").is_dir() else root)
     records: dict[str, Record] = {}
-    for path in sorted(root.glob("*.md")):
+    for path in sorted(target.glob("*.md")):
         text = path.read_text(encoding="utf-8")
         m = re.match(r"^---\n(.*?)\n---\n(.*)$", text, re.S)
         if not m:
@@ -299,7 +308,7 @@ def verify_traceability(records: dict[str, Record], code_root: Path) -> tuple[li
     errors, warnings = [], []
     if not code_root.exists():
         return [f"verify path not found: {code_root}"], warnings
-    skip = {".git", "node_modules", "__pycache__", ".venv", "dist", "records", "site"}
+    skip = {".git", "node_modules", "__pycache__", ".venv", "dist", "specs", ".specs", "records", "site"}
     files = [code_root] if code_root.is_file() else [
         p for p in sorted(code_root.rglob("*"))
         if p.is_file() and not any(part in skip for part in p.parts)
@@ -439,6 +448,41 @@ def render_speckit(spec: Record, records: dict[str, Record], stack: str = "") ->
     return "\n".join(out).rstrip() + "\n"
 
 
+def render_specs_readme(specs: list[Record], records: dict[str, Record], records_rel: str = ".specs/records") -> str:
+    """Render specs/README.md entrypoint so any agent automatically discovers compiled specifications."""
+    out = [
+        "# Specifications Index",
+        "",
+        f"> **Auto-generated from `{records_rel}/`.** Do not hand-edit files in `specs/`; update the atomic records in `{records_rel}/` and re-render.",
+        "",
+        "## Topological Build & Reading Order",
+        "",
+        "| Spec | Tier | Status | Readiness | Depends On | Title |",
+        "| :--- | :--- | :--- | :--- | :--- | :--- |",
+    ]
+    for s in specs:
+        deps = ", ".join(s.meta.get("depends_on") or []) or "—"
+        out.append(
+            f"| [`{s.id}`]({s.id}.md) | `{s.meta.get('tier', '')}` | `{s.status}` | **{readiness(s, records)}%** | {deps} | {s.title} |"
+        )
+    out.append("")
+
+    open_qs = [r for r in sorted(records.values(), key=lambda x: x.id) if r.prefix == "QST" and r.status == "open"]
+    open_asms = [r for r in sorted(records.values(), key=lambda x: x.id) if r.prefix == "ASM" and r.status == "open"]
+    if open_qs:
+        out += ["## Open Questions (Do Not Guess — Ask)", ""]
+        for q in open_qs:
+            blocks = ", ".join(q.meta.get("blocks") or [])
+            out.append(f"- **`{q.id}`** (blocks {blocks}): {q.title}")
+        out.append("")
+    if open_asms:
+        out += ["## Open Assumptions (Provisional Grounds)", ""]
+        for a in open_asms:
+            out.append(f"- **`{a.id}`**: {a.title}")
+        out.append("")
+    return "\n".join(out).rstrip() + "\n"
+
+
 RENDERERS = {
     "markdown": (render_markdown, ".md"),
     "gherkin": (render_gherkin, ".feature"),
@@ -447,12 +491,12 @@ RENDERERS = {
 }
 
 
-def github_repo() -> str:
+def github_repo(base: Path = ROOT) -> str:
     """owner/name for links from the Pages site; CI sets GITHUB_REPOSITORY."""
     if os.environ.get("GITHUB_REPOSITORY"):
         return os.environ["GITHUB_REPOSITORY"]
     try:
-        url = subprocess.run(["git", "remote", "get-url", "origin"], cwd=ROOT,
+        url = subprocess.run(["git", "remote", "get-url", "origin"], cwd=base,
                              capture_output=True, text=True, check=True).stdout.strip()
     except (OSError, subprocess.CalledProcessError):
         return ""
@@ -460,16 +504,16 @@ def github_repo() -> str:
     return m.group(1) if m else ""
 
 
-def git_revision() -> str:
+def git_revision(base: Path = ROOT) -> str:
     """Short git commit SHA for the published index, if available."""
     try:
-        return subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT,
+        return subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=base,
                               capture_output=True, text=True, check=True).stdout.strip()
     except (OSError, subprocess.CalledProcessError):
         return ""
 
 
-def to_index(records: dict[str, Record]) -> dict:
+def to_index(records: dict[str, Record], base: Path = ROOT) -> dict:
     """Everything the Pages site needs, in one JSON document."""
     errors, warnings = check(records)
     issues: dict[str, list[str]] = {}
@@ -483,6 +527,11 @@ def to_index(records: dict[str, Record]) -> dict:
             else:
                 global_issues.append(f"{level}: {item}")
     specs = [r for r in records.values() if r.prefix == "SPC"]
+    rec_dir = resolve_records_dir(base)
+    try:
+        rec_prefix = rec_dir.relative_to(base).as_posix()
+    except ValueError:
+        rec_prefix = "records"
     rows = []
     for r in records.values():
         try:
@@ -491,7 +540,7 @@ def to_index(records: dict[str, Record]) -> dict:
             touched, hit = [], []
         row = {k: (v.isoformat() if isinstance(v, date) else v)
                for k, v in r.meta.items() if k not in ("created_at", "updated_at")}
-        row.update(type=TYPES[r.prefix], path=f"records/{r.path.name}", body=r.body.strip(),
+        row.update(type=TYPES[r.prefix], path=f"{rec_prefix}/{r.path.name}", body=r.body.strip(),
                    downstream=touched + [s.id for s in hit], issues=issues.get(r.id, []))
         if r.prefix == "SPC":
             row["readiness"] = readiness(r, records)
@@ -499,9 +548,10 @@ def to_index(records: dict[str, Record]) -> dict:
             row["open_questions"] = open_questions(r, records)
         rows.append(row)
     return {
-        "repo": github_repo(),
+        "repo": github_repo(base),
+        "records_dir": rec_prefix,
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "revision": git_revision(),
+        "revision": git_revision(base),
         "summary": {"records": len(records), "errors": len(errors), "warnings": len(warnings)},
         "issues": global_issues,
         "spec_order": [s.id for s in topo(specs, records)] if not errors else sorted(s.id for s in specs),
@@ -511,6 +561,7 @@ def to_index(records: dict[str, Record]) -> dict:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--root", help="target repository root (defaults to parent of tools/spec.py)")
     sub = ap.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("check")
     c.add_argument("--strict", action="store_true", help="treat warnings as errors")
@@ -521,18 +572,19 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--tier", choices=["skeleton", "feature"])
     r.add_argument("--format", choices=sorted(RENDERERS), default="markdown")
     r.add_argument("--stack", help="optional technology stack file to bind at render time")
-    r.add_argument("--out", default="dist")
+    r.add_argument("--out", default="specs")
     x = sub.add_parser("index")
     x.add_argument("--out", default="site/data/index.json")
     args = ap.parse_args(argv)
 
-    records = load()
+    base = Path(args.root).resolve() if args.root else ROOT
+    records = load(base)
 
     if args.cmd == "check":
         errors, warnings = check(records)
         if args.verify:
             vp = Path(args.verify)
-            ve, vw = verify_traceability(records, vp if vp.is_absolute() else ROOT / vp)
+            ve, vw = verify_traceability(records, vp if vp.is_absolute() else base / vp)
             errors.extend(ve)
             warnings.extend(vw)
         for w in warnings:
@@ -554,9 +606,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.cmd == "index":
-        out = ROOT / args.out
+        out = Path(args.out) if Path(args.out).is_absolute() else base / args.out
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(to_index(records), indent=1, ensure_ascii=False), encoding="utf-8")
+        out.write_text(json.dumps(to_index(records, base), indent=1, ensure_ascii=False), encoding="utf-8")
         print(f"wrote {args.out}")
         return 0
 
@@ -564,23 +616,32 @@ def main(argv: list[str] | None = None) -> int:
     if args.stack:
         sp = Path(args.stack)
         if not sp.is_file():
-            sp = ROOT / args.stack
+            sp = base / args.stack
         if not sp.is_file():
             print(f"unknown stack file {args.stack}")
             return 1
         stack_text = sp.read_text(encoding="utf-8").strip()
 
     render, ext = RENDERERS[args.format]
-    out = ROOT / args.out
+    out = Path(args.out) if Path(args.out).is_absolute() else base / args.out
     out.mkdir(parents=True, exist_ok=True)
-    for s in topo([r for r in records.values() if r.prefix == "SPC"], records):
-        if args.tier and s.meta.get("tier") != args.tier:
-            continue
+    ordered_specs = topo([r for r in records.values() if r.prefix == "SPC"], records)
+    filtered_specs = [s for s in ordered_specs if not args.tier or s.meta.get("tier") == args.tier]
+    for s in filtered_specs:
         content = render(s, records, stack_text) if stack_text else render(s, records)
         (out / f"{s.id}{ext}").write_text(content, encoding="utf-8")
         print(f"wrote {args.out}/{s.id}{ext}")
+    if args.format == "markdown":
+        rec_dir = resolve_records_dir(base)
+        try:
+            rec_rel = rec_dir.relative_to(base).as_posix()
+        except ValueError:
+            rec_rel = ".specs/records"
+        (out / "README.md").write_text(render_specs_readme(ordered_specs, records, rec_rel), encoding="utf-8")
+        print(f"wrote {args.out}/README.md")
     return 0
 
 
 if __name__ == "__main__":
     sys.exit(main())
+
