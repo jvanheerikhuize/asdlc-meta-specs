@@ -23,7 +23,7 @@ Run real projects on the record model, extract existing repositories into `recor
 
 - ~~**Extract a production application corpus.**~~ Done: applied to a real self-hosted media appliance (`lumen`, 36 records across 1 `skeleton` and 4 `feature` specs, passing `tools/spec.py check --strict` with 0 errors and 0 warnings).
 - ~~**Interactive lineage & task triage in the workspace.**~~ Done: the static workspace (`site/`, specified by `SPC-0003`) derives actionable queues (*fix now*, *answer questions*, *test assumptions*, *quick wins*) and provides interactive left-to-right graph lineage focus.
-- ~~**Settle this repo's own open grounds & verify self-recreation.**~~ Done: all initial assumptions (`ASM-0001`..`ASM-0004`) promoted to facts (`FCT-0001`, `FCT-0005`..`FCT-0007`), questions answered (`QST-0001`..`QST-0002`), and the 30-record corpus (`SPC-0001`..`SPC-0003` + `TECH_STACK.md`) verified via clean-room blind reconstruction.
+- ~~**Settle this repo's own open grounds & verify self-recreation.**~~ Done: all initial assumptions (`ASM-0001`..`ASM-0004`) promoted to facts (`FCT-0001`, `FCT-0005`..`FCT-0007`), questions answered (`QST-0001`..`QST-0002`), and the 31-record corpus (`SPC-0001`..`SPC-0003` + `TECH_STACK.md`) verified via clean-room blind reconstruction.
 
 ### Phase 1: Sharpen the axiom
 

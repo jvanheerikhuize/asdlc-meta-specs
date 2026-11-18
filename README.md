@@ -221,4 +221,4 @@ asdlc-meta-specs/
 
 ## Self-specification & Roadmap
 
-The 30 records in [`records/`](records/) together with [`TECH_STACK.md`](TECH_STACK.md) completely specify this repository (`SPC-0001` for the record graph and checker, `SPC-0002` for rendering, index export, and guardrails, and `SPC-0003` for the interactive web workspace) and are verified by clean-room blind reconstruction. See [ROADMAP.md](ROADMAP.md) for the next evolution steps.
+The 31 records in [`records/`](records/) together with [`TECH_STACK.md`](TECH_STACK.md) completely specify this repository (`SPC-0001` for the record graph and checker, `SPC-0002` for rendering, index export, and guardrails, and `SPC-0003` for the interactive web workspace) and are verified by clean-room blind reconstruction. See [ROADMAP.md](ROADMAP.md) for the next evolution steps.

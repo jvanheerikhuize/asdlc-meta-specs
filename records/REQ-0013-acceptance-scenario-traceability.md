@@ -6,7 +6,7 @@ because: [FCT-0001, FCT-0009]
 ---
 
 ## Statement
-Rendered Markdown specs MUST label each acceptance scenario with a sequential ID (`**<REQ-ID>#<N>**`). When checking the graph with `--verify DIR`, the system MUST scan source and test files under `DIR` for `REQ-xxxx` or `REQ-xxxx#n` citations, fail on out-of-range scenario IDs (`cites unknown scenario <REQ-ID>#<N>`), and warn on any `active` requirement or numbered scenario lacking a citation.
+Rendered Markdown specs MUST label each acceptance scenario with a sequential ID (`**<REQ-ID>#<N>**`). When checking the graph with `--verify DIR`, the system MUST scan source and test files under `DIR` (skipping version-control, dependency, cache, build-output, `records`, and `site` directories) for `REQ-xxxx` or `REQ-xxxx#n` citations, fail on out-of-range scenario IDs (`cites unknown scenario <REQ-ID>#<N>`), and warn on any `active` requirement lacking a citation or any numbered scenario lacking a citation when at least one numbered scenario for that requirement is cited without a bare `REQ-xxxx` citation.
 
 ## Acceptance
 - Given an `active` requirement whose ID is not cited under the verified directory
