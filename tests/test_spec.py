@@ -18,12 +18,12 @@ evidence: Measured.
 SCENARIO = "\n## Acceptance\n- Given a\n- When b\n- Then c\n"
 
 
-def req(status="active", because="[FCT-0001]", body=SCENARIO, rid="REQ-0001"):
+def req(status="active", because="[FCT-0001]", body="\n## Statement\nThe system MUST behave.\n" + SCENARIO, rid="REQ-0001"):
     return f"---\nid: {rid}\ntitle: A requirement\nstatus: {status}\nbecause: {because}\n---\n{body}"
 
 
-def asm(status, rid="ASM-0001", extra=""):
-    return f"---\nid: {rid}\ntitle: An assumption\nstatus: {status}\n{extra}---\n"
+def asm(status, rid="ASM-0001", extra="", body="\n## How we validate it\nRun the check.\n"):
+    return f"---\nid: {rid}\ntitle: An assumption\nstatus: {status}\n{extra}---\n{body}"
 
 
 def qst(status="open", blocks="[REQ-0001]", extra="", rid="QST-0001"):
@@ -138,9 +138,16 @@ class CheckTest(unittest.TestCase):
         self.assertTrue(any("past review date" in w for w in warnings))
 
     def test_fact_freshness_invalid_date_fails(self):  # REQ-0008
-        bad_fact = FACT.replace("status: active", "status: active\nreview_after: not-a-date")
-        errors, warnings = Graph(FCT_0001=bad_fact, REQ_0001=req()).check()
-        self.assertTrue(any("invalid review_after date" in e for e in errors))
+        for bad in ("not-a-date", "20300101"):
+            bad_fact = FACT.replace("status: active", f"status: active\nreview_after: {bad}")
+            errors, _ = Graph(FCT_0001=bad_fact, REQ_0001=req()).check()
+            self.assertTrue(any("invalid review_after date" in e for e in errors))
+
+    def test_missing_statement_and_validation_plan_fail(self):  # REQ-0001
+        g = Graph(FCT_0001=FACT, REQ_0001=req(body=SCENARIO), ASM_0001=asm("open", body=""))
+        errors, _ = g.check()
+        self.assertTrue(any("non-empty '## Statement'" in e for e in errors))
+        self.assertTrue(any("non-empty '## How we validate it'" in e for e in errors))
 
 
 class QuestionTest(unittest.TestCase):
@@ -181,6 +188,12 @@ class QuestionTest(unittest.TestCase):
         gherkin = spec.render_gherkin(s, g.records)
         self.assertIn("@QST-0001", gherkin)
         self.assertIn("@QST-0002\nFeature:", gherkin)
+
+    def test_gherkin_preserves_scenarioless_blocked_requirement(self):  # REQ-0005
+        g = Graph(FCT_0001=FACT, REQ_0001=req("provisional", body="\n## Statement\nBlocked.\n"),
+                  QST_0001=qst(), SPC_0001=spc("SPC-0001", "skeleton", "[REQ-0001]"))
+        gherkin = spec.render_gherkin(g.records["SPC-0001"], g.records)
+        self.assertIn("# @provisional @QST-0001: REQ-0001", gherkin)
 
     def test_question_impact_flows_to_what_it_blocks(self):
         g = Graph(FCT_0001=FACT, REQ_0001=req("provisional"), QST_0001=qst(),
@@ -258,16 +271,45 @@ class IndexTest(unittest.TestCase):
         index = spec.to_index(spec.load())
         self.assertEqual(index["summary"]["errors"], 0)
         self.assertEqual(index["issues"], [])
-        self.assertEqual(index["spec_order"], ["SPC-0001", "SPC-0002", "SPC-0003"])
+        self.assertGreaterEqual(len(index["spec_order"]), 1)
         rows = {r["id"]: r for r in index["records"]}
-        self.assertEqual(rows["SPC-0001"]["readiness"], 100)
-        self.assertEqual(rows["SPC-0002"]["readiness"], 100)
-        self.assertEqual(rows["SPC-0003"]["readiness"], 100)
-        self.assertIn("SPC-0002", rows["ASM-0002"]["downstream"])
-        self.assertTrue(rows["REQ-0001"]["path"].startswith("records/REQ-0001-"))
-        self.assertEqual(rows["REQ-0005"]["open_questions"], [])
-        self.assertEqual(rows["QST-0002"]["status"], "answered")
-        self.assertEqual(rows["QST-0002"]["type"], "question")
+        for rid, row in rows.items():
+            for key in ("id", "type", "status", "path", "downstream", "issues"):
+                self.assertIn(key, row, f"{rid} missing {key}")
+            if row["type"] in ("requirement", "spec"):
+                self.assertIn("open_questions", row, f"{rid} missing open_questions")
+            self.assertTrue(row["path"].startswith(f"records/{rid}-"))
+        for sid in index["spec_order"]:
+            self.assertIn("readiness", rows[sid])
+            self.assertEqual(rows[sid]["type"], "spec")
+
+    def test_index_fixture_readiness_and_mixed_state(self):  # REQ-0009
+        g_green = Graph(
+            FCT_0001=FACT.replace("status: active", "status: active\npromoted_from: ASM-0001"),
+            ASM_0001=asm("validated", extra="promoted_to: FCT-0001\n"),
+            QST_0001=qst("answered", extra="answered_by: FCT-0001\n"),
+            REQ_0001=req(),
+            SPC_0001=spc("SPC-0001", "skeleton", "[REQ-0001]", status="active"),
+        )
+        idx_green = spec.to_index(g_green.records)
+        self.assertEqual(idx_green["summary"]["errors"], 0)
+        rows_g = {r["id"]: r for r in idx_green["records"]}
+        self.assertEqual(rows_g["SPC-0001"]["readiness"], 100)
+        self.assertEqual(rows_g["QST-0001"]["type"], "question")
+        self.assertEqual(rows_g["QST-0001"]["status"], "answered")
+        self.assertIn("SPC-0001", rows_g["FCT-0001"]["downstream"])
+
+        g_mixed = Graph(
+            FCT_0001=FACT,
+            REQ_0001=req("provisional"),
+            QST_0001=qst("open", blocks="[REQ-0001]"),
+            SPC_0001=spc("SPC-0001", "skeleton", "[REQ-0001]", status="draft"),
+        )
+        idx_mixed = spec.to_index(g_mixed.records)
+        self.assertEqual(idx_mixed["summary"]["errors"], 0)
+        rows_m = {r["id"]: r for r in idx_mixed["records"]}
+        self.assertEqual(rows_m["SPC-0001"]["readiness"], 0)
+        self.assertEqual(rows_m["REQ-0001"]["open_questions"], ["QST-0001"])
 
     def test_issues_are_attached_to_their_record(self):  # REQ-0009
         index = spec.to_index(Graph(ASM_0001=asm("open"), REQ_0001=req(because="[ASM-0001]")).records)

@@ -114,6 +114,8 @@ def check(records: dict[str, Record]) -> tuple[list[str], list[str]]:
 
         # 2. Assumptions are promoted to facts, both sides agree
         if r.prefix == "ASM":
+            if not r.section("How we validate it"):
+                err(r, "assumption must have a non-empty '## How we validate it' section")
             conf = r.meta.get("confidence")
             if conf is not None:
                 try:
@@ -144,8 +146,11 @@ def check(records: dict[str, Record]) -> tuple[list[str], list[str]]:
                     err(r, f"{source} must declare promoted_to: {r.id}")
             review = r.meta.get("review_after")
             if review:
+                review_str = review.isoformat() if isinstance(review, date) else str(review)
                 try:
-                    review_date = date.fromisoformat(str(review))
+                    if not re.match(r"^\d{4}-\d{2}-\d{2}$", review_str):
+                        raise ValueError
+                    review_date = date.fromisoformat(review_str)
                     if date.today() > review_date:
                         warn(r, f"fact is past review date {review_date.isoformat()} and may be stale")
                 except ValueError:
@@ -173,6 +178,8 @@ def check(records: dict[str, Record]) -> tuple[list[str], list[str]]:
 
         # 4. Epistemic gate: a requirement is only as solid as what it rests on
         if r.prefix == "REQ":
+            if not r.section("Statement"):
+                err(r, "requirement must have a non-empty '## Statement' section")
             grounds = [records[g] for g in r.meta.get("because") or [] if g in records]
             if not r.meta.get("because"):
                 err(r, "requirement must say 'because' (facts and/or assumptions)")
@@ -363,7 +370,12 @@ def render_gherkin(spec: Record, records: dict[str, Record], stack: str = "") ->
         req = records[rid]
         tags = ([] if req.status == "active" else [f"@{req.status}"]) + [f"@{q}" for q in open_questions(req, records)]
         tag = f"  {' '.join(tags)}\n" if tags else ""
-        for i, sc in enumerate(req.scenarios(), 1):
+        scenarios = req.scenarios()
+        if not scenarios:
+            prefix = f"{' '.join(tags)}: " if tags else ""
+            out += [f"  # {prefix}{rid} {req.title} (no scenarios yet)", ""]
+            continue
+        for i, sc in enumerate(scenarios, 1):
             out += [f"{tag}  Scenario: {rid} {req.title} #{i}"] + [f"    {ln}" for ln in sc] + [""]
     return "\n".join(out).rstrip() + "\n"
 
