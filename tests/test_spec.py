@@ -199,6 +199,13 @@ class RenderTest(unittest.TestCase):
             self.assertIn("## Technology Stack\n\nRuntime: Python 3.10+", rendered)
             self.assertEqual(spec.main(["render", "--stack", str(Path(tmp) / "missing.md"), "--out", str(out_dir)]), 1)
 
+    def test_render_includes_optional_non_goals(self):  # REQ-0005
+        records = spec.load()
+        md = spec.render_markdown(records["SPC-0001"], records)
+        self.assertIn("## Non-goals\n\n- Do not require external databases", md)
+        self.assertLess(md.index("## Non-goals"), md.index("## Requirements"))
+        self.assertNotIn("## Non-goals", spec.render_markdown(records["SPC-0003"], records))
+
 
 class IndexTest(unittest.TestCase):
     def test_index_has_everything_the_site_reads(self):  # REQ-0009

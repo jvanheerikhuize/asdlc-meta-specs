@@ -26,7 +26,7 @@ Together with the rendered specifications (`SPC-0001`, `SPC-0002`, `SPC-0003`), 
    - `FCT` keys: `status` in `{"active", "deprecated"}`, `evidence` (non-empty string, required), optional `promoted_from` (`ASM-xxxx`), optional `review_after` (`YYYY-MM-DD`). Markdown section: `## Statement`.
    - `QST` keys: `status` in `{"open", "answered"}`, `blocks` (non-empty list of `REQ-xxxx` / `SPC-xxxx`), optional `answered_by` (`FCT-xxxx` or `ASM-xxxx`, required when `answered`, forbidden when `open`). Markdown section: `## Question`.
    - `REQ` keys: `status` in `{"provisional", "active", "broken"}`, `because` (non-empty list of `FCT-xxxx` / `ASM-xxxx`). Markdown sections: `## Statement`, `## Acceptance` (one or more scenario blocks separated by blank lines, each line prefixed with `- Given ...`, `- When ...`, `- Then ...`).
-   - `SPC` keys: `status` in `{"draft", "active"}`, `tier` in `{"skeleton", "feature"}`, `requirements` (list of `REQ-xxxx`), optional `depends_on` (list of `SPC-xxxx`). Markdown section: `## Purpose`.
+   - `SPC` keys: `status` in `{"draft", "active"}`, `tier` in `{"skeleton", "feature"}`, `requirements` (list of `REQ-xxxx`), optional `depends_on` (list of `SPC-xxxx`). Markdown sections: `## Purpose`, optional `## Non-goals`.
 3. **Stack-Term Guardrail (`STACK_TERMS`):** Whole-word case-insensitive regex `(?<![\w-])(...)(?![\w-])` scanned across `r.title + "\n" + r.body` (not front-matter `evidence`):
    `postgres`, `postgresql`, `mysql`, `sqlite`, `mongodb`, `redis`, `kafka`, `rabbitmq`, `react`, `vue`, `angular`, `svelte`, `django`, `flask`, `fastapi`, `spring`, `rails`, `node.js`, `nodejs`, `typescript`, `javascript`, `python`, `java`, `golang`, `docker`, `kubernetes`, `aws`, `azure`, `gcp`, `graphql`, `grpc`, `json schema`.
 
