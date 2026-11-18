@@ -206,6 +206,18 @@ class RenderTest(unittest.TestCase):
         self.assertLess(md.index("## Non-goals"), md.index("## Requirements"))
         self.assertNotIn("## Non-goals", spec.render_markdown(records["SPC-0003"], records))
 
+    def test_openspec_and_speckit_renderers(self):  # REQ-0005
+        records = spec.load()
+        s = records["SPC-0001"]
+        os_md = spec.render_openspec(s, records)
+        self.assertIn("### Requirement: REQ-0001", os_md)
+        self.assertIn("#### Scenario: REQ-0001#1", os_md)
+        self.assertIn("- **GIVEN**", os_md)
+        sk_md = spec.render_speckit(s, records)
+        self.assertIn("# Feature Specification: Record graph and epistemic check", sk_md)
+        self.assertIn("## User Scenarios & Testing", sk_md)
+        self.assertIn("- **REQ-0001**:", sk_md)
+
 
 class IndexTest(unittest.TestCase):
     def test_index_has_everything_the_site_reads(self):  # REQ-0009

@@ -3,7 +3,7 @@
 
     python tools/spec.py check [--strict] [--verify DIR]  validate links, epistemic gates, open questions, spec DAG, traceability
     python tools/spec.py impact <ID>               what must be revisited when <ID> changes
-    python tools/spec.py render [--tier T] [--format markdown|gherkin] [--stack FILE] [--out DIR]
+    python tools/spec.py render [--tier T] [--format markdown|gherkin|openspec|speckit] [--stack FILE] [--out DIR]
     python tools/spec.py index [--out FILE]        write the JSON the Pages site reads
 """
 from __future__ import annotations
@@ -328,7 +328,66 @@ def render_gherkin(spec: Record, records: dict[str, Record], stack: str = "") ->
     return "\n".join(out).rstrip() + "\n"
 
 
-RENDERERS = {"markdown": (render_markdown, ".md"), "gherkin": (render_gherkin, ".feature")}
+def render_openspec(spec: Record, records: dict[str, Record], stack: str = "") -> str:
+    """Project a spec to OpenSpec Markdown (`### Requirement:` / `#### Scenario:`)."""
+    out = [f"# {spec.id} · {spec.title}", "", "## Purpose", "", spec.section("Purpose"), ""]
+    non_goals = spec.section("Non-goals")
+    if non_goals:
+        out += ["## Non-goals", "", non_goals, ""]
+    out += _asked(spec, records, "##")
+    out += ["## Requirements", ""]
+    for rid in spec.meta.get("requirements") or []:
+        req = records[rid]
+        out += [f"### Requirement: {rid} · {req.title}", "", req.section("Statement"), ""]
+        out += _asked(req, records, "####")
+        for i, sc in enumerate(req.scenarios(), 1):
+            out += [f"#### Scenario: {rid}#{i}"]
+            for ln in sc:
+                kw, _, rest = ln.partition(" ")
+                out.append(f"- **{kw.upper()}** {rest}" if kw.lower() in ("given", "when", "then", "and", "but") else f"- {ln}")
+            out.append("")
+    if stack.strip():
+        out += ["## Technology Stack", "", stack.strip(), ""]
+    return "\n".join(out).rstrip() + "\n"
+
+
+def render_speckit(spec: Record, records: dict[str, Record], stack: str = "") -> str:
+    """Project a spec to GitHub Spec Kit Markdown (`## User Scenarios & Testing` / `## Requirements`)."""
+    out = [f"# Feature Specification: {spec.title}", "",
+           f"**Spec ID**: `{spec.id}` | **Tier**: {spec.meta['tier']} | **Status**: {spec.status} ({readiness(spec, records)}% ready)", "",
+           spec.section("Purpose"), ""]
+    non_goals = spec.section("Non-goals")
+    if non_goals:
+        out += ["## Non-goals", "", non_goals, ""]
+    out += ["## User Scenarios & Testing", ""]
+    clarifications: list[str] = list(open_questions(spec, records))
+    for rid in spec.meta.get("requirements") or []:
+        req = records[rid]
+        clarifications.extend(q for q in open_questions(req, records) if q not in clarifications)
+        out += [f"### {rid} · {req.title} ({req.status})", ""]
+        for i, sc in enumerate(req.scenarios(), 1):
+            out += [f"**Acceptance Scenario {rid}#{i}**", ""] + [f"- {ln}" for ln in sc] + [""]
+    out += ["## Requirements", "", "### Functional Requirements", ""]
+    for rid in spec.meta.get("requirements") or []:
+        req = records[rid]
+        stmt = req.section("Statement").replace("\n", " ").strip()
+        grounds = ", ".join(req.meta["because"])
+        out.append(f"- **{rid}**: {stmt} *(grounds: {grounds})*")
+    out.append("")
+    if clarifications:
+        out += ["## Clarifications", "", "### Needs Clarification (do not guess, ask)", ""]
+        out += [f"- **{q}**: {records[q].title}" for q in clarifications] + [""]
+    if stack.strip():
+        out += ["## Technology Stack", "", stack.strip(), ""]
+    return "\n".join(out).rstrip() + "\n"
+
+
+RENDERERS = {
+    "markdown": (render_markdown, ".md"),
+    "gherkin": (render_gherkin, ".feature"),
+    "openspec": (render_openspec, ".openspec.md"),
+    "speckit": (render_speckit, ".speckit.md"),
+}
 
 
 def github_repo() -> str:
