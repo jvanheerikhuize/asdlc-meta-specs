@@ -1,19 +1,19 @@
-/* Design System tokens (Open Props-aligned, zero-build). Colours change per theme; sizes, spacing, layers and shapes do not. */
+/* Bound to asdlc-meta-designsystem tokens (dark-first :root + [data-theme="light"]). */
 :root {
-  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: var(--font-sans, system-ui, -apple-system, "Segoe UI", sans-serif);
+  --font-mono: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 24px;
   --space-6: 36px;
-  --control-h: 36px;        /* every button, chip, input and select */
-  --control-h-sm: 32px;     /* top navigation and graph controls */
+  --control-h: 36px;
+  --control-h-sm: 32px;
   --badge-h: 20px;
-  --radius-sm: 4px;         /* inline code, bar segments */
-  --radius: 8px;            /* controls */
-  --radius-lg: 10px;        /* cards, lists, panels */
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-lg: 10px;
   --pill: 999px;
   --fs-body: 15px;
   --fs-control: 14px;
@@ -25,36 +25,27 @@
   --z-node-active: 4;
   --z-sticky: 20;
   --z-header: 30;
+  --bg: var(--color-bg, #08080b);
+  --surface: var(--color-surface, #111116);
+  --text: var(--color-fg, #ededed);
+  --muted: var(--color-fg-muted, #8e8e98);
+  --line: var(--color-border, rgba(255, 255, 255, 0.08));
+  --soft: var(--color-card, rgba(255, 255, 255, 0.04));
+  --accent: var(--color-accent, #f43f5e);
+  --on-accent: var(--color-accent-fg, #08080b);
+  --fact: var(--color-success, #10b981);
+  --assume: var(--color-warning, #f59e0b);
+  --req: var(--color-info, #38bdf8);
+  --spec: #a78bfa;
+  --question: var(--color-accent, #f43f5e);
+  --bad: var(--color-danger, #f87171);
+  --shadow-sm: var(--shadow-sm, 0 2px 10px rgb(0 0 0 / .35));
+  --shadow-lg: var(--shadow-lg, 0 10px 28px rgb(0 0 0 / .48));
 }
-:root {
-  color-scheme: light dark;
-  --bg: #f7f7f5; --surface: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --line: #e3e2dd;
-  --accent: #3d5afe; --on-accent: #ffffff;
-  --fact: #1b8a5a; --assume: #c27c0e; --req: #3d5afe; --spec: #7b3fbf; --question: #c2255c;
-  --bad: #c62828; --soft: #f0efeb;
-  --shadow-sm: 0 2px 8px rgb(0 0 0 / .07);
-  --shadow-lg: 0 8px 24px rgb(0 0 0 / .11);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #141413; --surface: #1d1d1b; --text: #ecebe6; --muted: #9c9b95; --line: #33332f;
-    --accent: #7c8cff; --on-accent: #ffffff;
-    --fact: #4cc38a; --assume: #e6a23c; --req: #7c8cff; --spec: #b98cf0; --question: #f06595;
-    --bad: #ef6b6b; --soft: #262624;
-    --shadow-sm: 0 2px 10px rgb(0 0 0 / .35);
-    --shadow-lg: 0 10px 28px rgb(0 0 0 / .48);
-  }
-}
-:root[data-theme="light"] { color-scheme: light; }
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --bg: #141413; --surface: #1d1d1b; --text: #ecebe6; --muted: #9c9b95; --line: #33332f;
-  --accent: #7c8cff; --on-accent: #ffffff;
-  --fact: #4cc38a; --assume: #e6a23c; --req: #7c8cff; --spec: #b98cf0; --question: #f06595;
-  --bad: #ef6b6b; --soft: #262624;
-  --shadow-sm: 0 2px 10px rgb(0 0 0 / .35);
-  --shadow-lg: 0 10px 28px rgb(0 0 0 / .48);
-}
+.top-nav { display: flex; gap: 4px; flex-wrap: wrap; }
+.top-nav a { display: inline-flex; align-items: center; height: var(--control-h-sm); padding: 0 10px; border-radius: var(--radius); color: var(--muted); white-space: nowrap; transition: color .15s, background-color .15s; }
+.top-nav a:hover { text-decoration: none; color: var(--text); }
+.top-nav a[aria-current] { background: var(--soft); color: var(--text); }
 
 * { box-sizing: border-box; }
 html { accent-color: var(--accent); scroll-padding-top: 76px; }

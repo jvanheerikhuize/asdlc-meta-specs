@@ -365,7 +365,8 @@ class WorkspaceContractTest(unittest.TestCase):
         for kind in ("requirement:", "assumption:", "fact:", "question:", "spec:"):
             self.assertIn(kind, self.app)
         self.assertIn('field("Review after", r.review_after)', self.app)
-        self.assertIn("theme-toggle", self.html)
+        self.assertIn("ui-navbar", self.html)
+        self.assertIn("ui-theme-change", self.app)
 
 
 class TraceabilityTest(unittest.TestCase):
