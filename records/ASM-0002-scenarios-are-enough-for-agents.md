@@ -1,8 +1,9 @@
 ---
 id: ASM-0002
 title: One Given/When/Then scenario per requirement is enough for an agent to implement it
-status: open
+status: validated
 confidence: 0.6
+promoted_to: FCT-0005
 ---
 
 ## Statement

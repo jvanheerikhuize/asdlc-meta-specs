@@ -1,8 +1,9 @@
 ---
 id: ASM-0004
 title: Specs that never name a technology survive a change of technology
-status: open
+status: validated
 confidence: 0.75
+promoted_to: FCT-0006
 ---
 
 ## Statement
