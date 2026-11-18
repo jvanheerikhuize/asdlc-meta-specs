@@ -84,7 +84,12 @@ function effective(r) {
   if (r.open_questions?.length) return "asked";
   return grounds.length && grounds.every((g) => prefix(g.id) === "FCT") ? "ready" : r.status;
 }
-function tone(r) { return (TONES[prefix(r.id)][r.status] || ["off", r.status])[0]; }
+function tone(r) {
+  if (prefix(r.id) === "FCT" && r.status === "active" && r.review_after && new Date(r.review_after) < new Date()) {
+    return "wait";
+  }
+  return (TONES[prefix(r.id)][r.status] || ["off", r.status])[0];
+}
 const section = (body, heading) => (body.match(new RegExp(`^## ${heading}\\s*\\n([\\s\\S]*?)(?=^## |$(?![\\s\\S]))`, "m")) || [, ""])[1].trim();
 const editLink = (r, label = "Edit on GitHub") => h("a", { class: "btn ghost", href: gh(`edit/main/${r.path}`), target: "_blank", rel: "noopener" }, label);
 const idList = (ids) => ids.flatMap((d, i) => [i ? ", " : "", rid(d)]);
