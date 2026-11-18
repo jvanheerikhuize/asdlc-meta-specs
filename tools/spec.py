@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """One tool for the whole record graph.
 
-    python tools/spec.py check [--strict]          validate links, epistemic gates, open questions, spec DAG
+    python tools/spec.py check [--strict] [--verify DIR]  validate links, epistemic gates, open questions, spec DAG, traceability
     python tools/spec.py impact <ID>               what must be revisited when <ID> changes
     python tools/spec.py render [--tier T] [--format markdown|gherkin] [--stack FILE] [--out DIR]
     python tools/spec.py index [--out FILE]        write the JSON the Pages site reads
@@ -248,6 +248,44 @@ def impact(changed: str, records: dict[str, Record]) -> tuple[list[str], list[Re
     return sorted(seen - {s.id for s in hit_specs}), hit_specs
 
 
+def verify_traceability(records: dict[str, Record], code_root: Path) -> tuple[list[str], list[str]]:
+    """Check that active requirements and numbered scenarios are cited in code/tests under `code_root`."""
+    errors, warnings = [], []
+    if not code_root.exists():
+        return [f"verify path not found: {code_root}"], warnings
+    skip = {".git", "node_modules", "__pycache__", ".venv", "dist", "records", "site"}
+    files = [code_root] if code_root.is_file() else [
+        p for p in sorted(code_root.rglob("*"))
+        if p.is_file() and not any(part in skip for part in p.parts)
+    ]
+    bare_cited: set[str] = set()
+    scen_cited: set[tuple[str, int]] = set()
+    cite_re = re.compile(r"\b(REQ-\d{4})(?:#(\d+))?\b")
+    for p in files:
+        text = p.read_text(encoding="utf-8", errors="ignore")
+        for m in cite_re.finditer(text):
+            rid, num = m.group(1), m.group(2)
+            if num is None:
+                bare_cited.add(rid)
+            else:
+                idx = int(num)
+                if rid in records and (idx < 1 or idx > len(records[rid].scenarios())):
+                    errors.append(f"{p.name}: cites unknown scenario {rid}#{idx}")
+                else:
+                    scen_cited.add((rid, idx))
+    for r in sorted(records.values(), key=lambda x: x.id):
+        if r.prefix != "REQ" or r.status != "active":
+            continue
+        has_specific = any(rid == r.id for rid, _ in scen_cited)
+        if has_specific:
+            for i in range(1, len(r.scenarios()) + 1):
+                if (r.id, i) not in scen_cited and r.id not in bare_cited:
+                    warnings.append(f"{r.path.name}: unverified scenario {r.id}#{i}")
+        elif r.id not in bare_cited:
+            warnings.append(f"{r.path.name}: active requirement {r.id} has no test/code citation")
+    return errors, warnings
+
+
 def render_markdown(spec: Record, records: dict[str, Record], stack: str = "") -> str:
     out = [f"# {spec.id} · {spec.title}", "",
            f"Tier: **{spec.meta['tier']}** · Readiness: **{readiness(spec, records)}%**", ""]
@@ -262,8 +300,8 @@ def render_markdown(spec: Record, records: dict[str, Record], stack: str = "") -
     for rid in spec.meta.get("requirements") or []:
         req = records[rid]
         out += [f"### {rid} · {req.title} ({req.status})", "", req.section("Statement"), ""]
-        for sc in req.scenarios():
-            out += ["```gherkin", *sc, "```", ""]
+        for i, sc in enumerate(req.scenarios(), 1):
+            out += [f"**{rid}#{i}**", "", "```gherkin", *sc, "```", ""]
         out += ["Because:"] + [f"- {g} ({records[g].status}): {records[g].title}" for g in req.meta["because"]] + [""]
         out += _asked(req, records, "####")
     if stack.strip():
@@ -342,6 +380,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("check")
     c.add_argument("--strict", action="store_true", help="treat warnings as errors")
+    c.add_argument("--verify", help="verify active requirements against test/code citations in DIR")
     i = sub.add_parser("impact")
     i.add_argument("id")
     r = sub.add_parser("render")
@@ -357,6 +396,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "check":
         errors, warnings = check(records)
+        if args.verify:
+            vp = Path(args.verify)
+            ve, vw = verify_traceability(records, vp if vp.is_absolute() else ROOT / vp)
+            errors.extend(ve)
+            warnings.extend(vw)
         for w in warnings:
             print(f"WARN  {w}")
         for e in errors:
