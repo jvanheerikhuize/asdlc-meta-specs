@@ -1,5 +1,7 @@
 # ASDLC Meta-Specs — Technology Stack & Implementation Contract
 
+Design-System: asdlc-meta-designsystem@latest
+
 This document lives **outside** the epistemic specification corpus (`records/`) so that all assumptions (`ASM`), facts (`FCT`), questions (`QST`), requirements (`REQ`), and specifications (`SPC`) remain 100% technology-stack-agnostic (`python3 tools/spec.py check --strict`).
 
 Together with the rendered specifications (`SPC-0001`, `SPC-0002`, `SPC-0003`), this file provides the complete technical binding needed to build and verify the entire repository from scratch.
@@ -108,26 +110,17 @@ Together with the rendered specifications (`SPC-0001`, `SPC-0002`, `SPC-0003`), 
 
 ## 4. Web Workspace Architecture (`site/`)
 
-- **`site/index.html`**: Sticky glass top bar with brand link (`#/`), 5 primary navigation links (`Dashboard` `#/`, `Tasks` `#/tasks`, `Graph` `#/graph`, `Records` `#/records`, `Capture` `#/capture/requirement`), `#theme-toggle` button (`Theme: System` / `Light` / `Dark`), `<main id="main" tabindex="-1">`, and footer with `#repo-link`.
+- **`site/index.html`**: Links `https://jvanheerikhuize.github.io/asdlc-meta-designsystem/latest/src/tokens/tokens.css` and `.../latest/src/index.js`, renders `<ui-navbar id="navbar">` with brand link (`#/`), 5 primary navigation links (`Dashboard` `#/`, `Tasks` `#/tasks`, `Graph` `#/graph`, `Records` `#/records`, `Capture` `#/capture/requirement`), `<main id="main" tabindex="-1">`, and footer with `#repo-link`.
 - **`site/app.js`**:
-  - Fetches `data/index.json` (`cache: "no-cache"`), builds lookup maps (`byId`, `askedBy`, `usedBy`), attaches a badge with total task count to the `Tasks` nav link, and routes on `location.hash`.
-  - Uses `localStorage` keys `"theme"` and `"capture:<kind>"`.
-  - Links record edits to `https://github.com/<repo>/edit/main/<path>` and new record proposals to `https://github.com/<repo>/new/main?filename=<path>&value=<content>`.
-  - Uses `document.startViewTransition` when switching top-level routes unless `prefers-reduced-motion: reduce` is active.
-  - Implements the 5 views specified in `SPC-0003` (`dashboard`, `tasksView`, `graph`, `records`/`record`, `capture`).
-- **`site/styles.css`**: CSS custom properties for light/dark color tokens (`--bg`, `--surface`, `--text`, `--muted`, `--line`, `--bad`, `--soft`, `--fact`, `--assume`, `--question`, `--spec`, `--accent`), responsive grid layouts, `.glass` backdrop blur, and z-index layering for the interactive graph (`.graph.focus .node.lit`, `.edges-base`, `.edges-live`).
+  - Fetches `data/index.json` (`cache: "no-cache"`), builds lookup maps (`byId`, `askedBy`, `usedBy`), attaches a badge with total task count to the `Tasks` nav link (`.top-nav a[data-route="tasks"]`), and routes on `location.hash`.
+  - Listens to `ui-theme-change` on `#navbar` and persists `"theme"` (`"dark"` | `"light"`) and `"capture:<kind>"` in `localStorage`.
+  - Uses `asdlc-meta-designsystem` Web Components (`<ui-stat-tile>`, `<ui-callout>`, `<ui-progress>`, `<ui-badge>`, `<ui-dot>`, `<ui-chip>`, `<ui-input>`, `<ui-textarea>`, `<ui-select>`, `<ui-checkbox>`, `<ui-code-block>`, `<ui-button>`, `<detail-layout>`) across the 5 views specified in `SPC-0003` (`dashboard`, `tasksView`, `graph`, `records`/`record`, `capture`).
+- **`site/styles.css`**: Maps application aliases (`--bg`, `--surface`, `--text`, `--muted`, `--line`, `--soft`, `--accent`, `--fact`, `--assume`, `--req`, `--spec`, `--question`, `--bad`) directly to `asdlc-meta-designsystem` tokens without redeclaring `--font-*`, `--space-*`, `--radius-*`, or `--shadow-*` on `:root`.
 
 ---
 
-## 5. Design System (`site/styles.css`)
+## 5. Design System Binding (`Design-System: asdlc-meta-designsystem@latest`)
 
-1. **Token Architecture:** Uses a zero-build, native **CSS Custom Properties** token system (aligned with the **Open Props** sub-atomic token model, vendored inline with zero external CDN or npm dependencies so `site/` works offline and on GitHub Pages). Frameworks like Pico CSS are intentionally avoided so custom SVG lineage graphs and segmented status bars require no reset overrides.
-2. **Invariant Scale, Spacing, Typography & Z-Index Tokens:** Sizes, spacing, radii, font families/sizes, and stacking layers remain constant across themes:
-   - Spacing: `--space-1: 4px`, `--space-2: 8px`, `--space-3: 12px`, `--space-4: 16px`, `--space-5: 24px`, `--space-6: 36px`.
-   - Controls & radii: `--control-h: 36px`, `--control-h-sm: 32px`, `--badge-h: 20px`, `--radius-sm: 4px`, `--radius: 8px`, `--radius-lg: 10px`, `--pill: 999px`.
-   - Typography: `--font-sans: system-ui, -apple-system, "Segoe UI", sans-serif`, `--font-mono: ui-monospace, SFMono-Regular, Menlo, monospace`, `--fs-body: 15px`, `--fs-control: 14px`, `--fs-sm: 13px`, `--fs-xs: 12px`.
-   - Z-index layers: `--z-edge: 1`, `--z-node: 2`, `--z-edge-active: 3`, `--z-node-active: 4`, `--z-sticky: 20`, `--z-header: 30`.
-3. **Theme-Adaptive Color & Elevation Tokens:** Driven by `color-scheme: light dark`, `@media (prefers-color-scheme: dark)` (when `:root:not([data-theme="light"])`), and explicit `:root[data-theme="dark"]` overrides:
-   - **Surfaces & Ink:** Light `--bg: #f7f7f5`, `--surface: #ffffff`, `--soft: #f0efeb`, `--text: #1d1d1b`, `--muted: #6b6b66`, `--line: #e3e2dd`; Dark `--bg: #141413`, `--surface: #1d1d1b`, `--soft: #262624`, `--text: #ecebe6`, `--muted: #9c9b95`, `--line: #33332f`.
-   - **Semantic & Record-Type Accents:** Light `--accent: #3d5afe`, `--on-accent: #ffffff`, `--fact: #1b8a5a`, `--assume: #c27c0e`, `--req: #3d5afe`, `--spec: #7b3fbf`, `--question: #c2255c`, `--bad: #c62828`; Dark `--accent: #7c8cff`, `--on-accent: #ffffff`, `--fact: #4cc38a`, `--assume: #e6a23c`, `--req: #7c8cff`, `--spec: #b98cf0`, `--question: #f06595`, `--bad: #ef6b6b`.
-   - **Elevation:** `--shadow-sm` and `--shadow-lg` scale opacity from `0.07`/`0.11` (light) to `0.35`/`0.48` (dark).
+1. **Channel Policy:** Tracks the floating `@latest` channel (`https://jvanheerikhuize.github.io/asdlc-meta-designsystem/latest/src/index.js` and `.../latest/src/tokens/tokens.css`) by default so upstream token and component improvements propagate automatically on GitHub Pages deployment.
+2. **Version Pinning:** To pin to a specific release tag, change the header at the top of this file to `Design-System: asdlc-meta-designsystem@v0.1.0` and run `python3 ~/.agents/skills/asdlc-design-system/scripts/sync_consumers.py --apply` to rewrite `site/index.html` to `/v0.1.0/src/...`.
+
