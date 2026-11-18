@@ -28,15 +28,15 @@ This directory preserves independent technical, corpus, and research audits of `
 
 | ID | Priority | Summary | Status |
 | :--- | :--- | :--- | :--- |
-| `A01` | P1 | Evidence declarations can launder weak claims into green assurance | **Addressed in Pass 1** (`records/FCT-*.md`, `records/ASM-*.md`, `records/QST-*.md`) |
-| `A02` | P1 | Normative intent and rationale alongside empirical `because` grounds | **Addressed in Pass 1** (`REQ-0002`, `REQ-0003` grounds and rationale expanded) |
-| `A03` | P1 | Exported artifacts do not consistently preserve spec-level open questions | Planned for Pass 2 & 3 (`REQ-0005`, `tools/spec.py`) |
-| `A04` | P1 | Acceptance text is not checked for Given/When/Then structure | Planned for Pass 2 & 3 (`REQ-0004`, `tools/spec.py`) |
-| `A05` | P1 | Traceability verifies text citations rather than executed test assertions | Planned for Pass 2 & 3 (`REQ-0013`, `tools/spec.py`) |
-| `A06` | P1 | Unquoted YAML `review_after` dates break `to_index()` JSON serialization | Planned for Pass 2 & 3 (`REQ-0008`, `REQ-0009`, `tools/spec.py`) |
-| `A07` | P1 | Pages deployment is not gated by check/tests; global cycle errors lack UI banner | Planned for Pass 2 & 3 (`REQ-0009`, `REQ-0010`, `tools/spec.py`, `site/app.js`, `.github/workflows/pages.yml`) |
-| `A08` | P2 | Partial front-matter and relationship target-type validation | Planned for Pass 2 & 3 (`REQ-0001`, `REQ-0002`, `REQ-0003`, `tools/spec.py`) |
-| `A09` | P2 | Rounded readiness (`round(...) == 100`) used as active-spec gate | Planned for Pass 2 & 3 (`REQ-0003`, `tools/spec.py`) |
-| `A10` | P2 | Positional scenario IDs (`REQ-xxxx#n`) can drift when scenarios are reordered | Planned for Pass 2 & 3 (`REQ-0013`) |
-| `A11` | P2 | Snapshot provenance metadata and backend/frontend stale-date alignment | Planned for Pass 2 & 3 (`REQ-0008`, `REQ-0009`, `REQ-0010`, `tools/spec.py`, `site/app.js`) |
+| `A01` | P1 | Evidence declarations can launder weak claims into green assurance | **Resolved in Pass 1** (`records/FCT-*.md`, `records/ASM-*.md`, `records/QST-*.md`) |
+| `A02` | P1 | Normative intent and rationale alongside empirical `because` grounds | **Resolved in Pass 1** (`REQ-0002`, `REQ-0003` grounds and rationale expanded) |
+| `A03` | P1 | Exported artifacts do not consistently preserve spec-level open questions | **Resolved in Pass 2 & 3** (`REQ-0005`, `render_gherkin`, `render_openspec`) |
+| `A04` | P1 | Acceptance text is not checked for Given/When/Then structure | **Resolved in Pass 2 & 3** (`REQ-0004`, `valid_scenario` in `tools/spec.py`) |
+| `A05` | P1 | Traceability verifies text citations; unknown `REQ` IDs not rejected | **Resolved in Pass 2 & 3** (`REQ-0013`, `verify_traceability` in `tools/spec.py`) |
+| `A06` | P1 | Unquoted YAML `review_after` dates break `to_index()` JSON serialization | **Resolved in Pass 2 & 3** (`REQ-0009`, `to_index` ISO date normalization) |
+| `A07` | P1 | Pages deployment is not gated by check/tests; global cycle errors lack UI banner | **Resolved in Pass 2 & 3** (`REQ-0009`, `REQ-0010`, `tools/spec.py`, `site/app.js`, `.github/workflows/pages.yml`) |
+| `A08` | P2 | Partial front-matter and relationship target-type validation | **Resolved in Pass 2 & 3** (`REQ-0001`, `REQ-0002`, `REQ-0003`, `tools/spec.py`) |
+| `A09` | P2 | Rounded readiness (`round(...) == 100`) used as active-spec gate | **Resolved in Pass 2 & 3** (`REQ-0003`, `tools/spec.py`, `site/app.js`) |
+| `A10` | P2 | Positional scenario IDs (`REQ-xxxx#n`) and unknown requirement citations | **Resolved in Pass 2 & 3** (`REQ-0013`, `verify_traceability`) |
+| `A11` | P2 | Backend/frontend stale-date alignment and segmented status bar consistency | **Resolved in Pass 2 & 3** (`REQ-0010`, `site/app.js`) |
 | `A12` | P2 | Operational hygiene (license, runtime matrix, positioning copy) | Planned for Pass 4 (`README.md`, `ROADMAP.md`, `LICENSE`, `.github/workflows/check.yml`) |

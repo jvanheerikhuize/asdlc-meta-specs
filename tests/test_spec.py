@@ -80,9 +80,13 @@ class CheckTest(unittest.TestCase):
         self.assertEqual(errors, [])
         self.assertTrue(any("cite FCT-0001" in w for w in warnings))
 
-    def test_active_requirement_needs_scenario(self):  # REQ-0004
+    def test_active_requirement_needs_scenario(self):  # REQ-0004#1
         errors, _ = Graph(FCT_0001=FACT, REQ_0001=req(body="\n## Statement\nMUST.\n")).check()
         self.assertTrue(any("Given/When/Then" in e for e in errors))
+
+    def test_malformed_scenario_fails(self):  # REQ-0004#2
+        errors, _ = Graph(FCT_0001=FACT, REQ_0001=req(body="\n## Acceptance\n- TBD\n")).check()
+        self.assertTrue(any("malformed acceptance scenario" in e for e in errors))
 
     def test_tech_stack_term_warns(self):  # REQ-0006
         body = "\n## Statement\nData MUST be stored in PostgreSQL.\n" + SCENARIO
@@ -94,6 +98,32 @@ class CheckTest(unittest.TestCase):
                   SPC_0001=spc("SPC-0001", "skeleton", "[REQ-0001]", "[SPC-0002]"),
                   SPC_0002=spc("SPC-0002", "feature", "[REQ-0001]"))
         self.assertTrue(any("skeleton spec cannot depend" in e for e in g.check()[0]))
+
+    def test_spec_depends_on_must_target_spec(self):  # REQ-0003
+        g = Graph(FCT_0001=FACT, REQ_0001=req(),
+                  SPC_0001=spc("SPC-0001", "feature", "[REQ-0001]", "[REQ-0001]"))
+        self.assertTrue(any("'depends_on' lists non-spec REQ-0001" in e for e in g.check()[0]))
+
+    def test_active_spec_requires_all_requirements_active_not_rounded(self):  # REQ-0003
+        files = {"FCT_0001": FACT, "ASM_0001": asm("open")}
+        req_ids = []
+        for idx in range(1, 200):
+            rid = f"REQ-{idx:04d}"
+            req_ids.append(rid)
+            files[f"REQ_{idx:04d}"] = req(rid=rid)
+        last_rid = "REQ-" + "0200"
+        req_ids.append(last_rid)
+        files["REQ_0200"] = req(status="provisional", because="[ASM-0001]", rid=last_rid)
+        files["SPC_0001"] = spc("SPC-0001", "skeleton", "[" + ", ".join(req_ids) + "]", status="active")
+        g = Graph(**files)
+        self.assertEqual(spec.readiness(g.records["SPC-0001"], g.records), 100)
+        self.assertTrue(any("spec can only be active when all its requirements are active" in e for e in g.check()[0]))
+
+    def test_confidence_and_promotion_type_guards(self):  # REQ-0001, REQ-0002
+        g = Graph(ASM_0001=asm("open", extra="confidence: 1.5\n"))
+        self.assertTrue(any("confidence" in e for e in g.check()[0]))
+        g2 = Graph(ASM_0001=asm("validated", extra="promoted_to: REQ-0001\n"), FCT_0001=FACT, REQ_0001=req())
+        self.assertTrue(any("'promoted_to' must be a fact" in e for e in g2.check()[0]))
 
     def test_spec_cycle_fails(self):
         g = Graph(FCT_0001=FACT, REQ_0001=req(),
@@ -144,10 +174,13 @@ class QuestionTest(unittest.TestCase):
 
     def test_open_question_is_rendered_where_it_blocks(self):  # REQ-0005
         g = Graph(FCT_0001=FACT, REQ_0001=req("provisional"), QST_0001=qst(),
+                  QST_0002=qst(blocks="[SPC-0001]", rid="QST-0002"),
                   SPC_0001=spc("SPC-0001", "skeleton", "[REQ-0001]"))
         s = g.records["SPC-0001"]
         self.assertIn("QST-0001: A question?", spec.render_markdown(s, g.records))
-        self.assertIn("@QST-0001", spec.render_gherkin(s, g.records))
+        gherkin = spec.render_gherkin(s, g.records)
+        self.assertIn("@QST-0001", gherkin)
+        self.assertIn("@QST-0002\nFeature:", gherkin)
 
     def test_question_impact_flows_to_what_it_blocks(self):
         g = Graph(FCT_0001=FACT, REQ_0001=req("provisional"), QST_0001=qst(),
@@ -211,6 +244,7 @@ class RenderTest(unittest.TestCase):
         s = records["SPC-0001"]
         os_md = spec.render_openspec(s, records)
         self.assertIn("### Requirement: REQ-0001", os_md)
+        self.assertIn("*Status: active · Grounds: FCT-0001, FCT-0002*", os_md)
         self.assertIn("#### Scenario: REQ-0001#1", os_md)
         self.assertIn("- **GIVEN**", os_md)
         sk_md = spec.render_speckit(s, records)
@@ -223,6 +257,7 @@ class IndexTest(unittest.TestCase):
     def test_index_has_everything_the_site_reads(self):  # REQ-0009
         index = spec.to_index(spec.load())
         self.assertEqual(index["summary"]["errors"], 0)
+        self.assertEqual(index["issues"], [])
         self.assertEqual(index["spec_order"], ["SPC-0001", "SPC-0002", "SPC-0003"])
         rows = {r["id"]: r for r in index["records"]}
         self.assertEqual(rows["SPC-0001"]["readiness"], 100)
@@ -239,6 +274,22 @@ class IndexTest(unittest.TestCase):
         rows = {r["id"]: r for r in index["records"]}
         self.assertTrue(any("provisional" in i for i in rows["REQ-0001"]["issues"]))
 
+    def test_unquoted_review_after_date_serializes_to_json(self):  # REQ-0009
+        import json
+        unquoted = FACT.replace("status: active", "status: active\nreview_after: 2030-01-01")
+        index = spec.to_index(Graph(FCT_0001=unquoted, REQ_0001=req()).records)
+        payload = json.loads(json.dumps(index))
+        rows = {r["id"]: r for r in payload["records"]}
+        self.assertEqual(rows["FCT-0001"]["review_after"], "2030-01-01")
+
+    def test_global_cycle_error_is_preserved_in_index_issues(self):  # REQ-0009
+        g = Graph(FCT_0001=FACT, REQ_0001=req(),
+                  SPC_0001=spc("SPC-0001", "feature", "[REQ-0001]", "[SPC-0002]"),
+                  SPC_0002=spc("SPC-0002", "feature", "[REQ-0001]", "[SPC-0001]"))
+        index = spec.to_index(g.records)
+        self.assertEqual(index["summary"]["errors"], 1)
+        self.assertTrue(any("spec dependency cycle" in i for i in index["issues"]))
+
 
 class WorkspaceContractTest(unittest.TestCase):
     @classmethod
@@ -251,6 +302,7 @@ class WorkspaceContractTest(unittest.TestCase):
         for level in ("Fix now", "Answer questions", "Test assumptions", "Quick wins", "Tidy up"):
             self.assertIn(level, self.app)
         self.assertIn("review_after", self.app)
+        self.assertIn("data.issues", self.app)
 
     def test_interactive_graph_lineage_stops_at_spec_boundary(self):  # REQ-0011
         self.assertIn('const PREFIXES = ["ASM", "FCT", "QST", "REQ", "SPC"]', self.app)
@@ -287,6 +339,11 @@ class TraceabilityTest(unittest.TestCase):
             tfile.write_text(f"# {bad_cite}\n", encoding="utf-8")
             errors, warnings = spec.verify_traceability(g.records, Path(tmp))
             self.assertTrue(any(bad_cite in e for e in errors))
+
+            unknown_req = "REQ-" + "9999"
+            tfile.write_text(f"# {unknown_req}\n", encoding="utf-8")
+            errors, warnings = spec.verify_traceability(g.records, Path(tmp))
+            self.assertTrue(any(f"cites unknown requirement {unknown_req}" in e for e in errors))
 
 
 if __name__ == "__main__":
