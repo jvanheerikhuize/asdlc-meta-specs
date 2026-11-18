@@ -1,10 +1,10 @@
 ---
 id: FCT-0001
-title: An atomic record graph checks in under 150 ms with no merge conflicts
+title: Small atomic record corpora check in under 150 ms and avoid file-level conflicts on distinct records
 status: active
 promoted_from: ASM-0001
-evidence: The predecessor repository (asdlc-meta-specs) ran a 35-record graph through its checker in under 150 ms across many parallel pull requests, none of which conflicted.
+evidence: "Across the 31-record asdlc-meta-specs corpus and 36-record lumen corpus (17 pull requests), tools/spec.py check --strict completes in under 150 ms on standard CI runners, and parallel edits to distinct record files merge without file-level text conflicts (while concurrent sequential ID allocation, shared spec requirement lists, and semantic conflicts still require contributor coordination)."
 ---
 
 ## Statement
-Atomic Markdown records with front-matter links validate in well under a second and do not cause merge conflicts between unrelated changes.
+In corpora of roughly 30 to 40 atomic Markdown records with front-matter links, structural validation runs in well under a second and edits to separate record files do not produce file-level merge conflicts, though shared spec lists, sequential ID assignment, and semantic consistency still require coordination.

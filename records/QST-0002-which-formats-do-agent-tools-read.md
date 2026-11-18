@@ -7,4 +7,4 @@ answered_by: FCT-0004
 ---
 
 ## Question
-REQ-0005 says specs render to "each supported target format", but we have not decided which formats count. Candidates include OpenSpec, Spec Kit and plain Gherkin, but nobody has checked which of them the agents in use actually read. Until this is answered, the list of renderers is a guess.
+REQ-0005 says specs render to "each supported target format", so we needed to verify which baseline text formats our evaluated coding agents ingest directly into context without a proprietary intermediate compilation step (recorded in FCT-0004).

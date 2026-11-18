@@ -1,10 +1,11 @@
 ---
 id: FCT-0005
-title: Acceptance scenarios prevent agent clarification rounds during implementation
+title: At least one Given/When/Then scenario per requirement anchors baseline agent implementation and test traceability
 status: active
 promoted_from: ASM-0002
-evidence: In cross-agent trials across Claude Code and Antigravity implementing test specs and the lumen corpus, prompt requests supplying at least one Given/When/Then scenario proceeded to successful execution without triggering clarifying questions.
+review_after: "2027-05-18"
+evidence: "Across implementation and clean-room reconstruction of the 31-record asdlc-meta-specs corpus (21 scenarios, PRs #15 and #17) and authoring of the 36-record lumen corpus, requiring at least one concrete Given/When/Then scenario per active requirement gave coding agents (Claude Code and Google Antigravity) an executable behavioural target and scenario ID for test citation; this establishes a minimum baseline requirement rather than proof that a single example covers all boundary cases or removes the need for justified clarification."
 ---
 
 ## Statement
-Supplying at least one concrete Given/When/Then acceptance scenario per requirement enables coding agents to implement the specified behaviour without asking clarifying questions.
+Requiring at least one concrete Given/When/Then acceptance scenario per active requirement provides coding agents with an observable baseline behaviour and traceable test target on scoped tasks, while complex requirements still benefit from boundary/negative scenarios and explicit open questions (`QST`) when ambiguity remains.

@@ -2,7 +2,7 @@
 id: REQ-0002
 title: A requirement is never more certain than what it rests on
 status: active
-because: [FCT-0001]
+because: [FCT-0001, FCT-0002, FCT-0003]
 ---
 
 ## Statement

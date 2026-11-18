@@ -2,7 +2,7 @@
 id: REQ-0003
 title: Enforce acyclic skeleton-first spec dependencies and show downstream impact in rebuild order
 status: active
-because: [FCT-0001]
+because: [FCT-0001, FCT-0002]
 ---
 
 ## Statement

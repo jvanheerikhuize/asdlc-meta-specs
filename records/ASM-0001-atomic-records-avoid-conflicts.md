@@ -1,13 +1,13 @@
 ---
 id: ASM-0001
-title: One file per spec element avoids merge conflicts and keeps checking instant
+title: One file per spec element reduces file-level merge conflicts and checks quickly in small corpora
 status: validated
 confidence: 0.8
 promoted_to: FCT-0001
 ---
 
 ## Statement
-If every requirement, fact and assumption lives in its own small file, people and agents can edit the spec in parallel without conflicts, and the whole graph can be checked in well under a second.
+If every requirement, fact, question, and assumption lives in its own small file, contributors and agents editing distinct records in parallel avoid file-level merge conflicts on those records, and a small corpus (roughly 30 to 50 records) can be checked in well under a second.
 
 ## How we validate it
-Run a realistic corpus through a checker and count conflicts across parallel edits.
+Run a 30-to-40 record corpus through the checker and observe execution time and file-level conflicts across parallel pull requests touching distinct records, while noting where shared spec lists or sequential ID allocation still require coordination.
