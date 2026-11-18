@@ -375,11 +375,11 @@ function graph(params) {
   function applyHighlight() {
     const lin = current();
     const matches = matchesOf();
-    wrap.classList.toggle("focus", !!lin);
+    wrap.classList.toggle("focus", !!(lin || matches));
     for (const [nid, el] of Object.entries(nodes)) {
-      const lit = !!lin && lin.all.has(nid);
+      const lit = lin ? lin.all.has(nid) : !!matches && matches.has(nid);
       el.classList.toggle("lit", lit);
-      el.classList.toggle("dim", lin ? !lit : !!matches && !matches.has(nid));
+      el.classList.toggle("dim", lin ? !lit : !!matches && !lit);
       el.classList.toggle("up", !!lin && lin.up.has(nid));
       el.classList.toggle("down", !!lin && lin.down.has(nid));
       el.classList.toggle("sel", nid === selected);
@@ -387,7 +387,7 @@ function graph(params) {
       el.setAttribute("aria-pressed", String(nid === selected));
     }
     renderStatus(lin, matches);
-    draw(lin);
+    draw(lin, matches);
   }
 
   /** Click toggles a selection; `reveal` (chips, search, deep links) always selects and scrolls the card into view. */
@@ -420,9 +420,10 @@ function graph(params) {
   });
   wrap.append(baseLayer, ...columns, liveLayer);
 
-  function draw(lin) {
+  function draw(lin, matches = null) {
     const box = wrap.getBoundingClientRect();
     if (!box.width) return;
+    const active = lin ? lin.all : matches;
     const base = [], live = [];
     for (const e of edges) {
       const a = nodes[e.from].getBoundingClientRect(), b = nodes[e.to].getBoundingClientRect();
@@ -436,7 +437,7 @@ function graph(params) {
         d = `M${x1},${y1} C${mid},${y1} ${mid},${y2} ${x2},${y2}`;
       }
       const kind = e.dep ? "dep" : e.weak ? "weak" : "fact";
-      const on = !!lin && lin.all.has(e.from) && lin.all.has(e.to);
+      const on = !!active && active.has(e.from) && active.has(e.to);
       (on ? live : base).push(svgEl("path", { d, class: `edge edge-${kind}${on ? " on" : ""}`, "marker-end": `url(#arrow-${kind})` }));
     }
     baseLayer.replaceChildren(defs, ...base);
@@ -468,7 +469,7 @@ function graph(params) {
         bar)),
     h("div", { class: "graph-wrap" }, wrap));
 
-  redraw = () => draw(current());
+  redraw = () => draw(current(), matchesOf());
   if (typeof ResizeObserver !== "undefined") {
     const ro = new ResizeObserver(() => (wrap.isConnected ? redraw?.() : ro.disconnect()));
     ro.observe(wrap);
