@@ -216,7 +216,7 @@ function stateRow(p) {
 function specCard(sp) {
   const reqs = (sp.requirements || []).map((id) => byId[id]).filter(Boolean);
   const pending = reqs.filter((r) => r.status !== "active");
-  return h("div", { class: "card" },
+  return h("ui-surface", { variant: "card", padding: "lg" }, h("div", { class: "card" },
     h("div", { style: "display:flex;align-items:center;gap:6px;flex-wrap:wrap" }, rid(sp.id), badge(sp.status), h("ui-badge", { variant: "info" }, sp.tier)),
     h("h3", {}, h("a", { href: `#/record/${sp.id}` }, sp.title)),
     h("ui-progress", { value: String(sp.readiness), variant: sp.readiness === 100 ? "success" : "warning", "aria-label": `${sp.readiness}% of requirements active` }),
@@ -225,9 +225,10 @@ function specCard(sp) {
       sp.issues.map((i) => h("li", { class: "bad" }, i)),
       sp.open_questions.length ? h("li", { class: "wait" }, "Spec waiting on ", idList(sp.open_questions), " to be answered.") : "",
       pending.length ? pending.map((r) => { const [t, why] = blocker(r); return h("li", { class: t }, rid(r.id), " ", why); })
-        : sp.status !== "active" && !sp.open_questions.length ? h("li", { class: "ready" }, "All requirements active. Set ", h("code", {}, "status: active"), ".") : ""));
+        : sp.status !== "active" && !sp.open_questions.length ? h("li", { class: "ready" }, "All requirements active. Set ", h("code", {}, "status: active"), ".") : "")));
 }
 
+const TASK_ACCENT = { fix: "danger", answer: "accent", test: "warning", quick: "success" };
 function tasksView() {
   const todo = tasks();
   main.append(h("h1", {}, "Tasks"),
@@ -237,7 +238,7 @@ function tasksView() {
     const group = todo.filter((t) => t.level === lvl);
     if (!group.length) continue;
     main.append(h("h2", {}, title, h("span", { class: `count ${lvl}` }, group.length)), h("p", { class: "muted" }, intro),
-      h("div", { class: "tasks" }, group.map((t) => h("div", { class: `task ${lvl}` },
+      h("div", { class: "tasks" }, group.map((t) => h("ui-surface", { variant: "card", padding: "md", accent: TASK_ACCENT[lvl] },
         h("div", { class: "task-title" }, t.title, " ", h("span", { class: "muted" }, t.r.title)),
         h("div", { class: "task-why" }, t.why),
         t.unlocks.length ? h("div", { class: "muted" }, "Unlocks ", idList(t.unlocks)) : "",
@@ -390,9 +391,9 @@ function graph(params) {
         selected ? null : h("span", { class: "muted" }, "· preview")),
       h("div", { class: "graph-bar-actions" },
         selected && r.depends_on?.length ? h("span", { class: "muted" }, "Builds on ",
-          r.depends_on.map((d, i) => [i ? " " : "", h("button", { type: "button", class: "chip-inline", onclick: () => select(d, true) }, d)])) : null,
+          r.depends_on.map((d, i) => [i ? " " : "", h("ui-button", { variant: "ghost", size: "sm", "onui-press": () => select(d, true) }, d)])) : null,
         selected ? h("a", { class: "btn ghost", href: `#/record/${r.id}` }, "Open record →") : null,
-        selected ? h("button", { type: "button", class: "btn ghost", onclick: () => select(null) }, "Clear (Esc)") : null),
+        selected ? h("ui-button", { variant: "ghost", size: "sm", "onui-press": () => select(null) }, "Clear (Esc)") : null),
       ex);
   }
 
@@ -483,14 +484,14 @@ function graph(params) {
   main.append(h("h1", {}, "Graph"),
     h("p", { class: "muted lede" }, "Arrows run from what a record rests on to what rests on it. Select a record to bring its lineage forward; everything else steps back."),
     h("div", { class: "graph-toolbar-sticky" },
-      h("div", { class: "graph-toolbar glass" },
+      h("ui-surface", { class: "graph-toolbar", variant: "glass", padding: "md" },
         h("div", { class: "graph-toolbar-row" }, search,
           h("div", { class: "legend" },
             h("span", {}, h("i"), "grounded"),
             h("span", {}, h("i", { class: "weak" }), "open assumption or question"),
             h("span", {}, h("i", { class: "dep" }), "spec builds on spec"),
             h("span", {}, "↑ rests on · ↓ affects"))),
-        bar)),
+        h("ui-divider"), bar)),
     h("div", { class: "graph-wrap" }, wrap));
 
   redraw = () => draw(current(), matchesOf());
